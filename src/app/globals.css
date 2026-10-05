@@ -1,26 +1,273 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────────────────────
+   Tailwind v4 theme tokens — maps CSS variables to utilities
+   ───────────────────────────────────────────────────────────── */
+@theme {
+  /* Colors (HSL values without the hsl() wrapper) */
+  --color-background:        hsl(222 47% 4%);
+  --color-foreground:        hsl(210 40% 98%);
+  --color-card:              hsl(222 47% 6%);
+  --color-card-foreground:   hsl(210 40% 98%);
+  --color-popover:           hsl(222 47% 6%);
+  --color-popover-foreground:hsl(210 40% 98%);
+  --color-primary:           hsl(245 82% 67%);
+  --color-primary-foreground:hsl(210 40% 98%);
+  --color-secondary:         hsl(217 32% 17%);
+  --color-secondary-foreground:hsl(210 40% 98%);
+  --color-muted:             hsl(217 32% 17%);
+  --color-muted-foreground:  hsl(215 20% 65%);
+  --color-accent:            hsl(245 82% 67%);
+  --color-accent-foreground: hsl(210 40% 98%);
+  --color-destructive:       hsl(0 84% 60%);
+  --color-destructive-foreground: hsl(210 40% 98%);
+  --color-border:            hsl(217 32% 17%);
+  --color-input:             hsl(217 32% 17%);
+  --color-ring:              hsl(245 82% 67%);
+
+  /* Custom Udhari colors */
+  --color-success:           hsl(142 71% 45%);
+  --color-warning:           hsl(38 92% 50%);
+  --color-rupee-green:       hsl(142 76% 36%);
+  --color-overdue-red:       hsl(0 84% 60%);
+
+  /* Border radius */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   CSS custom properties (for shadcn/ui HSL refs compatibility)
+   ───────────────────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: 222 47% 4%;
+  --foreground: 210 40% 98%;
+  --card: 222 47% 6%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222 47% 6%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 245 82% 67%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 217 32% 17%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217 32% 17%;
+  --muted-foreground: 215 20% 65%;
+  --accent: 245 82% 67%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217 32% 17%;
+  --input: 217 32% 17%;
+  --ring: 245 82% 67%;
+  --radius: 0.75rem;
+  --success: 142 71% 45%;
+  --warning: 38 92% 50%;
+  --rupee-green: 142 76% 36%;
+  --overdue-red: 0 84% 60%;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* ─────────────────────────────────────────────────────────────
+   Base styles
+   ───────────────────────────────────────────────────────────── */
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+    box-sizing: border-box;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Big tap targets for mobile shopkeepers */
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  html {
+    scroll-behavior: smooth;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ─────────────────────────────────────────────────────────────
+   Utility classes
+   ───────────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Glassmorphism card */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 0.75rem;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    background: linear-gradient(to right, #818cf8, #c084fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Rupee green */
+  .text-rupee {
+    color: hsl(var(--rupee-green));
+  }
+
+  /* Stat card shine effect */
+  .stat-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    border: 1px solid hsl(var(--border));
+    background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 0.75rem;
+    opacity: 0;
+    transition: opacity 0.3s;
+    background: linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(168,85,247,0.05) 100%);
+  }
+
+  .stat-card:hover::before {
+    opacity: 1;
+  }
+
+  /* Status badge colors */
+  .badge-upcoming {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+  }
+
+  .badge-overdue {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+
+  .badge-promised {
+    background: rgba(234, 179, 8, 0.2);
+    color: #facc15;
+    border: 1px solid rgba(234, 179, 8, 0.3);
+  }
+
+  .badge-disputed {
+    background: rgba(249, 115, 22, 0.2);
+    color: #fb923c;
+    border: 1px solid rgba(249, 115, 22, 0.3);
+  }
+
+  .badge-paid {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+  }
+
+  .badge-written_off {
+    background: rgba(107, 114, 128, 0.2);
+    color: #9ca3af;
+    border: 1px solid rgba(107, 114, 128, 0.3);
+  }
+
+  /* Animated pulse for overdue items */
+  .overdue-pulse {
+    animation: overduePulse 2s ease-in-out infinite;
+  }
+
+  @keyframes overduePulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.15); }
+  }
+
+  /* Skeleton loading animation */
+  .skeleton {
+    background: rgba(255, 255, 255, 0.10);
+    border-radius: 0.5rem;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* Mobile bottom nav */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(17, 24, 39, 0.95);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255, 255, 255, 0.10);
+    z-index: 50;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Amount display */
+  .amount-display {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Custom scrollbar
+   ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(222 47% 4%);
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(217 32% 25%);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(245 82% 67%);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Animations
+   ───────────────────────────────────────────────────────────── */
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.pwa-prompt {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+.count-animate {
+  animation: countUp 0.5s ease-out forwards;
+}
+
+@keyframes toastIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+.toast-enter {
+  animation: toastIn 0.3s ease-out;
 }

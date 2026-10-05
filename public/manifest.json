@@ -1,0 +1,27 @@
+{
+  "name": "Udhari OS",
+  "short_name": "Udhari",
+  "description": "AI Payment Collection for Indian Merchants",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#030712",
+  "theme_color": "#6366f1",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["finance", "business"],
+  "lang": "hi"
+}

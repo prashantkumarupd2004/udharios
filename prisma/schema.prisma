@@ -1,0 +1,502 @@
+// prisma/schema.prisma — Udhari OS
+// =============================================================================
+// Udhari OS — Prisma Schema
+// Database: PostgreSQL (Supabase, ap-south-1 / Mumbai)
+// ORM: Prisma 5.x (single source of truth)
+// =============================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [pgcrypto, uuid_ossp(map: "uuid-ossp")]
+}
+
+// ---------------------------------------------------------------------------
+// ENUMS
+// ---------------------------------------------------------------------------
+
+enum MerchantPlan {
+  trial
+  starter
+  pro
+  enterprise
+}
+
+enum UserRole {
+  owner
+  staff
+}
+
+enum OutstandingStatus {
+  upcoming
+  overdue
+  promised
+  disputed
+  paid
+  written_off
+}
+
+enum ReminderChannel {
+  whatsapp
+  sms
+  voice
+  escalate
+}
+
+enum ReminderLogStatus {
+  sent
+  delivered
+  read
+  failed
+}
+
+enum TemplateCategory {
+  utility
+  marketing
+  authentication
+}
+
+enum TemplateStatus {
+  draft
+  approved
+  rejected
+}
+
+enum PaymentLinkStatus {
+  created
+  paid
+  expired
+  cancelled
+}
+
+enum PromiseSource {
+  whatsapp
+  voice
+  manual
+}
+
+enum PromiseStatus {
+  open
+  kept
+  broken
+}
+
+enum DisputeStatus {
+  open
+  resolved
+  withdrawn
+}
+
+enum CallOutcome {
+  promised
+  disputed
+  no_answer
+  paid_already
+  failed
+}
+
+enum SubscriptionStatus {
+  created
+  authenticated
+  active
+  paused
+  halted
+  cancelled
+  completed
+  expired
+}
+
+// ---------------------------------------------------------------------------
+// MERCHANTS
+// ---------------------------------------------------------------------------
+
+model Merchant {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  phone          String       @unique
+  businessName   String       @map("business_name")
+  category       String       @default("general")
+  upiVpa         String?      @map("upi_vpa")
+  logoUrl        String?      @map("logo_url")
+  plan           MerchantPlan @default(trial)
+  trialEndsAt    DateTime?    @map("trial_ends_at")
+  quietStart     String       @default("21:00") @map("quiet_start")
+  quietEnd       String       @default("09:00") @map("quiet_end")
+  isKillSwitched Boolean      @default(false) @map("is_kill_switched")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  users          User[]
+  customers      Customer[]
+  outstandings   Outstanding[]
+  reminderRules  ReminderRule[]
+  reminderLogs   ReminderLog[]
+  templates      Template[]
+  paymentLinks   PaymentLink[]
+  payments       Payment[]
+  calls          Call[]
+  auditLogs      AuditLog[]
+  subscription   Subscription?
+  merchantNotifs MerchantNotification[]
+
+  @@map("merchants")
+}
+
+// ---------------------------------------------------------------------------
+// USERS
+// ---------------------------------------------------------------------------
+
+model User {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  merchantId String   @map("merchant_id") @db.Uuid
+  role       UserRole @default(staff)
+  name       String
+  supabaseId String?  @unique @map("supabase_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId])
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// CUSTOMERS
+// ---------------------------------------------------------------------------
+
+model Customer {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  merchantId String    @map("merchant_id") @db.Uuid
+  name       String
+  phone      String
+  consent    Boolean   @default(false)
+  consentAt  DateTime? @map("consent_at")
+  optedOut   Boolean   @default(false) @map("opted_out")
+  optedOutAt DateTime? @map("opted_out_at")
+  notes      String?
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  merchant     Merchant      @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  outstandings Outstanding[]
+  reminderLogs ReminderLog[]
+  calls        Call[]
+  promises     Promise[]
+  disputes     Dispute[]
+
+  @@unique([merchantId, phone])
+  @@index([merchantId])
+  @@index([phone])
+  @@map("customers")
+}
+
+// ---------------------------------------------------------------------------
+// OUTSTANDINGS (Udhaari Ledger)
+// ---------------------------------------------------------------------------
+
+model Outstanding {
+  id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  merchantId   String            @map("merchant_id") @db.Uuid
+  customerId   String            @map("customer_id") @db.Uuid
+  invoiceNo    String?           @map("invoice_no")
+  amount       Decimal           @db.Decimal(12, 2)
+  dueDate      DateTime          @map("due_date") @db.Date
+  status       OutstandingStatus @default(upcoming)
+  items        Json?
+  photoUrl     String?           @map("photo_url")
+  ocrData      Json?             @map("ocr_data")
+  paidAt       DateTime?         @map("paid_at")
+  currentStage Int               @default(0) @map("current_stage")
+  inngestJobId String?           @map("inngest_job_id")
+  notes        String?
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+
+  merchant     Merchant      @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  customer     Customer      @relation(fields: [customerId], references: [id])
+  reminderLogs ReminderLog[]
+  paymentLink  PaymentLink?
+  payments     Payment[]
+  promises     Promise[]
+  disputes     Dispute[]
+  calls        Call[]
+
+  @@index([merchantId])
+  @@index([customerId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([merchantId, status])
+  @@map("outstandings")
+}
+
+// ---------------------------------------------------------------------------
+// REMINDER RULES
+// ---------------------------------------------------------------------------
+
+model ReminderRule {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  merchantId String   @map("merchant_id") @db.Uuid
+  name       String   @default("Default")
+  isDefault  Boolean  @default(false) @map("is_default")
+  stages     Json
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId])
+  @@map("reminder_rules")
+}
+
+// ---------------------------------------------------------------------------
+// REMINDER LOGS
+// ---------------------------------------------------------------------------
+
+model ReminderLog {
+  id            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  merchantId    String            @map("merchant_id") @db.Uuid
+  outstandingId String            @map("outstanding_id") @db.Uuid
+  customerId    String            @map("customer_id") @db.Uuid
+  stage         Int
+  channel       ReminderChannel
+  templateName  String?           @map("template_name")
+  messageBody   String?           @map("message_body")
+  status        ReminderLogStatus @default(sent)
+  externalMsgId String?           @map("external_msg_id")
+  sentAt        DateTime          @default(now()) @map("sent_at")
+  deliveredAt   DateTime?         @map("delivered_at")
+  readAt        DateTime?         @map("read_at")
+  failedReason  String?           @map("failed_reason")
+
+  merchant    Merchant    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  outstanding Outstanding @relation(fields: [outstandingId], references: [id])
+  customer    Customer    @relation(fields: [customerId], references: [id])
+
+  @@index([merchantId])
+  @@index([outstandingId])
+  @@index([customerId])
+  @@index([sentAt])
+  @@map("reminder_logs")
+}
+
+// ---------------------------------------------------------------------------
+// TEMPLATES
+// ---------------------------------------------------------------------------
+
+model Template {
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  merchantId   String?          @map("merchant_id") @db.Uuid
+  name         String
+  category     TemplateCategory @default(utility)
+  language     String           @default("hi")
+  body         String
+  buttons      Json?
+  dltId        String?          @map("dlt_id")
+  waTemplateId String?          @map("wa_template_id")
+  status       TemplateStatus   @default(draft)
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  merchant Merchant? @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId])
+  @@index([status])
+  @@map("templates")
+}
+
+// ---------------------------------------------------------------------------
+// PAYMENT LINKS
+// ---------------------------------------------------------------------------
+
+model PaymentLink {
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  merchantId     String            @map("merchant_id") @db.Uuid
+  outstandingId  String            @unique @map("outstanding_id") @db.Uuid
+  razorpayLinkId String            @unique @map("razorpay_link_id")
+  url            String
+  shortUrl       String?           @map("short_url")
+  amount         Decimal           @db.Decimal(12, 2)
+  status         PaymentLinkStatus @default(created)
+  expiresAt      DateTime?         @map("expires_at")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  merchant    Merchant    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  outstanding Outstanding @relation(fields: [outstandingId], references: [id])
+
+  @@index([merchantId])
+  @@map("payment_links")
+}
+
+// ---------------------------------------------------------------------------
+// PAYMENTS (idempotent)
+// ---------------------------------------------------------------------------
+
+model Payment {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  razorpayPaymentId String   @unique @map("razorpay_payment_id")
+  merchantId        String   @map("merchant_id") @db.Uuid
+  outstandingId     String   @map("outstanding_id") @db.Uuid
+  amount            Decimal  @db.Decimal(12, 2)
+  method            String?
+  paidAt            DateTime @map("paid_at")
+  needsReview       Boolean  @default(false) @map("needs_review")
+  raw               Json
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  merchant    Merchant    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  outstanding Outstanding @relation(fields: [outstandingId], references: [id])
+
+  @@index([merchantId])
+  @@index([outstandingId])
+  @@map("payments")
+}
+
+// ---------------------------------------------------------------------------
+// PROMISES
+// ---------------------------------------------------------------------------
+
+model Promise {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  outstandingId String        @map("outstanding_id") @db.Uuid
+  customerId    String        @map("customer_id") @db.Uuid
+  merchantId    String        @map("merchant_id") @db.Uuid
+  promisedDate  DateTime      @map("promised_date") @db.Date
+  source        PromiseSource
+  status        PromiseStatus @default(open)
+  notes         String?
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  outstanding Outstanding @relation(fields: [outstandingId], references: [id])
+  customer    Customer    @relation(fields: [customerId], references: [id])
+
+  @@index([outstandingId])
+  @@index([customerId])
+  @@index([merchantId])
+  @@index([promisedDate])
+  @@map("promises")
+}
+
+// ---------------------------------------------------------------------------
+// DISPUTES
+// ---------------------------------------------------------------------------
+
+model Dispute {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  outstandingId String        @map("outstanding_id") @db.Uuid
+  customerId    String        @map("customer_id") @db.Uuid
+  merchantId    String        @map("merchant_id") @db.Uuid
+  reason        String
+  status        DisputeStatus @default(open)
+  resolution    String?
+  resolvedAt    DateTime?     @map("resolved_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  outstanding Outstanding @relation(fields: [outstandingId], references: [id])
+  customer    Customer    @relation(fields: [customerId], references: [id])
+
+  @@index([outstandingId])
+  @@index([merchantId])
+  @@map("disputes")
+}
+
+// ---------------------------------------------------------------------------
+// CALLS
+// ---------------------------------------------------------------------------
+
+model Call {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  merchantId    String       @map("merchant_id") @db.Uuid
+  outstandingId String       @map("outstanding_id") @db.Uuid
+  customerId    String       @map("customer_id") @db.Uuid
+  exotelSid     String       @unique @map("exotel_sid")
+  status        String       @default("initiated")
+  transcript    Json?
+  outcome       CallOutcome?
+  recordingUrl  String?      @map("recording_url")
+  durationSec   Int?         @map("duration_sec")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  merchant    Merchant    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  outstanding Outstanding @relation(fields: [outstandingId], references: [id])
+  customer    Customer    @relation(fields: [customerId], references: [id])
+
+  @@index([merchantId])
+  @@index([outstandingId])
+  @@map("calls")
+}
+
+// ---------------------------------------------------------------------------
+// AUDIT LOGS — append-only
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  merchantId  String   @map("merchant_id") @db.Uuid
+  actor       String
+  action      String
+  entity      String
+  entityId    String   @map("entity_id") @db.Uuid
+  payload     Json     @default("{}")
+  payloadHash String   @map("payload_hash")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ---------------------------------------------------------------------------
+// SUBSCRIPTIONS
+// ---------------------------------------------------------------------------
+
+model Subscription {
+  id              String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  merchantId      String             @unique @map("merchant_id") @db.Uuid
+  razorpaySubId   String             @unique @map("razorpay_sub_id")
+  plan            MerchantPlan
+  status          SubscriptionStatus @default(created)
+  currentPeriodEnd DateTime?         @map("current_period_end")
+  trialEnd        DateTime?          @map("trial_end")
+  cancelledAt     DateTime?          @map("cancelled_at")
+  raw             Json?
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+// ---------------------------------------------------------------------------
+// MERCHANT NOTIFICATIONS
+// ---------------------------------------------------------------------------
+
+model MerchantNotification {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  merchantId String   @map("merchant_id") @db.Uuid
+  type       String
+  title      String
+  body       String
+  entityId   String?  @map("entity_id") @db.Uuid
+  entityType String?  @map("entity_type")
+  isRead     Boolean  @default(false) @map("is_read")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId, isRead])
+  @@index([createdAt])
+  @@map("merchant_notifications")
+}
