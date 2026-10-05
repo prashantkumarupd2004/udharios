@@ -1,363 +1,676 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import Link from 'next/link'
+import {
+  MessageCircle,
+  Phone,
+  CreditCard,
+  Zap,
+  BarChart3,
+  ShieldCheck,
+  IndianRupee,
+  ArrowRight,
+  Play,
+  Check,
+  ChevronDown,
+  Menu,
+  X,
+  Bell,
+  Clock,
+  TrendingUp,
+  Wallet,
+  Sparkles,
+} from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
 
+/* ── Scroll reveal wrapper ─────────────────────────────────────────── */
+function Reveal({ children, delay = 0, className = '' }: { children: ReactNode; delay?: number; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true)
+          obs.disconnect()
+        }
+      },
+      { threshold: 0.12 }
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+
+  return (
+    <div
+      ref={ref}
+      className={`transition-all duration-700 ease-out ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'} ${className}`}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      {children}
+    </div>
+  )
+}
+
+/* ── Brand logo ────────────────────────────────────────────────────── */
+function Logo({ size = 'md' }: { size?: 'md' | 'lg' }) {
+  const box = size === 'lg' ? 'w-11 h-11' : 'w-9 h-9'
+  const icon = size === 'lg' ? 'w-6 h-6' : 'w-5 h-5'
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className={`${box} rounded-xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/30`}>
+        <IndianRupee className={`${icon} text-white`} strokeWidth={2.5} />
+      </div>
+      <span className="font-bold text-xl tracking-tight text-white">
+        Udhari <span className="gradient-text">OS</span>
+      </span>
+    </div>
+  )
+}
+
+/* ── CSS dashboard mockup for hero ─────────────────────────────────── */
+function DashboardMockup({ lang }: { lang: 'hi' | 'en' }) {
+  return (
+    <div className="relative">
+      {/* glow */}
+      <div className="absolute -inset-4 bg-gradient-to-r from-indigo-600/20 via-violet-600/20 to-indigo-600/20 rounded-3xl blur-2xl" />
+      <div className="relative glass-card rounded-2xl p-5 sm:p-6 shadow-2xl shadow-black/50">
+        {/* window bar */}
+        <div className="flex items-center gap-2 mb-5">
+          <span className="w-3 h-3 rounded-full bg-red-500/70" />
+          <span className="w-3 h-3 rounded-full bg-yellow-500/70" />
+          <span className="w-3 h-3 rounded-full bg-green-500/70" />
+          <span className="ml-3 text-xs text-gray-500">udhari.app/dashboard</span>
+          <span className="ml-auto flex items-center gap-1.5 text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-full px-2.5 py-1">
+            <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+            Live
+          </span>
+        </div>
+
+        {/* KPI row */}
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          {[
+            { label: lang === 'hi' ? 'Kul Udhaari' : 'Outstanding', value: '₹4.2L', tone: 'text-white' },
+            { label: lang === 'hi' ? 'Is Hafte Vasool' : 'Collected', value: '₹1.1L', tone: 'text-green-400' },
+            { label: lang === 'hi' ? 'Overdue' : 'Overdue', value: '₹86K', tone: 'text-red-400' },
+          ].map((s) => (
+            <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-3">
+              <p className={`text-lg sm:text-xl font-bold amount-display ${s.tone}`}>{s.value}</p>
+              <p className="text-[11px] text-gray-500 mt-0.5">{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* reminder timeline mini */}
+        <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-medium text-gray-300">
+              {lang === 'hi' ? 'Gupta Store — ₹50,000' : 'Gupta Store — ₹50,000'}
+            </p>
+            <span className="text-[11px] text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded-full px-2 py-0.5">
+              {lang === 'hi' ? 'Day 5' : 'Day 5'}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {[
+              { done: true, icon: MessageCircle },
+              { done: true, icon: MessageCircle },
+              { done: true, icon: CreditCard },
+              { done: false, icon: Phone },
+              { done: false, icon: Bell },
+            ].map((st, i) => (
+              <div key={i} className="flex items-center flex-1 last:flex-none">
+                <div
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center border ${
+                    st.done
+                      ? 'bg-indigo-600/30 border-indigo-500/40 text-indigo-300'
+                      : 'bg-white/5 border-white/10 text-gray-600'
+                  }`}
+                >
+                  {st.done ? <Check className="w-4 h-4" /> : <st.icon className="w-4 h-4" />}
+                </div>
+                {i < 4 && <div className={`h-px flex-1 mx-1 ${st.done ? 'bg-indigo-500/40' : 'bg-white/10'}`} />}
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-between mt-2 text-[10px] text-gray-600">
+            <span>Day 1</span><span>Day 3</span><span>Day 5</span><span>Day 7</span><span>Day 15</span>
+          </div>
+        </div>
+
+        {/* payment notification */}
+        <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/25 rounded-xl p-3.5 count-animate">
+          <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+            <Check className="w-5 h-5 text-green-400" strokeWidth={3} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-green-300">
+              {lang === 'hi' ? '₹25,000 vasool ho gaya ✓' : '₹25,000 collected ✓'}
+            </p>
+            <p className="text-xs text-gray-500 truncate">
+              {lang === 'hi' ? 'Sharma Kirana — reminders auto-stop' : 'Sharma Kirana — reminders auto-stopped'}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ════════════════════════════ PAGE ═══════════════════════════════════ */
 export default function LandingPage() {
   const { t, lang, toggleLang } = useLanguage()
   const [openFaq, setOpenFaq] = useState<number | null>(null)
+  const [mobileMenu, setMobileMenu] = useState(false)
+
+  const features = [
+    {
+      icon: MessageCircle,
+      title: lang === 'hi' ? 'Staged WhatsApp Reminders' : 'Staged WhatsApp Reminders',
+      desc: lang === 'hi'
+        ? 'Day 1 polite, Day 3 payment link, Day 5 firm, Day 14 final notice — Hindi templates, auto-personalized.'
+        : 'Day 1 polite, Day 3 payment link, Day 5 firm, Day 14 final notice — Hindi templates, auto-personalized.',
+      tint: 'from-green-500/20 to-green-500/5 text-green-400',
+    },
+    {
+      icon: Phone,
+      title: lang === 'hi' ? 'AI Voice Calls (Hindi)' : 'AI Voice Calls (Hindi)',
+      desc: lang === 'hi'
+        ? 'System khud call karke Hindi me baat karta hai — date capture, dispute record, transcript save.'
+        : 'The system calls and speaks Hindi itself — captures dates, records disputes, saves transcripts.',
+      tint: 'from-indigo-500/20 to-indigo-500/5 text-indigo-400',
+    },
+    {
+      icon: CreditCard,
+      title: lang === 'hi' ? 'UPI Payment Links' : 'UPI Payment Links',
+      desc: lang === 'hi'
+        ? 'Har reminder me Razorpay link — customer ek tap me UPI se pay kare. Webhook se auto-reconcile.'
+        : 'Razorpay link in every reminder — customer pays via UPI in one tap. Auto-reconciled via webhook.',
+      tint: 'from-violet-500/20 to-violet-500/5 text-violet-400',
+    },
+    {
+      icon: Zap,
+      title: lang === 'hi' ? 'Payment Pe Auto-Stop' : 'Auto-Stop on Payment',
+      desc: lang === 'hi'
+        ? 'Paisa aate hi saare future reminders khud band. Koi double-reminder ka embarrassment nahi.'
+        : 'All future reminders stop the moment payment arrives. No embarrassing double-reminders.',
+      tint: 'from-yellow-500/20 to-yellow-500/5 text-yellow-400',
+    },
+    {
+      icon: BarChart3,
+      title: lang === 'hi' ? 'Collection Dashboard' : 'Collection Dashboard',
+      desc: lang === 'hi'
+        ? 'Kul udhaari, aging buckets (30/60/90 din), defaulter list, collection rate — sab ek screen pe.'
+        : 'Total outstanding, aging buckets (30/60/90 days), defaulter list, collection rate — one screen.',
+      tint: 'from-blue-500/20 to-blue-500/5 text-blue-400',
+    },
+    {
+      icon: ShieldCheck,
+      title: lang === 'hi' ? 'Compliance-First' : 'Compliance-First',
+      desc: lang === 'hi'
+        ? 'DLT templates, STOP pe instant opt-out, 9AM–9PM window, max 2 touches/din. Professional, kabhi spammy nahi.'
+        : 'DLT templates, instant opt-out on STOP, 9AM–9PM window, max 2 touches/day. Professional, never spammy.',
+      tint: 'from-teal-500/20 to-teal-500/5 text-teal-400',
+    },
+  ]
+
+  const timeline = [
+    { day: 'Day 1', icon: MessageCircle, label: lang === 'hi' ? 'Polite WhatsApp' : 'Polite WhatsApp', desc: lang === 'hi' ? 'Halki si yaad' : 'Gentle nudge' },
+    { day: 'Day 3', icon: CreditCard, label: lang === 'hi' ? 'Reminder + Pay Link' : 'Reminder + Pay Link', desc: lang === 'hi' ? 'UPI link ke saath' : 'With UPI link' },
+    { day: 'Day 5', icon: MessageCircle, label: lang === 'hi' ? 'Firm Message' : 'Firm Message', desc: lang === 'hi' ? 'Thoda sakht' : 'Firmer tone' },
+    { day: 'Day 7', icon: Phone, label: lang === 'hi' ? 'AI Voice Call' : 'AI Voice Call', desc: lang === 'hi' ? 'Hindi me baat' : 'Hindi conversation' },
+    { day: 'Day 10', icon: Phone, label: lang === 'hi' ? 'Call Retry' : 'Call Retry', desc: lang === 'hi' ? 'Dusri koshish' : 'Second attempt' },
+    { day: 'Day 14', icon: MessageCircle, label: lang === 'hi' ? 'Final Notice' : 'Final Notice', desc: lang === 'hi' ? 'Antim soochna' : 'Final notice' },
+    { day: 'Day 15', icon: Bell, label: lang === 'hi' ? 'Aapko Escalation' : 'Escalation to You', desc: lang === 'hi' ? 'Ab aap sambhalo' : 'Human takeover' },
+  ]
 
   const faqs = [
     {
-      q: lang === 'hi' ? 'Kya yeh safe hai?' : 'Is this safe?',
+      q: lang === 'hi' ? 'Kya yeh safe aur legal hai?' : 'Is this safe and legal?',
       a: lang === 'hi'
-        ? 'Bilkul. Aapka data Supabase (India servers) mein store hota hai. Razorpay India ka #1 payment gateway hai. Koi bhi API key client-side nahi hai.'
-        : 'Absolutely. Data stored on Supabase India servers. Razorpay is India\'s #1 payment gateway. No API keys on client-side.',
+        ? 'Bilkul. DLT-registered templates, har message me opt-out option, calls sirf subah 9 se raat 9 ke beech, ek customer ko din me max 2 messages. Data India (Mumbai) servers pe store hota hai. Ye professional collection hai — recovery-agent wali dadagiri nahi.'
+        : 'Absolutely. DLT-registered templates, opt-out in every message, calls only 9AM–9PM, max 2 touches/customer/day. Data stored on India (Mumbai) servers. This is professional collection — not strong-arm recovery.',
     },
     {
-      q: lang === 'hi' ? 'Customer ko kitne reminder bhejenge?' : 'How many reminders will customers get?',
+      q: lang === 'hi' ? 'Mere customers bura to nahi maanenge?' : "Won't my customers feel harassed?",
       a: lang === 'hi'
-        ? 'Default mein: Day 1 polite WhatsApp, Day 3 payment link, Day 5 firm message, Day 7 & 10 AI voice call, Day 14 final notice, Day 15 aapko escalation. Max 2 messages/customer/din. Quiet hours 9 PM – 9 AM mein koi message nahi.'
-        : 'Default: Day 1 polite WhatsApp, Day 3 payment link, Day 5 firm message, Day 7 & 10 AI voice call, Day 14 final notice, Day 15 escalation. Max 2 touches/customer/day. No messages 9 PM – 9 AM.',
+        ? 'Isi liye staged approach hai — pehle polite yaad, phir dheere-dheere firm. Tone hamesha respectful rehta hai, aur payment aate hi sab kuch turant band ho jata hai. Aksar customers kehte hain ki yaad dilaane ke liye shukriya.'
+        : "That's why it's staged — polite nudge first, gradually firmer. Tone stays respectful throughout, and everything stops instantly on payment. Customers often thank merchants for the reminder.",
     },
     {
-      q: lang === 'hi' ? 'Customer ne STOP bola toh?' : 'What if customer says STOP?',
+      q: lang === 'hi' ? 'Customer ne STOP bola toh?' : 'What if a customer says STOP?',
       a: lang === 'hi'
-        ? 'Turant ek confirmation message jaata hai aur hum permanently band kar dete hain. Opt-out list ka poora dhyan rakha jaata hai.'
-        : 'One confirmation message sent immediately and permanently opted out. Opt-out list is always respected.',
+        ? 'Turant ek confirmation message jaata hai aur us number pe hamesha ke liye reminders band. Opt-out list ka 100% samman — ye non-negotiable hai.'
+        : 'One confirmation goes out immediately and that number is silenced forever. The opt-out list is respected 100% — non-negotiable.',
     },
     {
-      q: lang === 'hi' ? 'Kaunse WhatsApp provider support hote hain?' : 'Which WhatsApp providers are supported?',
+      q: lang === 'hi' ? 'Setup me kitna time lagega?' : 'How long does setup take?',
       a: lang === 'hi'
-        ? 'AiSensy, Gupshup, Interakt, aur Meta Cloud API — sab support hain. Provider change karna sirf ek env variable badalna hai.'
-        : 'AiSensy, Gupshup, Interakt, and Meta Cloud API — all supported. Changing provider is just one env variable change.',
+        ? '5 minute. Signup → dukaan ka naam + UPI ID → customers add karo (Excel import bhi hai) → bas. Pehla reminder system khud bhej dega.'
+        : '5 minutes. Sign up → shop name + UPI ID → add customers (Excel import supported) → done. The system sends the first reminder itself.',
     },
     {
-      q: lang === 'hi' ? 'AI voice call mein kya hota hai?' : 'What happens on an AI voice call?',
+      q: lang === 'hi' ? 'AI voice call me kya hota hai?' : 'What happens on the AI voice call?',
       a: lang === 'hi'
-        ? 'Exotel call place karta hai. Sarvam AI Hindi mein baat karta hai. Customer payment date de sakta hai, dispute raise kar sakta hai, ya payment confirm kar sakta hai. Puri conversation transcript save hoti hai.'
-        : 'Exotel places the call. Sarvam AI speaks in Hindi. Customer can give a payment date, raise a dispute, or confirm payment. Full transcript is saved.',
+        ? 'Exotel call lagata hai, Sarvam AI Hindi me baat karta hai. Customer date de sakta hai ("shukravaar tak"), dispute raise kar sakta hai, ya turant pay kar sakta hai. Poori baat-cheet transcript me save hoti hai aur aap dashboard pe padh sakte ho.'
+        : 'Exotel places the call, Sarvam AI speaks Hindi. The customer can promise a date ("by Friday"), raise a dispute, or pay instantly. The full conversation is saved as a transcript you can read on the dashboard.',
     },
-  ]
-
-  const features = [
-    { icon: '💬', title: lang === 'hi' ? 'WhatsApp Reminders' : 'WhatsApp Reminders', desc: lang === 'hi' ? 'Staged Hindi reminders — polite se firm tak' : 'Staged Hindi reminders — polite to firm' },
-    { icon: '📞', title: lang === 'hi' ? 'AI Voice Calls' : 'AI Voice Calls', desc: lang === 'hi' ? 'Hindi mein baat, date capture, dispute record' : 'Hindi conversation, date capture, dispute recording' },
-    { icon: '💳', title: lang === 'hi' ? 'UPI Payment Links' : 'UPI Payment Links', desc: lang === 'hi' ? 'Razorpay link — customer seedha pay kar le' : 'Razorpay link — customer pays instantly' },
-    { icon: '⚡', title: lang === 'hi' ? 'Auto Stop' : 'Auto Stop', desc: lang === 'hi' ? 'Payment aate hi sab reminders band' : 'All reminders stop the moment payment arrives' },
-    { icon: '📊', title: lang === 'hi' ? 'Live Dashboard' : 'Live Dashboard', desc: lang === 'hi' ? 'Outstanding, collected, defaulter list' : 'Outstanding, collected, defaulter list' },
-    { icon: '🛡️', title: lang === 'hi' ? 'Opt-out Safe' : 'Opt-out Safe', desc: lang === 'hi' ? 'STOP bola → forever band' : 'STOP said → forever silenced' },
   ]
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100">
+    <div className="min-h-screen bg-gray-950 text-gray-100 overflow-x-clip">
       {/* ── Nav ── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-gray-950/80 backdrop-blur-md border-b border-white/10">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">💰</span>
-            <span className="font-bold text-xl gradient-text">Udhari OS</span>
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-gray-950/75 backdrop-blur-xl border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <Link href="/" aria-label="Udhari OS home">
+            <Logo />
+          </Link>
+          <div className="hidden md:flex items-center gap-8 text-sm text-gray-400">
+            <a href="#features" className="hover:text-white transition-colors">{lang === 'hi' ? 'Features' : 'Features'}</a>
+            <a href="#journey" className="hover:text-white transition-colors">{lang === 'hi' ? 'Kaise Kaam Karta Hai' : 'How It Works'}</a>
+            <a href="#pricing" className="hover:text-white transition-colors">{lang === 'hi' ? 'Pricing' : 'Pricing'}</a>
+            <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={toggleLang}
-              className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg border border-white/10 hover:border-white/30 transition-all"
+              className="text-xs font-medium text-gray-400 hover:text-white px-3 py-2 rounded-lg border border-white/10 hover:border-white/25 transition-all"
             >
-              {lang === 'hi' ? 'EN' : 'HI'}
+              {lang === 'hi' ? 'EN' : 'हिं'}
             </button>
             <Link
               href="/login"
-              className="text-sm text-gray-300 hover:text-white px-4 py-2 rounded-lg hover:bg-white/10 transition-all"
+              className="hidden sm:block text-sm text-gray-300 hover:text-white px-4 py-2 rounded-lg hover:bg-white/10 transition-all"
             >
               {lang === 'hi' ? 'Login' : 'Login'}
             </Link>
             <Link
               href="/login"
-              className="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition-all font-medium"
+              className="hidden sm:inline-flex text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl transition-all font-semibold shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 items-center gap-1.5"
             >
-              {t.landing.hero.cta}
+              {t.landing.hero.cta} <ArrowRight className="w-4 h-4" />
             </Link>
+            <button
+              onClick={() => setMobileMenu(!mobileMenu)}
+              className="md:hidden p-2 text-gray-400 hover:text-white"
+              aria-label="Menu"
+            >
+              {mobileMenu ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
+        {mobileMenu && (
+          <div className="md:hidden border-t border-white/10 px-4 py-4 space-y-1 bg-gray-950/95 backdrop-blur-xl">
+            {[
+              { href: '#features', label: 'Features' },
+              { href: '#journey', label: lang === 'hi' ? 'Kaise Kaam Karta Hai' : 'How It Works' },
+              { href: '#pricing', label: lang === 'hi' ? 'Pricing' : 'Pricing' },
+              { href: '#faq', label: 'FAQ' },
+              { href: '/login', label: lang === 'hi' ? 'Login' : 'Login' },
+            ].map((l) => (
+              <a
+                key={l.href}
+                href={l.href}
+                onClick={() => setMobileMenu(false)}
+                className="block px-3 py-2.5 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white text-sm"
+              >
+                {l.label}
+              </a>
+            ))}
+          </div>
+        )}
       </nav>
 
       {/* ── Hero ── */}
-      <section className="pt-32 pb-20 px-4 text-center relative overflow-hidden">
-        {/* Background gradient orbs */}
-        <div className="absolute top-20 left-1/4 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-40 right-1/4 w-80 h-80 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
+      <section className="relative pt-28 sm:pt-36 pb-16 sm:pb-24 px-4 sm:px-6">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-indigo-600/15 rounded-full blur-[120px]" />
+          <div className="absolute top-40 -left-40 w-96 h-96 bg-violet-600/10 rounded-full blur-[100px]" />
+          <div className="absolute top-60 -right-40 w-96 h-96 bg-blue-600/10 rounded-full blur-[100px]" />
+        </div>
 
-        <div className="relative max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-2 bg-indigo-500/20 text-indigo-300 px-4 py-1.5 rounded-full text-sm mb-6 border border-indigo-500/30">
-            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-            {lang === 'hi' ? '14-din free trial — credit card nahi chahiye' : '14-day free trial — no credit card needed'}
+        <div className="relative max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          <div>
+            <Reveal>
+              <div className="inline-flex items-center gap-2 bg-indigo-500/15 text-indigo-300 px-4 py-1.5 rounded-full text-[13px] mb-6 border border-indigo-500/25">
+                <Sparkles className="w-3.5 h-3.5" />
+                {lang === 'hi' ? '14-din free trial — credit card nahi chahiye' : '14-day free trial — no credit card needed'}
+              </div>
+            </Reveal>
+            <Reveal delay={80}>
+              <h1 className="text-[2.6rem] leading-[1.08] sm:text-6xl font-extrabold mb-6 tracking-tight">
+                {lang === 'hi' ? (
+                  <>
+                    Udhaari vasool karna,
+                    <br />
+                    <span className="gradient-text">ab automatic.</span>
+                  </>
+                ) : (
+                  <>
+                    Payment collection,
+                    <br />
+                    <span className="gradient-text">on autopilot.</span>
+                  </>
+                )}
+              </h1>
+            </Reveal>
+            <Reveal delay={160}>
+              <p className="text-lg text-gray-400 mb-8 max-w-lg leading-relaxed">
+                {t.landing.hero.subheadline}{' '}
+                <span className="text-gray-200 font-medium">
+                  {lang === 'hi'
+                    ? 'Phone uthane ki zaroorat hi nahi padegi.'
+                    : 'You may never need to pick up the phone again.'}
+                </span>
+              </p>
+            </Reveal>
+            <Reveal delay={240}>
+              <div className="flex flex-col sm:flex-row gap-3.5 mb-10">
+                <Link
+                  href="/login"
+                  className="inline-flex justify-center items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-2xl text-base font-semibold transition-all hover:scale-[1.02] shadow-xl shadow-indigo-500/30"
+                >
+                  {t.landing.hero.cta} <ArrowRight className="w-5 h-5" />
+                </Link>
+                <a
+                  href="#journey"
+                  className="inline-flex justify-center items-center gap-2.5 bg-white/5 hover:bg-white/10 text-white px-8 py-4 rounded-2xl text-base font-semibold transition-all border border-white/15"
+                >
+                  <span className="w-8 h-8 rounded-full bg-indigo-600/40 flex items-center justify-center">
+                    <Play className="w-3.5 h-3.5 ml-0.5" fill="currentColor" />
+                  </span>
+                  {t.landing.hero.demo}
+                </a>
+              </div>
+            </Reveal>
+            <Reveal delay={320}>
+              <div className="flex flex-wrap gap-x-8 gap-y-4">
+                {[
+                  { icon: Clock, big: lang === 'hi' ? '5 min' : '5 min', small: lang === 'hi' ? 'me setup' : 'setup time' },
+                  { icon: Zap, big: '24/7', small: lang === 'hi' ? 'automatic chase' : 'automatic chase' },
+                  { icon: ShieldCheck, big: '100%', small: lang === 'hi' ? 'opt-out samman' : 'opt-out respected' },
+                ].map((s) => (
+                  <div key={s.small} className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                      <s.icon className="w-5 h-5 text-indigo-400" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-white leading-none">{s.big}</p>
+                      <p className="text-xs text-gray-500 mt-1">{s.small}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Reveal>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 leading-tight">
-            {lang === 'hi' ? (
-              <>
-                Udhaari collection<br />
-                <span className="gradient-text">ab automatic</span>
-              </>
-            ) : (
-              <>
-                Payment collection<br />
-                <span className="gradient-text">on autopilot</span>
-              </>
-            )}
-          </h1>
-
-          <p className="text-lg sm:text-xl text-gray-400 mb-10 max-w-2xl mx-auto leading-relaxed">
-            {t.landing.hero.subheadline}
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/login"
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all hover:scale-105 shadow-lg shadow-indigo-500/25"
-            >
-              {t.landing.hero.cta}
-            </Link>
-            <a
-              href="#demo"
-              className="bg-white/10 hover:bg-white/15 text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all border border-white/20"
-            >
-              {t.landing.hero.demo} →
-            </a>
-          </div>
-
-          {/* Social proof */}
-          <p className="mt-8 text-sm text-gray-500">
-            {lang === 'hi'
-              ? '🏪 Kirana stores, wholesale distributors, aur suppliers ke liye banaya gaya'
-              : '🏪 Built for kirana stores, wholesale distributors, and suppliers'}
-          </p>
+          <Reveal delay={200} className="lg:pl-4">
+            <DashboardMockup lang={lang} />
+          </Reveal>
         </div>
       </section>
 
-      {/* ── Demo Video Placeholder ── */}
-      <section id="demo" className="py-16 px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="glass-card aspect-video flex items-center justify-center group hover:border-indigo-500/30 transition-all cursor-pointer">
-            <div className="text-center">
-              <div className="w-20 h-20 bg-indigo-600/30 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-indigo-600/50 transition-all">
-                <svg className="w-8 h-8 text-indigo-400 ml-1" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              </div>
-              <p className="text-gray-400 text-sm">
-                {lang === 'hi' ? '2-minute demo dekhein' : 'Watch 2-minute demo'}
-              </p>
-              <p className="text-gray-600 text-xs mt-1">
-                {lang === 'hi' ? 'Video jald aayega' : 'Video coming soon'}
-              </p>
-            </div>
+      {/* ── Trust strip ── */}
+      <section className="border-y border-white/10 bg-white/[0.02] py-8 px-4">
+        <div className="max-w-7xl mx-auto">
+          <p className="text-center text-xs uppercase tracking-[0.2em] text-gray-600 mb-6">
+            {lang === 'hi' ? 'In sab ke liye banaya gaya' : 'Built for'}
+          </p>
+          <div className="flex flex-wrap justify-center gap-x-10 gap-y-4 text-gray-400 font-medium">
+            {[
+              lang === 'hi' ? 'Kirana Stores' : 'Kirana Stores',
+              lang === 'hi' ? 'Wholesale Distributors' : 'Wholesale Distributors',
+              lang === 'hi' ? 'FMCG Suppliers' : 'FMCG Suppliers',
+              lang === 'hi' ? 'Hardware Dealers' : 'Hardware Dealers',
+              lang === 'hi' ? 'Pharma Stockists' : 'Pharma Stockists',
+            ].map((s) => (
+              <span key={s} className="flex items-center gap-2 text-sm">
+                <Check className="w-4 h-4 text-indigo-500" strokeWidth={3} /> {s}
+              </span>
+            ))}
           </div>
         </div>
       </section>
 
       {/* ── Features ── */}
-      <section className="py-16 px-4">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-4">
-            {lang === 'hi' ? 'Kya milta hai?' : 'What you get'}
-          </h2>
-          <p className="text-gray-400 text-center mb-12 max-w-xl mx-auto">
-            {lang === 'hi'
-              ? 'Ek complete collection system — WhatsApp se lekar AI voice call tak'
-              : 'A complete collection system — from WhatsApp to AI voice calls'}
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <section id="features" className="py-20 sm:py-28 px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto">
+          <Reveal className="text-center max-w-2xl mx-auto mb-14">
+            <p className="text-indigo-400 text-sm font-semibold uppercase tracking-[0.18em] mb-3">
+              {lang === 'hi' ? 'Poora System' : 'The Full System'}
+            </p>
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4">
+              {lang === 'hi' ? 'Ek hi jagah, sab kuch' : 'Everything, in one place'}
+            </h2>
+            <p className="text-gray-400 text-lg">
+              {lang === 'hi'
+                ? 'Reminder bhejna, call karna, payment lena, hisaab rakhna — koi alag tool nahi chahiye.'
+                : 'Sending reminders, making calls, collecting payments, keeping books — no separate tools needed.'}
+            </p>
+          </Reveal>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {features.map((f, i) => (
-              <div
-                key={i}
-                className="glass-card p-6 hover:border-indigo-500/30 transition-all group"
-              >
-                <div className="text-3xl mb-3">{f.icon}</div>
-                <h3 className="font-semibold text-white mb-1 group-hover:text-indigo-300 transition-colors">
-                  {f.title}
-                </h3>
-                <p className="text-gray-400 text-sm">{f.desc}</p>
-              </div>
+              <Reveal key={f.title} delay={(i % 3) * 90}>
+                <div className="glass-card p-7 h-full hover:border-indigo-500/35 hover:-translate-y-1 transition-all duration-300 group">
+                  <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${f.tint} flex items-center justify-center mb-5 group-hover:scale-110 transition-transform`}>
+                    <f.icon className="w-6 h-6" strokeWidth={2} />
+                  </div>
+                  <h3 className="font-bold text-white text-lg mb-2">{f.title}</h3>
+                  <p className="text-gray-400 text-[15px] leading-relaxed">{f.desc}</p>
+                </div>
+              </Reveal>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── How it works ── */}
-      <section className="py-16 px-4 bg-white/2">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12">
-            {lang === 'hi' ? 'Kaise kaam karta hai?' : 'How it works'}
-          </h2>
-          <div className="space-y-6">
-            {[
-              { step: '1', icon: '➕', title: lang === 'hi' ? 'Customer + Udhaar add karo' : 'Add customer + outstanding', desc: lang === 'hi' ? 'Naam, phone, amount, due date. Excel import bhi ho sakta hai.' : 'Name, phone, amount, due date. Excel import supported.' },
-              { step: '2', icon: '🤖', title: lang === 'hi' ? 'System automatically chase karta hai' : 'System automatically chases', desc: lang === 'hi' ? 'WhatsApp → payment link → AI voice call — sab apne aap, quiet hours respect karte hue.' : 'WhatsApp → payment link → AI voice call — all automatic, respecting quiet hours.' },
-              { step: '3', icon: '✅', title: lang === 'hi' ? 'Payment aate hi sab band' : 'Payment received — everything stops', desc: lang === 'hi' ? 'Razorpay webhook aate hi — paid mark, reminders cancel, aapko notification.' : 'Razorpay webhook arrives — marked paid, reminders cancelled, you get notified.' },
-            ].map((s) => (
-              <div key={s.step} className="flex gap-4 items-start">
-                <div className="w-12 h-12 rounded-full bg-indigo-600/30 border border-indigo-500/30 flex items-center justify-center text-indigo-300 font-bold flex-shrink-0">
-                  {s.step}
-                </div>
-                <div className="glass-card flex-1 p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xl">{s.icon}</span>
-                    <h3 className="font-semibold">{s.title}</h3>
+      {/* ── Collection journey timeline ── */}
+      <section id="journey" className="py-20 sm:py-28 px-4 sm:px-6 bg-white/[0.02] border-y border-white/10 relative overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="relative max-w-6xl mx-auto">
+          <Reveal className="text-center max-w-2xl mx-auto mb-14">
+            <p className="text-indigo-400 text-sm font-semibold uppercase tracking-[0.18em] mb-3">
+              {lang === 'hi' ? 'Engine Ke Andar' : 'Inside The Engine'}
+            </p>
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4">
+              {lang === 'hi' ? 'Ek udhaari ki 15-din ki kahani' : 'The 15-day journey of one due'}
+            </h2>
+            <p className="text-gray-400 text-lg">
+              {lang === 'hi'
+                ? 'Aapne entry ki — uske baad system ne sab sambhal liya. Dekho kaise:'
+                : 'You made the entry — the system handled the rest. Watch how:'}
+            </p>
+          </Reveal>
+
+          <div className="relative">
+            {/* connecting line (desktop) */}
+            <div className="hidden lg:block absolute top-7 left-[4%] right-[4%] h-px bg-gradient-to-r from-indigo-500/10 via-indigo-500/40 to-indigo-500/10" />
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
+              {timeline.map((st, i) => (
+                <Reveal key={st.day} delay={i * 70}>
+                  <div className="relative text-center group">
+                    <div className="w-14 h-14 mx-auto rounded-2xl bg-gray-900 border border-indigo-500/30 flex items-center justify-center mb-3 group-hover:border-indigo-400 group-hover:shadow-lg group-hover:shadow-indigo-500/25 transition-all relative z-10">
+                      <st.icon className="w-6 h-6 text-indigo-400" />
+                    </div>
+                    <p className="text-xs font-bold text-indigo-300 mb-1">{st.day}</p>
+                    <p className="text-sm font-semibold text-white leading-tight mb-1">{st.label}</p>
+                    <p className="text-xs text-gray-500">{st.desc}</p>
                   </div>
-                  <p className="text-gray-400 text-sm">{s.desc}</p>
-                </div>
-              </div>
-            ))}
+                </Reveal>
+              ))}
+            </div>
           </div>
+
+          <Reveal delay={200} className="mt-12">
+            <div className="glass-card max-w-3xl mx-auto p-6 flex flex-col sm:flex-row items-center gap-5">
+              <div className="w-12 h-12 rounded-2xl bg-green-500/15 border border-green-500/25 flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="w-6 h-6 text-green-400" />
+              </div>
+              <p className="text-gray-300 text-[15px] leading-relaxed text-center sm:text-left">
+                {lang === 'hi'
+                  ? 'Aur agar beech me kahin bhi payment aa gaya — chahe Day 2 ho ya Day 13 — to saare future steps turant cancel. Customer ko ek extra message tak nahi jayega.'
+                  : 'And if payment arrives at any point — Day 2 or Day 13 — all future steps cancel instantly. The customer never gets one extra message.'}
+              </p>
+            </div>
+          </Reveal>
         </div>
       </section>
 
       {/* ── Pricing ── */}
-      <section id="pricing" className="py-16 px-4">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-4">{t.landing.pricing.title}</h2>
-          <p className="text-gray-400 text-center mb-12">
-            {lang === 'hi' ? 'Simple pricing. Koi hidden fees nahi.' : 'Simple pricing. No hidden fees.'}
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <section id="pricing" className="py-20 sm:py-28 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto">
+          <Reveal className="text-center mb-14">
+            <p className="text-indigo-400 text-sm font-semibold uppercase tracking-[0.18em] mb-3">Pricing</p>
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4">{t.landing.pricing.title}</h2>
+            <p className="text-gray-400 text-lg">
+              {lang === 'hi' ? 'Simple pricing. Koi hidden fees nahi, kabhi bhi cancel karo.' : 'Simple pricing. No hidden fees, cancel anytime.'}
+            </p>
+          </Reveal>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch max-w-5xl mx-auto">
             {[
               { ...t.landing.pricing.trial, highlight: false },
               { ...t.landing.pricing.starter, highlight: false },
               { ...t.landing.pricing.pro, highlight: true },
             ].map((plan, i) => (
-              <div
-                key={i}
-                className={`glass-card p-6 flex flex-col ${plan.highlight ? 'border-indigo-500/50 bg-indigo-500/10' : ''}`}
-              >
-                {plan.highlight && (
-                  <div className="text-xs text-indigo-300 font-medium mb-2 uppercase tracking-wider">
-                    {lang === 'hi' ? '⭐ Sabse Popular' : '⭐ Most Popular'}
-                  </div>
-                )}
-                <h3 className="text-xl font-bold mb-1">{plan.name}</h3>
-                <div className="text-3xl font-bold text-white mb-4">
-                  {plan.price}
-                  {'duration' in plan && plan.duration && (
-                    <span className="text-sm text-gray-400 font-normal ml-1">
-                      ({plan.duration})
-                    </span>
-                  )}
-                </div>
-                <ul className="space-y-2 flex-1 mb-6">
-                  {plan.features.map((f, j) => (
-                    <li key={j} className="flex items-center gap-2 text-sm text-gray-300">
-                      <span className="text-green-400">✓</span> {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href="/login"
-                  className={`w-full py-3 rounded-xl text-center font-medium transition-all ${
+              <Reveal key={plan.name} delay={i * 90} className="h-full">
+                <div
+                  className={`rounded-2xl p-7 flex flex-col h-full transition-all duration-300 hover:-translate-y-1.5 ${
                     plan.highlight
-                      ? 'bg-indigo-600 hover:bg-indigo-500 text-white'
-                      : 'bg-white/10 hover:bg-white/15 text-white border border-white/20'
+                      ? 'bg-gradient-to-b from-indigo-600/25 to-indigo-600/5 border-2 border-indigo-500/60 shadow-2xl shadow-indigo-500/20 relative'
+                      : 'glass-card hover:border-white/25'
                   }`}
                 >
-                  {lang === 'hi' ? 'Shuru Karein' : 'Get Started'}
-                </Link>
-              </div>
+                  {plan.highlight && (
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg whitespace-nowrap">
+                      {lang === 'hi' ? '⭐ Sabse Popular' : '⭐ Most Popular'}
+                    </div>
+                  )}
+                  <h3 className="text-lg font-bold text-white mb-1">{plan.name}</h3>
+                  <div className="flex items-baseline gap-2 mb-6">
+                    <span className="text-4xl font-extrabold text-white amount-display">{plan.price}</span>
+                    {'duration' in plan && plan.duration && (
+                      <span className="text-sm text-gray-500">/ {plan.duration}</span>
+                    )}
+                  </div>
+                  <ul className="space-y-3 flex-1 mb-8">
+                    {plan.features.map((f: string, j: number) => (
+                      <li key={j} className="flex items-start gap-2.5 text-sm text-gray-300">
+                        <span className="w-5 h-5 rounded-full bg-green-500/15 border border-green-500/25 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <Check className="w-3 h-3 text-green-400" strokeWidth={3} />
+                        </span>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href="/login"
+                    className={`w-full py-3.5 rounded-xl text-center font-semibold transition-all flex items-center justify-center gap-2 ${
+                      plan.highlight
+                        ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30'
+                        : 'bg-white/8 hover:bg-white/12 text-white border border-white/15'
+                    }`}
+                  >
+                    {lang === 'hi' ? 'Shuru Karein' : 'Get Started'} <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              </Reveal>
             ))}
           </div>
+          <Reveal delay={150}>
+            <p className="text-center text-sm text-gray-600 mt-8 flex items-center justify-center gap-2">
+              <Wallet className="w-4 h-4" />
+              {lang === 'hi'
+                ? 'WhatsApp/SMS/Call ke operator charges alag se (paise me, actual usage pe)'
+                : 'Operator charges for WhatsApp/SMS/calls billed separately (pennies, pay-as-you-go)'}
+            </p>
+          </Reveal>
         </div>
       </section>
 
       {/* ── FAQ ── */}
-      <section className="py-16 px-4">
-        <div className="max-w-2xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-10">
-            {lang === 'hi' ? 'Sawaal Jawab' : 'FAQ'}
-          </h2>
-          <div className="space-y-3">
+      <section id="faq" className="py-20 sm:py-28 px-4 sm:px-6 bg-white/[0.02] border-y border-white/10">
+        <div className="max-w-3xl mx-auto">
+          <Reveal className="text-center mb-12">
+            <p className="text-indigo-400 text-sm font-semibold uppercase tracking-[0.18em] mb-3">FAQ</p>
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+              {lang === 'hi' ? 'Aksar poochhe jaane wale sawaal' : 'Frequently asked questions'}
+            </h2>
+          </Reveal>
+          <div className="space-y-3.5">
             {faqs.map((faq, i) => (
-              <div key={i} className="glass-card overflow-hidden">
-                <button
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-white/5 transition-colors"
-                  aria-expanded={openFaq === i}
-                >
-                  <span className="font-medium text-sm sm:text-base">{faq.q}</span>
-                  <span className={`text-indigo-400 transition-transform ml-3 ${openFaq === i ? 'rotate-45' : ''}`}>
-                    +
-                  </span>
-                </button>
-                {openFaq === i && (
-                  <div className="px-5 pb-4 text-gray-400 text-sm leading-relaxed border-t border-white/5 pt-3">
-                    {faq.a}
+              <Reveal key={i} delay={i * 60}>
+                <div className={`glass-card overflow-hidden transition-all ${openFaq === i ? 'border-indigo-500/40' : ''}`}>
+                  <button
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-white/[0.03] transition-colors"
+                    aria-expanded={openFaq === i}
+                  >
+                    <span className="font-semibold text-[15px] sm:text-base text-white pr-4">{faq.q}</span>
+                    <span className={`flex-shrink-0 w-8 h-8 rounded-full border flex items-center justify-center transition-all ${openFaq === i ? 'bg-indigo-600 border-indigo-600 rotate-180' : 'border-white/20'}`}>
+                      <ChevronDown className="w-4 h-4 text-white" />
+                    </span>
+                  </button>
+                  <div
+                    className={`grid transition-all duration-300 ease-out ${openFaq === i ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
+                  >
+                    <div className="overflow-hidden">
+                      <p className="px-6 pb-6 text-gray-400 text-[15px] leading-relaxed">{faq.a}</p>
+                    </div>
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Testimonials placeholder ── */}
-      <section className="py-16 px-4 bg-white/2">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-2xl font-bold mb-8">
-            {lang === 'hi' ? 'Merchants kya kehte hain' : 'What merchants say'}
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[
-              { name: 'Ramesh Gupta', role: lang === 'hi' ? 'Wholesale Distributor, Delhi' : 'Wholesale Distributor, Delhi', quote: lang === 'hi' ? '"Pehle 2 ghante call karne mein jaate the. Ab sab automatic hai. ₹2.4 lakh is mahine vasool."' : '"Used to spend 2 hours calling. Now everything is automatic. ₹2.4L collected this month."' },
-              { name: 'Priya Sharma', role: lang === 'hi' ? 'Kirana Supplier, Mumbai' : 'Kirana Supplier, Mumbai', quote: lang === 'hi' ? '"WhatsApp reminders bahut polite hain. Customers bura nahi maante aur pay kar dete hain."' : '"WhatsApp reminders are so polite. Customers don\'t mind and just pay."' },
-              { name: 'Vijay Mehta', role: lang === 'hi' ? 'Hardware Dealer, Pune' : 'Hardware Dealer, Pune', quote: lang === 'hi' ? '"AI voice call feature kamaal ka hai. Customer date de deta hai aur system follow up kar leta hai."' : '"The AI voice call feature is amazing. Customer gives a date and the system follows up."' },
-            ].map((t, i) => (
-              <div key={i} className="glass-card p-5 text-left">
-                <p className="text-gray-300 text-sm mb-4 italic">{t.quote}</p>
-                <div>
-                  <p className="font-semibold text-white text-sm">{t.name}</p>
-                  <p className="text-gray-500 text-xs">{t.role}</p>
                 </div>
-              </div>
+              </Reveal>
             ))}
           </div>
-          <p className="text-xs text-gray-600 mt-4">
-            {lang === 'hi' ? '* Illustrative testimonials' : '* Illustrative testimonials'}
-          </p>
         </div>
       </section>
 
-      {/* ── Footer CTA ── */}
-      <section className="py-20 px-4 text-center">
-        <div className="max-w-2xl mx-auto">
-          <h2 className="text-3xl font-bold mb-4">
-            {lang === 'hi' ? 'Aaj hi shuru karein — free mein' : 'Start today — for free'}
+      {/* ── Final CTA ── */}
+      <section className="py-24 sm:py-32 px-4 sm:px-6 relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-indigo-600/15 rounded-full blur-[120px]" />
+        </div>
+        <Reveal className="relative max-w-3xl mx-auto text-center">
+          <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-sm text-gray-400 mb-6">
+            <IndianRupee className="w-4 h-4 text-green-400" />
+            {lang === 'hi' ? 'Har din ka delay = paisa atka hua' : 'Every delayed day = money stuck'}
+          </div>
+          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-5 leading-tight">
+            {lang === 'hi' ? (
+              <>Aaj ka udhaar, <span className="gradient-text">aaj se automatic.</span></>
+            ) : (
+              <>Today&apos;s dues, <span className="gradient-text">automatic from today.</span></>
+            )}
           </h2>
-          <p className="text-gray-400 mb-8">
+          <p className="text-gray-400 text-lg mb-10 max-w-xl mx-auto">
             {lang === 'hi'
-              ? '14 din ka free trial. Koi credit card nahi. Setup 5 minute mein.'
-              : '14-day free trial. No credit card. Setup in 5 minutes.'}
+              ? '14 din free. Koi credit card nahi. 5 minute me setup. Pehla reminder aaj hi jayega.'
+              : '14 days free. No credit card. 5-minute setup. Your first reminder goes out today.'}
           </p>
           <Link
             href="/login"
-            className="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-10 py-4 rounded-xl text-lg font-semibold transition-all hover:scale-105 shadow-lg shadow-indigo-500/25"
+            className="inline-flex items-center gap-2.5 bg-indigo-600 hover:bg-indigo-500 text-white px-10 py-4.5 rounded-2xl text-lg font-bold transition-all hover:scale-[1.03] shadow-2xl shadow-indigo-500/35"
           >
-            {t.landing.hero.cta}
+            {t.landing.hero.cta} <ArrowRight className="w-5 h-5" />
           </Link>
-        </div>
+        </Reveal>
       </section>
 
       {/* ── Footer ── */}
-      <footer className="border-t border-white/10 py-8 px-4">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-gray-600 text-sm">
-          <div className="flex items-center gap-2">
-            <span>💰</span>
-            <span className="font-bold text-gray-400">Udhari OS</span>
+      <footer className="border-t border-white/10 py-10 px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+            <Logo />
+            <div className="flex gap-6 text-sm text-gray-500">
+              <a href="#" className="hover:text-gray-300 transition-colors">{lang === 'hi' ? 'Privacy Policy' : 'Privacy Policy'}</a>
+              <a href="#" className="hover:text-gray-300 transition-colors">{lang === 'hi' ? 'Terms' : 'Terms'}</a>
+              <a href="mailto:support@udhari.app" className="hover:text-gray-300 transition-colors">Support</a>
+            </div>
           </div>
-          <p>© 2025 Udhari OS. All rights reserved.</p>
-          <div className="flex gap-4">
-            <a href="#" className="hover:text-gray-400 transition-colors">Privacy</a>
-            <a href="#" className="hover:text-gray-400 transition-colors">Terms</a>
-            <a href="mailto:support@udhari.app" className="hover:text-gray-400 transition-colors">Support</a>
-          </div>
+          <p className="text-center text-xs text-gray-700 mt-8">© 2026 Udhari OS. {lang === 'hi' ? 'Sabhi adhikaar surakshit.' : 'All rights reserved.'}</p>
         </div>
       </footer>
     </div>

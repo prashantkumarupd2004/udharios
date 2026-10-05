@@ -12,9 +12,10 @@ import { logger } from '@/lib/logger'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getSession()
     if (!session?.merchantId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -24,7 +25,7 @@ export async function POST(
     const { resolution } = resolveDisputeSchema.parse(body)
 
     const dispute = await prisma.dispute.findFirst({
-      where: { id: params.id, merchantId: session.merchantId },
+      where: { id: id, merchantId: session.merchantId },
     })
 
     if (!dispute) return NextResponse.json({ error: 'Dispute not found' }, { status: 404 })
@@ -33,7 +34,7 @@ export async function POST(
     }
 
     await prisma.dispute.update({
-      where: { id: params.id },
+      where: { id: id },
       data: { status: 'resolved', resolution, resolvedAt: new Date() },
     })
 
@@ -47,7 +48,7 @@ export async function POST(
       actor: 'merchant',
       action: AUDIT_ACTIONS.DISPUTE_RESOLVED,
       entity: 'dispute',
-      entityId: params.id,
+      entityId: id,
       payload: { resolution },
     })
 

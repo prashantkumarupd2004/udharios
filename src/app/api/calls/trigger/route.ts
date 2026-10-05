@@ -13,13 +13,8 @@ import { logger } from '@/lib/logger'
 
 async function getMerchantId(request: NextRequest): Promise<string | null> {
   const session = await getSession()
-    if (!session?.merchantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-      const dbUser = await prisma.user.findFirst({
-    where: { supabaseId: user.id },
-    select: { merchantId: true },
-  })
-  return session.merchantId ?? null
+    if (!session?.merchantId) return null
+return session.merchantId ?? null
 }
 
 export async function POST(request: NextRequest) {
@@ -53,7 +48,7 @@ export async function POST(request: NextRequest) {
     // Check sending window
     if (!isWithinSendingWindow(outstanding.merchant.quietStart, outstanding.merchant.quietEnd)) {
       return NextResponse.json(
-        { error: lang_error('Quiet hours mein call nahi ho sakta (9 PM – 9 AM)', 'Cannot call during quiet hours (9 PM – 9 AM)') },
+        { error: 'Quiet hours mein call nahi ho sakta (9 PM – 9 AM)' },
         { status: 400 }
       )
     }
@@ -125,20 +120,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       call: callRecord,
-      message: lang === 'hi'
-        ? `Call shuru ho gayi — ${outstanding.customer.name} ke phone par ring ho rahi hai`
-        : `Call initiated — ringing ${outstanding.customer.name}`,
+      message: `Call shuru ho gayi — ${outstanding.customer.name} ke phone par ring ho rahi hai`,
     }, { status: 201 })
   } catch (err) {
     logger.error('POST /api/calls/trigger error', { error: String(err) })
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
 }
-
-// Helper to return bilingual error messages
-function lang_error(hi: string, en: string) {
-  return hi // default to Hindi; the client can use the `lang` context
-}
-
-// Suppress unused warning
-const lang = 'hi'

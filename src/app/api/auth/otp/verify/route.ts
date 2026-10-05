@@ -1,45 +1,56 @@
 /**
- * POST /api/auth/otp/verify
+ * POST /api/auth/otp/verify — Verify OTP via MSG91 v5 API (server-side flow)
  *
- * Accepts the MSG91 Widget access-token sent from the browser
- * after the Widget JS SDK verifies the OTP on the client side.
- *
- * Body: { accessToken: string }
+ * Body: { phone: string, otp: string }
  *
  * Flow:
- *   1. MSG91 Widget JS SDK sends OTP + user enters it → Widget verifies
- *   2. On success, Widget fires callback with { "access-token": "..." }
- *   3. Frontend sends that token here
- *   4. We call MSG91 verifyAccessToken → get mobile number
- *   5. Find/create merchant → set session cookie → return redirectTo
+ *   1. Frontend collects 6-digit OTP from user (/login/otp page)
+ *   2. We call MSG91 /otp/verify with { mobile, otp }
+ *   3. On success → find/create merchant → set JWT session cookie → return redirectTo
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
-import { msg91VerifyAccessToken, toE164 } from '@/lib/msg91'
+import { normalizePhone, toE164, msg91VerifyOtp } from '@/lib/msg91'
 import { createSessionToken, setSessionCookie } from '@/lib/session'
 import { addDays } from '@/lib/date-utils'
-import { z } from 'zod'
-
-const schema = z.object({
-  accessToken: z.string().min(8),
-})
+import { verifyOtpSchema } from '@/validations'
+import { checkAndRecordVerify } from '@/lib/rateLimit'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const parsed = schema.safeParse(body)
+    const parsed = verifyOtpSchema.safeParse(body)
     if (!parsed.success) {
       return NextResponse.json({ ok: false, error: 'invalid_input' }, { status: 400 })
     }
 
-    // Verify access-token with MSG91 → get mobile number
-    const verifyResult = await msg91VerifyAccessToken(parsed.data.accessToken)
-    if (!verifyResult.ok) {
-      return NextResponse.json({ ok: false, error: 'invalid_token' }, { status: 401 })
+    const mobile91 = normalizePhone(parsed.data.phone)
+    if (!mobile91) {
+      return NextResponse.json({ ok: false, error: 'invalid_phone' }, { status: 400 })
     }
 
-    const phoneE164 = toE164(verifyResult.mobile)  // +91XXXXXXXXXX
+    // Our-side verify attempt limiting (MSG91 has its own too)
+    const rateCheck = checkAndRecordVerify(mobile91)
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: 'too_many_attempts',
+          ...(rateCheck.reason === 'cooldown' ? { retryAfterSec: rateCheck.retryAfterSec } : {}),
+        },
+        { status: 429 }
+      )
+    }
+
+    // Verify OTP with MSG91
+    const verifyResult = await msg91VerifyOtp(mobile91, parsed.data.otp)
+    if (!verifyResult.ok) {
+      const error = verifyResult.error === 'expired' ? 'otp_expired' : 'wrong_otp'
+      return NextResponse.json({ ok: false, error }, { status: 401 })
+    }
+
+    const phoneE164 = toE164(mobile91) // +91XXXXXXXXXX
 
     // Find or create merchant
     let merchant = await prisma.merchant.findFirst({
@@ -91,7 +102,7 @@ export async function POST(request: NextRequest) {
     })
 
     const redirectTo = !merchant.businessName ? '/onboarding' : '/dashboard'
-    logger.info('Login successful via Widget', { merchantId: merchant.id, isNewUser })
+    logger.info('Login successful via OTP', { merchantId: merchant.id, isNewUser })
 
     const response = NextResponse.json({ ok: true, isNewUser, redirectTo })
     setSessionCookie(response, sessionToken)

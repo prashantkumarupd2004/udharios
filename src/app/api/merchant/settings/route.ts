@@ -10,13 +10,8 @@ import { logger } from '@/lib/logger'
 
 async function getMerchantId(request: NextRequest): Promise<string | null> {
   const session = await getSession()
-    if (!session?.merchantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-      const dbUser = await prisma.user.findFirst({
-    where: { supabaseId: user.id },
-    select: { merchantId: true },
-  })
-  return session.merchantId ?? null
+    if (!session?.merchantId) return null
+return session.merchantId ?? null
 }
 
 export async function GET(request: NextRequest) {

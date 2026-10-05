@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ComponentType } from 'react'
 import Link from 'next/link'
+import { Wallet, AlertTriangle, BadgeCheck, TrendingUp, Plus } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatINR } from '@/lib/date-utils'
 
@@ -34,9 +35,9 @@ interface AgingData {
 }
 
 function StatCard({
-  label, value, sub, color = 'indigo', icon,
+  label, value, sub, color = 'indigo', Icon,
 }: {
-  label: string; value: string; sub?: string; color?: string; icon: string
+  label: string; value: string; sub?: string; color?: string; Icon: ComponentType<{ className?: string }>
 }) {
   const colorMap: Record<string, string> = {
     indigo: 'border-indigo-500/20 from-indigo-500/10',
@@ -44,11 +45,19 @@ function StatCard({
     green: 'border-green-500/20 from-green-500/10',
     yellow: 'border-yellow-500/20 from-yellow-500/10',
   }
+  const iconColorMap: Record<string, string> = {
+    indigo: 'text-indigo-400',
+    red: 'text-red-400',
+    green: 'text-green-400',
+    yellow: 'text-yellow-400',
+  }
 
   return (
     <div className={`stat-card border ${colorMap[color]} bg-gradient-to-br to-transparent`}>
       <div className="flex items-start justify-between mb-3">
-        <span className="text-2xl">{icon}</span>
+        <span className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+          <Icon className={`w-5 h-5 ${iconColorMap[color]}`} />
+        </span>
         {sub && <span className="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded-full">{sub}</span>}
       </div>
       <p className="text-2xl font-bold amount-display text-white count-animate">{value}</p>
@@ -97,10 +106,10 @@ export default function DashboardPage() {
         </div>
         <Link
           href="/dashboard/outstandings"
-          className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2"
+          className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 shadow-lg shadow-indigo-500/20"
           id="add-outstanding-btn"
         >
-          <span>+</span>
+          <Plus className="w-4 h-4" strokeWidth={2.5} />
           {lang === 'hi' ? 'Naya Udhaar' : 'Add Outstanding'}
         </Link>
       </div>
@@ -114,27 +123,27 @@ export default function DashboardPage() {
         ) : (
           <>
             <StatCard
-              icon="💸"
+              Icon={Wallet}
               label={t.dashboard.totalOutstanding}
               value={summary ? formatINR(summary.totalOutstanding.amount) : '₹0'}
               sub={summary ? `${summary.totalOutstanding.count} entries` : undefined}
               color="indigo"
             />
             <StatCard
-              icon="⚠️"
+              Icon={AlertTriangle}
               label={t.dashboard.totalOverdue}
               value={summary ? formatINR(summary.totalOverdue.amount) : '₹0'}
               sub={summary ? `${summary.overdueCount} overdue` : undefined}
               color="red"
             />
             <StatCard
-              icon="✅"
+              Icon={BadgeCheck}
               label={t.dashboard.collectedThisWeek}
               value={summary ? formatINR(summary.collectedThisWeek) : '₹0'}
               color="green"
             />
             <StatCard
-              icon="📈"
+              Icon={TrendingUp}
               label={t.dashboard.collectionRate}
               value={summary ? `${summary.collectionRate}%` : '0%'}
               sub={summary ? formatINR(summary.collectedThisMonth) + ' this month' : undefined}
