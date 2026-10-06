@@ -105,7 +105,7 @@ export default function AdminAccessRequestsPage() {
           <p className="text-stone-600 mb-6">
             Ye page sirf admin ke liye hai. Tumhara number admin list me nahi hai.
           </p>
-          <Link href="/dashboard" className="btn-primary px-6 py-3">Dashboard wapas</Link>
+          <Link href="/admin" className="btn-primary px-6 py-3">Admin wapas</Link>
         </div>
       </div>
     )
@@ -130,7 +130,7 @@ export default function AdminAccessRequestsPage() {
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
-            <Link href="/dashboard" className="btn-ghost text-sm px-4 py-2.5">Dashboard</Link>
+            <Link href="/admin" className="btn-ghost text-sm px-4 py-2.5">Admin Panel</Link>
           </div>
         </div>
       </header>

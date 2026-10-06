@@ -15,6 +15,8 @@ export interface AdminContext {
   merchantId: string
   userId: string
   phone: string
+  isSuperAdmin?: boolean
+  email?: string
 }
 
 function adminPhones(): string[] {
@@ -36,10 +38,20 @@ export function isAdminPhone(phoneE164: string): boolean {
 }
 
 /**
- * Returns admin context if the session belongs to an allowlisted admin phone,
- * otherwise null. Use at the top of every /api/admin/* route.
+ * Returns admin context if EITHER:
+ *   1. Valid superadmin session (email+password login via /admin/login), OR
+ *   2. Merchant session belonging to an allowlisted admin phone.
+ * Use at the top of every /api/admin/* route.
  */
 export async function requireAdmin(): Promise<AdminContext | null> {
+  // Path 1: superadmin email+password session
+  const { getAdminSession } = await import('@/lib/admin-auth')
+  const adminSession = await getAdminSession()
+  if (adminSession) {
+    return { merchantId: '', userId: '', phone: '', isSuperAdmin: true, email: adminSession.email }
+  }
+
+  // Path 2: merchant session with allowlisted admin phone (legacy)
   const session = await getSession()
   if (!session) return null
 

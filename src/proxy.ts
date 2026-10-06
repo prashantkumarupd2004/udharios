@@ -12,12 +12,22 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { jwtVerify } from 'jose'
 
 const COOKIE_NAME = 'udhari_session'
+const ADMIN_COOKIE_NAME = 'ugaahi_admin_session'
 
 function getSecret(): Uint8Array {
-  const secret = process.env.SESSION_SECRET
+  const secret = process.env.SESSION_SECRET ?? process.env.JWT_SECRET
   // Fallback to empty bytes if not set — will cause all verifications to fail
   // (safe: no session will be accepted)
   return new TextEncoder().encode(secret ?? '')
+}
+
+async function verifyAdminSession(token: string): Promise<boolean> {
+  try {
+    const { payload } = await jwtVerify(token, getSecret())
+    return payload.type === 'admin' && typeof payload.email === 'string'
+  } catch {
+    return false
+  }
 }
 
 // Paths that do NOT require authentication
@@ -79,13 +89,24 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Admin routes — phone-number whitelist
+  // Admin routes — separate email+password auth (ugaahi_admin_session).
+  // Public: /admin/login and /api/admin/auth/* (login/logout endpoints).
   if (path.startsWith('/admin') || path.startsWith('/api/admin')) {
-    if (!session) {
-      return NextResponse.redirect(new URL('/login', request.url))
+    const isAdminPublic =
+      path === '/admin/login' ||
+      path.startsWith('/api/admin/auth/')
+    if (!isAdminPublic) {
+      const adminToken = request.cookies.get(ADMIN_COOKIE_NAME)?.value ?? null
+      const adminOk = adminToken ? await verifyAdminSession(adminToken) : false
+      if (!adminOk) {
+        // API → 401 JSON, pages → redirect to admin login
+        if (path.startsWith('/api/')) {
+          return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 })
+        }
+        return NextResponse.redirect(new URL('/admin/login', request.url))
+      }
     }
-    // Admin check is done at the route-handler level using the DB
-    // (middleware doesn't know the merchant's phone at this point)
+    return response
   }
 
   // Redirect already-authenticated users away from login
