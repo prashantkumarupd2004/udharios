@@ -50,20 +50,23 @@ export async function GET(request: NextRequest) {
   if (!profile) {
     return NextResponse.redirect(new URL('/login?error=google_failed', request.url))
   }
+  // Email normalize — Google kabhi-kabhi case alag bhejta hai
+  const email = profile.email.trim().toLowerCase()
 
   // Admin emails bypass the gate (auto-provision like admin phones).
   // Pehle check karo: kya is email ka ASLI merchant pehle se hai?
   // Agar hai to usi me login karo — nakli google: merchant mat banao.
-  if (adminEmails().includes(profile.email)) {
+  if (adminEmails().includes(email)) {
     const existing = await prisma.merchant.findFirst({
-      where: { email: profile.email, NOT: { phone: { startsWith: 'google:' } } },
+      where: { email: { equals: email, mode: 'insensitive' }, NOT: { phone: { startsWith: 'google:' } } },
       include: { users: { where: { role: 'owner' } } },
     })
+    logger.info('Admin Google login match', { email, matchedMerchant: existing?.id ?? null })
     const merchant = existing ?? await provisionMerchant({
-      phone: `google:${profile.email}`,
+      phone: `google:${email}`,
       businessName: profile.name || 'Ugaahi Admin',
       ownerName: profile.name,
-      email: profile.email,
+      email,
     })
     const owner = merchant.users[0]
     if (!owner) {
@@ -76,21 +79,21 @@ export async function GET(request: NextRequest) {
     })
     const res = NextResponse.redirect(new URL('/admin/access-requests', request.url))
     setSessionCookie(res, token)
-    logger.info('Admin Google login', { email: profile.email })
+    logger.info('Admin Google login', { email })
     return res
   }
 
   // GATED: merchant must exist AND be approved
   const merchant = await prisma.merchant.findFirst({
-    where: { email: profile.email },
+    where: { email: { equals: email, mode: 'insensitive' } },
     include: { users: { where: { role: 'owner' } } },
   })
 
   if (!merchant || !merchant.isApproved) {
-    logger.info('Google login blocked: email not approved', { email: profile.email })
+    logger.info('Google login blocked: email not approved', { email })
     // Send them to request access, pre-filling what we know
     const reqUrl = new URL('/request-access', request.url)
-    reqUrl.searchParams.set('email', profile.email)
+    reqUrl.searchParams.set('email', email)
     reqUrl.searchParams.set('name', profile.name)
     return NextResponse.redirect(reqUrl)
   }
@@ -106,7 +109,7 @@ export async function GET(request: NextRequest) {
     role: ownerUser.role,
   })
 
-  logger.info('Google login successful', { merchantId: merchant.id, email: profile.email })
+  logger.info('Google login successful', { merchantId: merchant.id, email })
   const response = NextResponse.redirect(new URL(redirectTo, request.url))
   setSessionCookie(response, sessionToken)
   return response
