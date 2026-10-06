@@ -17,6 +17,8 @@ import { normalizePhone, toE164, msg91VerifyOtp } from '@/lib/msg91'
 import { createSessionToken, setSessionCookie } from '@/lib/session'
 import { verifyOtpSchema } from '@/validations'
 import { checkAndRecordVerify } from '@/lib/rateLimit'
+import { isAdminPhone } from '@/lib/admin'
+import { provisionMerchant } from '@/lib/merchant'
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,10 +57,16 @@ export async function POST(request: NextRequest) {
 
     // GATED ACCESS: merchant must exist AND be approved by admin.
     // No auto-provisioning here — approval happens via AccessRequest flow.
-    const merchant = await prisma.merchant.findFirst({
+    // Exception: admin phones (ADMIN_PHONE_NUMBERS) are auto-provisioned so
+    // the admin can always log in to review requests.
+    let merchant = await prisma.merchant.findFirst({
       where: { phone: phoneE164 },
       include: { users: { where: { role: 'owner' } } },
     })
+
+    if (!merchant && isAdminPhone(phoneE164)) {
+      merchant = await provisionMerchant({ phone: phoneE164, businessName: 'Ugaahi Admin' })
+    }
 
     if (!merchant || !merchant.isApproved) {
       logger.info('Login blocked: number not approved', { phone: phoneE164 })

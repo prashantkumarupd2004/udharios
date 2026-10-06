@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { normalizePhone, toE164 } from '@/lib/msg91'
 import { sendOtpSchema } from '@/validations'
+import { isAdminPhone } from '@/lib/admin'
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,6 +26,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'invalid_phone' }, { status: 400 })
     }
     const phoneE164 = toE164(mobile91)
+
+    // Admin phones always pass the gate
+    if (isAdminPhone(phoneE164)) {
+      return NextResponse.json({ ok: true, approved: true, hasPendingRequest: false })
+    }
 
     const merchant = await prisma.merchant.findFirst({
       where: { phone: phoneE164 },

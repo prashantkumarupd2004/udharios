@@ -29,6 +29,13 @@ function adminPhones(): string[] {
 }
 
 /**
+ * Returns true if the phone (E.164) is in the ADMIN_PHONE_NUMBERS allowlist.
+ */
+export function isAdminPhone(phoneE164: string): boolean {
+  return adminPhones().includes(phoneE164)
+}
+
+/**
  * Returns admin context if the session belongs to an allowlisted admin phone,
  * otherwise null. Use at the top of every /api/admin/* route.
  */
