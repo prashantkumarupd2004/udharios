@@ -6,6 +6,7 @@ import Link from 'next/link'
 import {
   ArrowLeft, Loader2, Ban, CheckCircle2, Phone, Mail,
   Users, IndianRupee, PhoneCall, MessageSquare, Clock, Plus,
+  AlertTriangle, X,
 } from 'lucide-react'
 
 interface Detail {
@@ -36,16 +37,33 @@ export default function MerchantDetailPage() {
   const [acting, setActing] = useState(false)
   const [extendDays, setExtendDays] = useState('7')
   const [showExtend, setShowExtend] = useState(false)
+  const [confirmSuspend, setConfirmSuspend] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function fetchJson(url: string, ms = 30000, init?: RequestInit) {
+    const ctrl = new AbortController()
+    const t = setTimeout(() => ctrl.abort(), ms)
+    try {
+      const res = await fetch(url, { ...init, signal: ctrl.signal })
+      const data = await res.json().catch(() => ({}))
+      return { res, data }
+    } finally {
+      clearTimeout(t)
+    }
+  }
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/admin/merchants/${id}`)
+      const { res, data } = await fetchJson(`/api/admin/merchants/${id}`)
       if (res.status === 401 || res.status === 403) { router.push('/admin/login'); return }
-      const data = await res.json()
       if (data.ok) {
         setDetail(data.merchant)
         setExtras({ recentCalls: data.recentCalls, recentReminders: data.recentReminders, recentPayments: data.recentPayments })
+      } else {
+        setError('Merchant load nahi hua.')
       }
+    } catch {
+      setError('Network slow/fail — refresh karo.')
     } finally {
       setLoading(false)
     }
@@ -54,18 +72,27 @@ export default function MerchantDetailPage() {
   useEffect(() => { load() }, [load])
 
   async function toggleSuspend() {
-    if (!detail) return
-    const action = detail.isKillSwitched ? 'unsuspend' : 'suspend'
-    if (!confirm(`${detail.businessName} ko ${action === 'suspend' ? 'SUSPEND' : 'UNSUSPEND'} karna hai?`)) return
+    if (!detail || acting) return
     setActing(true)
+    setConfirmSuspend(false)
+    setError(null)
+    const next = !detail.isKillSwitched
+    // Optimistic
+    setDetail(d => d ? { ...d, isKillSwitched: next } : d)
     try {
-      const res = await fetch(`/api/admin/merchants/${id}/suspend`, {
+      const { res, data } = await fetchJson(`/api/admin/merchants/${id}/suspend`, 30000, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ suspended: !detail.isKillSwitched, reason: `Admin action via panel` }),
+        body: JSON.stringify({ suspended: next, reason: `Admin action via panel` }),
       })
-      const data = await res.json()
-      if (data.ok) await load()
+      if (res.status === 401 || res.status === 403) { router.push('/admin/login'); return }
+      if (!data.ok) {
+        setDetail(d => d ? { ...d, isKillSwitched: !next } : d)
+        setError(`Suspend fail: ${data.error ?? 'server error'}`)
+      }
+    } catch {
+      setDetail(d => d ? { ...d, isKillSwitched: !next } : d)
+      setError('Network fail — suspend nahi hua.')
     } finally {
       setActing(false)
     }
@@ -73,19 +100,25 @@ export default function MerchantDetailPage() {
 
   async function extendTrial() {
     const days = parseInt(extendDays)
-    if (!days || days < 1 || days > 90) { alert('1-90 din daalo'); return }
+    if (!days || days < 1 || days > 90) { setError('1-90 din daalo'); return }
+    if (acting) return
     setActing(true)
+    setError(null)
     try {
-      const res = await fetch(`/api/admin/merchants/${id}/extend-trial`, {
+      const { res, data } = await fetchJson(`/api/admin/merchants/${id}/extend-trial`, 30000, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ days }),
       })
-      const data = await res.json()
+      if (res.status === 401 || res.status === 403) { router.push('/admin/login'); return }
       if (data.ok) {
         setShowExtend(false)
         await load()
+      } else {
+        setError(`Extend fail: ${data.error ?? 'server error'}`)
       }
+    } catch {
+      setError('Network fail — trial extend nahi hua.')
     } finally {
       setActing(false)
     }
@@ -116,15 +149,41 @@ export default function MerchantDetailPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {error && (
+          <div className="bg-red-950/60 border border-red-800 rounded-2xl p-4 flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
+            <p className="text-red-200 text-sm font-medium flex-1">{error}</p>
+            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-200 p-1">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
         {/* Actions */}
         <div className="bg-stone-900/70 border border-stone-800 rounded-2xl p-5">
           <h2 className="font-extrabold mb-4">Admin Actions</h2>
           <div className="flex flex-wrap gap-3">
-            <button onClick={toggleSuspend} disabled={acting}
-              className={`px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 disabled:opacity-50 ${detail.isKillSwitched ? 'bg-green-700 hover:bg-green-600' : 'bg-red-700 hover:bg-red-600'}`}>
-              {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
-              {detail.isKillSwitched ? 'Unsuspend karo' : 'Suspend karo'}
-            </button>
+            {confirmSuspend ? (
+              <>
+                <span className="text-sm font-bold text-stone-300 self-center">
+                  {detail.isKillSwitched ? 'Unsuspend' : 'Suspend'} pakka?
+                </span>
+                <button onClick={toggleSuspend} disabled={acting}
+                  className={`px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 disabled:opacity-50 ${detail.isKillSwitched ? 'bg-green-700 hover:bg-green-600' : 'bg-red-700 hover:bg-red-600'}`}>
+                  {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
+                  Haan, {detail.isKillSwitched ? 'Unsuspend' : 'Suspend'}
+                </button>
+                <button onClick={() => setConfirmSuspend(false)}
+                  className="px-4 py-2.5 rounded-xl bg-stone-800 hover:bg-stone-700 font-bold text-sm">
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button onClick={() => setConfirmSuspend(true)} disabled={acting}
+                className={`px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 disabled:opacity-50 ${detail.isKillSwitched ? 'bg-green-700 hover:bg-green-600' : 'bg-red-700 hover:bg-red-600'}`}>
+                {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
+                {detail.isKillSwitched ? 'Unsuspend karo' : 'Suspend karo'}
+              </button>
+            )}
             <button onClick={() => setShowExtend(!showExtend)}
               className="px-5 py-2.5 rounded-xl bg-stone-800 hover:bg-stone-700 font-bold text-sm flex items-center gap-2">
               <Clock className="w-4 h-4" /> Trial extend karo

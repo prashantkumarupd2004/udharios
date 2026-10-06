@@ -41,21 +41,39 @@ export default function AdminAccessRequestsPage() {
   const [loading, setLoading] = useState(true)
   const [forbidden, setForbidden] = useState(false)
   const [acting, setActing] = useState<string | null>(null)
+  const [confirmId, setConfirmId] = useState<{ id: string; action: 'approve' | 'reject' } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function fetchJson(url: string, ms = 30000, init?: RequestInit) {
+    const ctrl = new AbortController()
+    const t = setTimeout(() => ctrl.abort(), ms)
+    try {
+      const res = await fetch(url, { ...init, signal: ctrl.signal })
+      const data = await res.json().catch(() => ({}))
+      return { res, data }
+    } finally {
+      clearTimeout(t)
+    }
+  }
 
   async function load(status: Tab) {
     setLoading(true)
     setForbidden(false)
+    setError(null)
     try {
-      const res = await fetch(`/api/admin/access-requests?status=${status}`)
-      const data = await res.json()
-      if (res.status === 403) {
+      const { res, data } = await fetchJson(`/api/admin/access-requests?status=${status}`)
+      if (res.status === 403 || res.status === 401) {
         setForbidden(true)
         return
       }
       if (data.ok) {
         setRequests(data.requests)
         setCounts(data.counts ?? {})
+      } else {
+        setError('Load fail — refresh karo.')
       }
+    } catch {
+      setError('Network slow/fail — refresh karo.')
     } finally {
       setLoading(false)
     }
@@ -67,23 +85,31 @@ export default function AdminAccessRequestsPage() {
   }, [tab])
 
   async function act(id: string, action: 'approve' | 'reject') {
-    const r = requests.find(x => x.id === id)
-    const verb = action === 'approve' ? 'APPROVE' : 'REJECT'
-    if (!r || !confirm(`${verb} access request from ${r.name} (${r.businessName}, ${r.phone})?`)) return
+    if (acting) return
     setActing(id)
+    setConfirmId(null)
+    setError(null)
+    // Optimistic: turant list se hatao
+    const prev = requests
+    setRequests(p => p.filter(x => x.id !== id))
     try {
-      const res = await fetch(`/api/admin/access-requests/${id}/${action}`, { method: 'POST' })
-      const data = await res.json()
+      const { res, data } = await fetchJson(`/api/admin/access-requests/${id}/${action}`, 30000, { method: 'POST' })
+      if (res.status === 403 || res.status === 401) { setForbidden(true); setRequests(prev); return }
       if (data.ok) {
-        setRequests(prev => prev.filter(x => x.id !== id))
-        setCounts(prev => ({
-          ...prev,
-          pending: Math.max(0, (prev.pending ?? 1) - 1),
-          [action === 'approve' ? 'approved' : 'rejected']: (prev[action === 'approve' ? 'approved' : 'rejected'] ?? 0) + 1,
+        setCounts(prevC => ({
+          ...prevC,
+          pending: Math.max(0, (prevC.pending ?? 1) - 1),
+          [action === 'approve' ? 'approved' : 'rejected']: (prevC[action === 'approve' ? 'approved' : 'rejected'] ?? 0) + 1,
         }))
       } else {
-        alert(`Failed: ${data.error ?? 'unknown'}`)
+        setRequests(prev)
+        setError(data.error === 'already_reviewed'
+          ? 'Ye request pehle hi review ho chuki hai.'
+          : `Failed: ${data.error ?? 'server error'} — dobara try karo.`)
       }
+    } catch {
+      setRequests(prev)
+      setError('Network fail — action nahi hua. Dobara try karo.')
     } finally {
       setActing(null)
     }
@@ -156,6 +182,16 @@ export default function AdminAccessRequestsPage() {
           ))}
         </div>
 
+        {error && (
+          <div className="mb-4 bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3">
+            <ShieldAlert className="w-5 h-5 text-red-500 shrink-0" />
+            <p className="text-red-700 text-sm font-medium flex-1">{error}</p>
+            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 p-1">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
@@ -224,22 +260,46 @@ export default function AdminAccessRequestsPage() {
 
                   {r.status === 'pending' && (
                     <div className="flex sm:flex-col gap-2.5 flex-shrink-0">
-                      <button
-                        onClick={() => act(r.id, 'approve')}
-                        disabled={acting === r.id}
-                        className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-3 rounded-xl transition-all disabled:opacity-60 text-sm"
-                      >
-                        {acting === r.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" strokeWidth={3} />}
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => act(r.id, 'reject')}
-                        disabled={acting === r.id}
-                        className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-bold px-6 py-3 rounded-xl transition-all disabled:opacity-60 text-sm"
-                      >
-                        <X className="w-4 h-4" strokeWidth={3} />
-                        Reject
-                      </button>
+                      {confirmId?.id === r.id ? (
+                        <>
+                          <p className="text-sm font-bold text-stone-700 text-center">
+                            {confirmId.action === 'approve' ? 'Approve' : 'Reject'} pakka?
+                          </p>
+                          <button
+                            onClick={() => act(r.id, confirmId.action)}
+                            disabled={acting === r.id}
+                            className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-2 text-white font-bold px-6 py-3 rounded-xl transition-all disabled:opacity-60 text-sm ${confirmId.action === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
+                          >
+                            {acting === r.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" strokeWidth={3} />}
+                            Haan, {confirmId.action === 'approve' ? 'Approve' : 'Reject'}
+                          </button>
+                          <button
+                            onClick={() => setConfirmId(null)}
+                            className="flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-sm font-bold bg-stone-100 text-stone-600 hover:bg-stone-200"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => setConfirmId({ id: r.id, action: 'approve' })}
+                            disabled={acting === r.id}
+                            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-3 rounded-xl transition-all disabled:opacity-60 text-sm"
+                          >
+                            {acting === r.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" strokeWidth={3} />}
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => setConfirmId({ id: r.id, action: 'reject' })}
+                            disabled={acting === r.id}
+                            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-bold px-6 py-3 rounded-xl transition-all disabled:opacity-60 text-sm"
+                          >
+                            <X className="w-4 h-4" strokeWidth={3} />
+                            Reject
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

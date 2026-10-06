@@ -72,6 +72,19 @@ function StatCard({ icon: Icon, label, value, sub, color }: {
   )
 }
 
+/** Fetch with timeout — admin APIs must never hang the UI forever. */
+async function fetchJson(url: string, ms = 25000, init?: RequestInit) {
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), ms)
+  try {
+    const res = await fetch(url, { ...init, signal: ctrl.signal })
+    const data = await res.json().catch(() => ({}))
+    return { res, data }
+  } finally {
+    clearTimeout(t)
+  }
+}
+
 export default function AdminDashboard() {
   const router = useRouter()
   const [stats, setStats] = useState<Stats | null>(null)
@@ -82,40 +95,65 @@ export default function AdminDashboard() {
   const [actionId, setActionId] = useState<string | null>(null)
   const [revenue, setRevenue] = useState<{ daily: { date: string; revenue: number }[]; totalRevenue30d: number; conversionRate: number } | null>(null)
   const [health, setHealth] = useState<{ alerts: { level: string; message: string }[]; calls: { successRate: number }; messages: { deliveryRate: number } } | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/admin/stats')
-      .then(r => {
-        if (r.status === 401) { router.push('/admin/login'); return null }
-        return r.json()
-      })
-      .then(data => {
-        if (!data) return
+    let cancelled = false
+    // Single combined call — one cold start instead of three.
+    fetchJson('/api/admin/dashboard')
+      .then(({ res, data }) => {
+        if (cancelled) return
+        if (res.status === 401 || res.status === 403) { router.push('/admin/login'); return }
         if (data.ok) {
           setStats(data.stats)
           setMerchants(data.recentMerchants)
           setRequests(data.recentRequests)
           setTopMerchants(data.topMerchants)
+          setRevenue(data.revenue)
+          setHealth(data.health)
+        } else {
+          setError('Dashboard load nahi hua — refresh karo.')
         }
         setLoading(false)
       })
-      .catch(() => setLoading(false))
-
-    fetch('/api/admin/revenue').then(r => r.json()).then(d => { if (d.ok) setRevenue(d) }).catch(() => {})
-    fetch('/api/admin/health').then(r => r.json()).then(d => { if (d.ok) setHealth(d) }).catch(() => {})
+      .catch(() => {
+        if (!cancelled) {
+          setError('Network slow/fail — refresh karo.')
+          setLoading(false)
+        }
+      })
+    return () => { cancelled = true }
   }, [router])
 
   async function handleRequest(id: string, action: 'approve' | 'reject') {
+    if (actionId) return // ek time pe ek action
     setActionId(id)
+    setError(null)
+    // Optimistic update — UI turant, server background me
+    const prev = requests
+    setRequests(rs => rs.map(r => r.id === id ? { ...r, status: action === 'approve' ? 'approved' : 'rejected' } : r))
     try {
-      const res = await fetch(`/api/admin/access-requests/${id}/${action}`, { method: 'POST' })
-      const data = await res.json()
+      const { res, data } = await fetchJson(`/api/admin/access-requests/${id}/${action}`, 30000, { method: 'POST' })
+      if (res.status === 401 || res.status === 403) { router.push('/admin/login'); return }
       if (data.ok) {
-        setRequests(rs => rs.map(r => r.id === id ? { ...r, status: action === 'approve' ? 'approved' : 'rejected' } : r))
-        // refresh stats
-        const s = await fetch('/api/admin/stats').then(r => r.json())
-        if (s.ok) setStats(s.stats)
+        // Local count update — poora stats refetch nahi (slow tha)
+        setStats(s => s ? {
+          ...s,
+          pendingRequests: Math.max(0, s.pendingRequests - 1),
+          totalRequests: s.totalRequests,
+          approvedMerchants: action === 'approve' ? s.approvedMerchants + 1 : s.approvedMerchants,
+          trialMerchants: action === 'approve' ? s.trialMerchants + 1 : s.trialMerchants,
+        } : s)
+      } else {
+        // Rollback + error dikhao (silent fail nahi)
+        setRequests(prev)
+        setError(data.error === 'already_reviewed'
+          ? 'Ye request pehle hi review ho chuki hai.'
+          : `Action fail: ${data.error ?? 'server error'} — dobara try karo.`)
       }
+    } catch {
+      setRequests(prev)
+      setError('Network fail — approve nahi hua. Dobara try karo.')
     } finally {
       setActionId(null)
     }
@@ -177,6 +215,16 @@ export default function AdminDashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+        {/* Error toast — silent fail nahi, error dikhega */}
+        {error && (
+          <div className="bg-red-950/60 border border-red-700 rounded-2xl p-4 flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
+            <p className="text-red-200 text-sm font-medium flex-1">{error}</p>
+            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-200 p-1">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
         {/* System health alerts */}
         {health && health.alerts.length > 0 && (
           <div className="space-y-2">

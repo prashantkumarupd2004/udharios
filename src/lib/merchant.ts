@@ -21,8 +21,11 @@ export interface ProvisionMerchantInput {
  * Create an approved merchant with owner user + default reminder rule.
  * Idempotent on phone: returns existing merchant if already present.
  */
-export async function provisionMerchant(input: ProvisionMerchantInput) {
-  const existing = await prisma.merchant.findFirst({
+type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
+
+export async function provisionMerchant(input: ProvisionMerchantInput, tx?: TxClient) {
+  const db = tx ?? prisma
+  const existing = await db.merchant.findFirst({
     where: { phone: input.phone },
     include: { users: { where: { role: 'owner' } } },
   })
@@ -31,7 +34,7 @@ export async function provisionMerchant(input: ProvisionMerchantInput) {
     // Also backfill email if provided (for Google login matching).
     const needsUpdate = !existing.isApproved || (!existing.email && input.email)
     if (needsUpdate) {
-      const updated = await prisma.merchant.update({
+      const updated = await db.merchant.update({
         where: { id: existing.id },
         data: {
           isApproved: true,
@@ -44,7 +47,7 @@ export async function provisionMerchant(input: ProvisionMerchantInput) {
     return existing
   }
 
-  const merchant = await prisma.merchant.create({
+  const merchant = await db.merchant.create({
     data: {
       phone: input.phone,
       businessName: input.businessName,
@@ -57,7 +60,7 @@ export async function provisionMerchant(input: ProvisionMerchantInput) {
     include: { users: { where: { role: 'owner' } } },
   })
 
-  await prisma.reminderRule.create({
+  await db.reminderRule.create({
     data: {
       merchantId: merchant.id,
       name: 'Default',

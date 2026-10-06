@@ -31,16 +31,22 @@ export async function POST(
       return NextResponse.json({ ok: false, error: 'already_reviewed' }, { status: 409 })
     }
 
-    const merchant = await provisionMerchant({
-      phone: req.phone,
-      businessName: req.businessName,
-      ownerName: req.name,
-      email: req.email ?? undefined,
-    })
+    // Provision merchant + mark request approved atomically so a slow/failed
+    // step can never leave half-done state (request approved but no merchant).
+    const reviewedBy = admin.email ?? admin.phone ?? 'admin'
+    const merchant = await prisma.$transaction(async (tx) => {
+      const m = await provisionMerchant({
+        phone: req.phone,
+        businessName: req.businessName,
+        ownerName: req.name,
+        email: req.email ?? undefined,
+      }, tx)
 
-    await prisma.accessRequest.update({
-      where: { id },
-      data: { status: 'approved', reviewedBy: admin.phone, reviewedAt: new Date() },
+      await tx.accessRequest.update({
+        where: { id },
+        data: { status: 'approved', reviewedBy, reviewedAt: new Date() },
+      })
+      return m
     })
 
     logger.info('Access request approved', { requestId: id, merchantId: merchant.id })

@@ -28,7 +28,7 @@ export async function POST(
 
     await prisma.accessRequest.update({
       where: { id },
-      data: { status: 'rejected', reviewedBy: admin.phone, reviewedAt: new Date() },
+      data: { status: 'rejected', reviewedBy: admin.email ?? admin.phone ?? 'admin', reviewedAt: new Date() },
     })
 
     logger.info('Access request rejected', { requestId: id })
