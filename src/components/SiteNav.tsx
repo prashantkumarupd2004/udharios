@@ -38,7 +38,7 @@ export default function SiteNav() {
         <Link href="/" aria-label="Udhari OS home">
           <Logo />
         </Link>
-        <div className="hidden md:flex items-center gap-8 text-sm font-medium text-stone-600">
+        <div className="hidden md:flex items-center gap-8 text-sm font-medium text-stone-600 absolute left-1/2 -translate-x-1/2">
           {links.map((l) => (
             <Link key={l.href} href={l.href} className="hover:text-orange-600 transition-colors">
               {l.label}

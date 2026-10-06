@@ -15,13 +15,13 @@ interface LanguageContextValue {
 }
 
 const LanguageContext = createContext<LanguageContextValue>({
-  lang: 'hi',
-  t: hi,
+  lang: 'en',
+  t: en as unknown as Strings,
   toggleLang: () => {},
 })
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLang] = useState<Language>('hi')
+  const [lang, setLang] = useState<Language>('en')
 
   const toggleLang = () => setLang(prev => (prev === 'hi' ? 'en' : 'hi'))
 

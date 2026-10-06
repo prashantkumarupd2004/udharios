@@ -382,7 +382,7 @@ export default function LandingPage() {
           <Link href="/" aria-label="Udhari OS home">
             <Logo />
           </Link>
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-stone-600">
+          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-stone-600 absolute left-1/2 -translate-x-1/2">
             <a href="#features" className="hover:text-orange-600 transition-colors">Features</a>
             <Link href="/services" className="hover:text-orange-600 transition-colors">{hi ? 'Services' : 'Services'}</Link>
             <a href="#journey" className="hover:text-orange-600 transition-colors">{hi ? 'Kaise Kaam Karta Hai' : 'How It Works'}</a>
