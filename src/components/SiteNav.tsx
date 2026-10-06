@@ -55,7 +55,7 @@ export default function SiteNav() {
             {lang === 'hi' ? 'EN' : 'हिं'}
           </button>
           <Link
-            href="/login"
+            href="/request-access"
             className="hidden sm:inline-flex items-center gap-1.5 text-sm font-bold text-white bg-gradient-to-r from-orange-500 to-amber-600 px-5 py-2.5 rounded-xl shadow-md shadow-orange-500/25 hover:shadow-lg transition-all"
           >
             {lang === 'hi' ? 'Shuru Karo' : 'Get Started'} <ArrowRight className="w-4 h-4" />
