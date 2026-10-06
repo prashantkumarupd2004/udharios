@@ -172,29 +172,30 @@ function OtpPageInner() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 flex items-center justify-center px-4 relative overflow-hidden">
+    <div className="min-h-screen bg-[#FDF9F1] pattern-jaali flex items-center justify-center px-4 relative overflow-hidden">
+      <div className="absolute top-0 left-0 right-0 tricolor-bar" />
       {/* Background orbs */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-orange-400/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-amber-400/15 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative w-full max-w-sm">
-        <div className="glass-card p-8">
+        <div className="bg-white rounded-3xl border border-orange-100 shadow-2xl shadow-orange-900/10 p-8">
           {/* Lang toggle */}
           <div className="flex justify-end mb-4">
             <button
               onClick={() => setLang(lang === 'hi' ? 'en' : 'hi')}
-              className="text-xs text-gray-500 hover:text-gray-300 px-2 py-1 rounded border border-white/10"
+              className="text-xs font-bold text-stone-500 hover:text-orange-600 px-2 py-1 rounded-lg border border-stone-200"
             >
               {lang === 'hi' ? 'EN' : 'HI'}
             </button>
           </div>
 
           <div className="text-center mb-2">
-            <span className="text-4xl">🔐</span>
+            <span className="inline-flex w-14 h-14 rounded-2xl bg-orange-100 border border-orange-200 items-center justify-center text-3xl mb-2">🔐</span>
           </div>
-          <h1 className="text-2xl font-bold text-center text-white mb-1">{t.title}</h1>
-          <p className="text-gray-400 text-sm text-center mb-6">
-            {t.subtitle} <span className="text-white font-medium amount-display">+91 {phone}</span>
+          <h1 className="text-2xl font-extrabold text-center text-stone-900 mb-1">{t.title}</h1>
+          <p className="text-stone-500 text-sm text-center mb-6">
+            {t.subtitle} <span className="text-stone-900 font-bold amount-display">+91 {phone}</span>
           </p>
 
           {/* OTP boxes */}
@@ -212,13 +213,13 @@ function OtpPageInner() {
                 onChange={(e) => handleChange(i, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(i, e)}
                 aria-label={`Digit ${i + 1}`}
-                className="w-12 h-14 text-center text-2xl font-bold bg-white/5 border border-white/15 rounded-xl text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none transition-all amount-display"
+                className="w-12 h-14 text-center text-2xl font-bold bg-orange-50/50 border-2 border-stone-200 rounded-xl text-stone-900 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition-all amount-display"
               />
             ))}
           </div>
 
           {error && (
-            <p className="text-red-400 text-sm text-center mb-4 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+            <p className="text-red-700 text-sm text-center mb-4 bg-red-50 border border-red-200 rounded-lg px-3 py-2 font-medium">
               {error}
             </p>
           )}
@@ -226,19 +227,19 @@ function OtpPageInner() {
           <button
             onClick={handleVerify}
             disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3.5 rounded-xl font-semibold transition-all mb-4"
+            className="btn-primary w-full py-3.5 mb-4 disabled:cursor-not-allowed"
           >
             {loading ? t.verifyingBtn : t.verifyBtn}
           </button>
 
           <div className="text-center space-y-2 text-sm">
             {cooldown > 0 ? (
-              <p className="text-gray-500">{t.resendIn(cooldown)}</p>
+              <p className="text-stone-400 font-medium">{t.resendIn(cooldown)}</p>
             ) : (
               <button
                 onClick={() => handleResend(false)}
                 disabled={resending}
-                className="text-indigo-400 hover:text-indigo-300 font-medium disabled:opacity-50"
+                className="text-orange-600 hover:text-orange-700 font-bold disabled:opacity-50"
               >
                 {resending ? t.verifyingBtn : t.resend}
               </button>
@@ -248,7 +249,7 @@ function OtpPageInner() {
                 <button
                   onClick={() => handleResend(true)}
                   disabled={resending || cooldown > 0}
-                  className="text-gray-400 hover:text-gray-200 disabled:opacity-50"
+                  className="text-stone-500 hover:text-stone-700 font-medium disabled:opacity-50"
                 >
                   {t.voice}
                 </button>
@@ -257,7 +258,7 @@ function OtpPageInner() {
             <div>
               <button
                 onClick={() => router.push('/login')}
-                className="text-gray-500 hover:text-gray-300"
+                className="text-stone-400 hover:text-stone-600 font-medium"
               >
                 {t.changeNumber}
               </button>
@@ -273,7 +274,7 @@ export default function OtpPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="min-h-screen bg-[#FDF9F1] flex items-center justify-center">
           <div className="skeleton w-80 h-96 rounded-2xl" />
         </div>
       }

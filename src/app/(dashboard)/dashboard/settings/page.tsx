@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Settings as SettingsIcon, Store, MoonStar, Languages, LogOut, Crown } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
 
 interface MerchantSettings {
@@ -56,89 +57,108 @@ export default function SettingsPage() {
   }
 
   if (loading) {
-    return <div className="space-y-4">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="skeleton h-12 rounded-xl" />)}</div>
+    return <div className="space-y-4 max-w-2xl">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="skeleton h-16" />)}</div>
   }
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <h1 className="text-2xl font-bold text-white">
-        ⚙️ {lang === 'hi' ? 'Settings' : 'Settings'}
-      </h1>
+      <div>
+        <h1 className="text-2xl font-extrabold text-stone-900 flex items-center gap-2">
+          <SettingsIcon className="w-6 h-6 text-orange-600" />
+          {lang === 'hi' ? 'Settings' : 'Settings'}
+        </h1>
+        <p className="text-sm text-stone-500 mt-0.5">
+          {lang === 'hi' ? 'Dukaan aur system ki setting' : 'Shop and system preferences'}
+        </p>
+      </div>
 
       {/* Plan info */}
-      <div className={`glass-card p-4 flex items-center justify-between ${
-        settings?.plan === 'pro' ? 'border-indigo-500/30' : 'border-yellow-500/30'
+      <div className={`glass-card p-5 flex items-center justify-between ${
+        settings?.plan === 'pro' ? '!border-orange-300 bg-gradient-to-br from-orange-50 to-white' : '!border-amber-300 bg-gradient-to-br from-amber-50 to-white'
       }`}>
-        <div>
-          <p className="text-sm text-gray-400">{lang === 'hi' ? 'Current Plan' : 'Current Plan'}</p>
-          <p className="font-bold text-white capitalize">{settings?.plan} {settings?.plan === 'trial' && settings.trialEndsAt ? `(${lang === 'hi' ? 'expires' : 'expires'} ${new Date(settings.trialEndsAt).toLocaleDateString('en-IN')})` : ''}</p>
+        <div className="flex items-center gap-3">
+          <span className="w-11 h-11 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-md shadow-orange-500/30">
+            <Crown className="w-5 h-5 text-white" />
+          </span>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-stone-500">{lang === 'hi' ? 'Current Plan' : 'Current Plan'}</p>
+            <p className="font-extrabold text-stone-900 capitalize text-lg">
+              {settings?.plan}
+              {settings?.plan === 'trial' && settings.trialEndsAt && (
+                <span className="text-xs font-semibold text-stone-500 ml-2">
+                  ({lang === 'hi' ? 'expires' : 'expires'} {new Date(settings.trialEndsAt).toLocaleDateString('en-IN')})
+                </span>
+              )}
+            </p>
+          </div>
         </div>
-        <a
-          href="/dashboard/billing"
-          className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all"
-        >
+        <a href="/dashboard/billing" className="btn-primary px-4 py-2.5 text-sm">
           {lang === 'hi' ? 'Upgrade Karo' : 'Upgrade'}
         </a>
       </div>
 
       {/* Business settings */}
       <div className="glass-card p-5 space-y-4">
-        <h2 className="font-semibold text-white">
-          {lang === 'hi' ? '🏪 Business Details' : '🏪 Business Details'}
+        <h2 className="font-bold text-stone-900 flex items-center gap-2">
+          <Store className="w-4 h-4 text-orange-600" />
+          {lang === 'hi' ? 'Business Details' : 'Business Details'}
         </h2>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-1">
-            {lang === 'hi' ? 'Business naam' : 'Business name'}
-          </label>
+          <label className="field-label">{lang === 'hi' ? 'Business naam' : 'Business name'}</label>
           <input
             value={form.businessName}
             onChange={e => setForm(p => ({ ...p, businessName: e.target.value }))}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500"
+            className="field"
           />
         </div>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-1">
-            {lang === 'hi' ? 'UPI ID / VPA' : 'UPI ID / VPA'}
-          </label>
+          <label className="field-label">{lang === 'hi' ? 'UPI ID / VPA' : 'UPI ID / VPA'}</label>
           <input
             value={form.upiVpa}
             onChange={e => setForm(p => ({ ...p, upiVpa: e.target.value }))}
             placeholder="merchant@upi"
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+            className="field"
           />
+          <p className="text-xs text-stone-400 mt-1">
+            {lang === 'hi' ? 'Payment links me auto-fill hoga' : 'Auto-filled in payment links'}
+          </p>
         </div>
       </div>
 
       {/* Quiet hours */}
       <div className="glass-card p-5 space-y-4">
-        <h2 className="font-semibold text-white">
-          🌙 {lang === 'hi' ? 'Quiet Hours (Koi reminder nahi)' : 'Quiet Hours (No reminders)'}
+        <h2 className="font-bold text-stone-900 flex items-center gap-2">
+          <MoonStar className="w-4 h-4 text-indigo-500" />
+          {lang === 'hi' ? 'Quiet Hours' : 'Quiet Hours'}
+          <span className="text-[11px] font-semibold text-stone-500 bg-stone-100 px-2 py-0.5 rounded-full">
+            {lang === 'hi' ? 'koi reminder nahi' : 'no reminders'}
+          </span>
         </h2>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-stone-500">
           {lang === 'hi'
             ? 'In ghanton mein koi WhatsApp message ya call nahi jayega'
             : 'No WhatsApp messages or calls will be sent during these hours'}
         </p>
         <div className="flex gap-4 items-center">
           <div className="flex-1">
-            <label className="text-xs text-gray-500 block mb-1">{lang === 'hi' ? 'Shuru' : 'Start'}</label>
+            <label className="field-label">{lang === 'hi' ? 'Shuru' : 'Start'}</label>
             <input
               type="time"
               value={form.quietStart}
               onChange={e => setForm(p => ({ ...p, quietStart: e.target.value }))}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
+              className="field"
             />
           </div>
-          <div className="text-gray-600 mt-5">→</div>
+          <div className="text-stone-400 font-bold mt-6">→</div>
           <div className="flex-1">
-            <label className="text-xs text-gray-500 block mb-1">{lang === 'hi' ? 'Khatam' : 'End'}</label>
+            <label className="field-label">{lang === 'hi' ? 'Khatam' : 'End'}</label>
             <input
               type="time"
               value={form.quietEnd}
               onChange={e => setForm(p => ({ ...p, quietEnd: e.target.value }))}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500"
+              className="field"
             />
           </div>
         </div>
@@ -146,21 +166,23 @@ export default function SettingsPage() {
 
       {/* Language toggle */}
       <div className="glass-card p-5">
-        <h2 className="font-semibold text-white mb-3">
-          🌐 {lang === 'hi' ? 'Language' : 'Language'}
+        <h2 className="font-bold text-stone-900 mb-3 flex items-center gap-2">
+          <Languages className="w-4 h-4 text-orange-600" />
+          {lang === 'hi' ? 'Language' : 'Language'}
         </h2>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-400">
-            {lang === 'hi' ? 'Hinglish (Hindi)' : 'English'}
+          <span className="text-sm font-semibold text-stone-600">
+            {lang === 'hi' ? 'हिंग्लिश' : 'English'}
           </span>
           <button
             onClick={toggleLang}
-            className={`relative w-12 h-6 rounded-full transition-all ${lang === 'en' ? 'bg-indigo-600' : 'bg-white/20'}`}
+            className={`relative w-14 h-7 rounded-full transition-all ${lang === 'en' ? 'bg-orange-500' : 'bg-stone-200'}`}
+            aria-label="Toggle language"
           >
-            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${lang === 'en' ? 'left-7' : 'left-1'}`} />
+            <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-all ${lang === 'en' ? 'left-8' : 'left-1'}`} />
           </button>
-          <span className="text-sm text-gray-400">
-            {lang === 'hi' ? 'English' : 'Hinglish'}
+          <span className="text-sm font-semibold text-stone-600">
+            {lang === 'hi' ? 'English' : 'हिंग्लिश'}
           </span>
         </div>
       </div>
@@ -170,39 +192,37 @@ export default function SettingsPage() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-900 text-white px-6 py-3 rounded-xl font-semibold transition-all"
+          className="btn-primary px-8 py-3"
           id="save-settings-btn"
         >
           {saving ? '...' : (lang === 'hi' ? 'Save Karo' : 'Save Settings')}
         </button>
         {saved && (
-          <span className="text-green-400 text-sm animate-pulse">
+          <span className="text-green-700 text-sm font-bold animate-pulse">
             ✓ {lang === 'hi' ? 'Saved!' : 'Saved!'}
           </span>
         )}
       </div>
 
       {/* Danger zone */}
-      <div className="glass-card p-5 border-red-500/20">
-        <h2 className="font-semibold text-red-400 mb-3">
+      <div className="glass-card p-5 !border-red-200">
+        <h2 className="font-bold text-red-700 mb-3">
           ⚠️ {lang === 'hi' ? 'Danger Zone' : 'Danger Zone'}
         </h2>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between p-3 bg-red-500/5 rounded-xl">
-            <div>
-              <p className="text-sm text-white">{lang === 'hi' ? 'Logout' : 'Logout'}</p>
-              <p className="text-xs text-gray-500">{lang === 'hi' ? 'Is device se logout karein' : 'Sign out from this device'}</p>
-            </div>
-            <button
-              onClick={async () => {
-                await fetch('/api/auth/logout', { method: 'POST' })
-                window.location.href = '/login'
-              }}
-              className="bg-red-500/20 hover:bg-red-500/30 text-red-400 px-4 py-2 rounded-xl text-sm transition-all"
-            >
-              {lang === 'hi' ? 'Logout' : 'Logout'}
-            </button>
+        <div className="flex items-center justify-between p-4 bg-red-50 border border-red-100 rounded-xl">
+          <div>
+            <p className="text-sm font-bold text-stone-900">{lang === 'hi' ? 'Logout' : 'Logout'}</p>
+            <p className="text-xs text-stone-500">{lang === 'hi' ? 'Is device se logout karein' : 'Sign out from this device'}</p>
           </div>
+          <button
+            onClick={async () => {
+              await fetch('/api/auth/logout', { method: 'POST' })
+              window.location.href = '/login'
+            }}
+            className="bg-white border border-red-200 hover:bg-red-50 text-red-700 px-4 py-2 rounded-xl text-sm font-bold transition-all inline-flex items-center gap-2"
+          >
+            <LogOut className="w-4 h-4" /> {lang === 'hi' ? 'Logout' : 'Logout'}
+          </button>
         </div>
       </div>
     </div>

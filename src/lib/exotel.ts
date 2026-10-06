@@ -6,13 +6,15 @@
 import { logger } from '@/lib/logger'
 
 const EXOTEL_SID = process.env.EXOTEL_SID!
-const EXOTEL_TOKEN = process.env.EXOTEL_TOKEN!
+const EXOTEL_API_KEY = process.env.EXOTEL_API_KEY!
+const EXOTEL_API_TOKEN = process.env.EXOTEL_API_TOKEN!
 const EXOTEL_VIRTUAL_NUMBER = process.env.EXOTEL_VIRTUAL_NUMBER!
 const EXOTEL_APP_ID = process.env.EXOTEL_APP_ID!
 const EXOTEL_SUBDOMAIN = process.env.EXOTEL_SUBDOMAIN ?? 'api.exotel.com'
 
 function authHeader(): string {
-  const credentials = Buffer.from(`${EXOTEL_SID}:${EXOTEL_TOKEN}`).toString('base64')
+  // Exotel Basic auth = API Key (username) : API Token (password)
+  const credentials = Buffer.from(`${EXOTEL_API_KEY}:${EXOTEL_API_TOKEN}`).toString('base64')
   return `Basic ${credentials}`
 }
 

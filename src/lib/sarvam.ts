@@ -71,18 +71,27 @@ export interface SynthesizeResult {
 }
 
 export type SarvamVoice =
-  | 'meera'    // Female, standard Hindi
-  | 'pavithra' // Female, clear Hindi
-  | 'maitreyi' // Female, warm
-  | 'arvind'   // Male
-  | 'amol'     // Male, authoritative
+  | 'priya'    // Female, Hindi (default)
+  | 'neha'     // Female, Hindi
+  | 'pooja'    // Female, Hindi
+  | 'simran'   // Female, Hindi
+  | 'ishita'   // Female, Hindi
+  | 'shreya'   // Female, Hindi
+  | 'ritu'     // Female, Hindi
+  | 'kavya'    // Female, Hindi
+  | 'aditya'   // Male, Hindi
+  | 'rahul'    // Male, Hindi
+  | 'rohan'    // Male, Hindi
+  | 'amit'     // Male, Hindi
+  | 'dev'      // Male, Hindi
+  | 'ashutosh' // Male, authoritative
 
 /**
  * Synthesize Hindi text to speech using Sarvam bulbul
  */
 export async function synthesizeSpeech(
   text: string,
-  voice: SarvamVoice = 'meera',
+  voice: SarvamVoice = 'priya',
   languageCode = 'hi-IN',
   speed = 1.0
 ): Promise<SynthesizeResult> {
@@ -101,7 +110,7 @@ export async function synthesizeSpeech(
       loudness: 1.5,
       speech_sample_rate: 8000,   // 8kHz for telephony
       enable_preprocessing: true,
-      model: 'bulbul:v1',
+      model: 'bulbul:v3',
     }),
   })
 

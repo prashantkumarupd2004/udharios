@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { ScrollText, RefreshCw } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatIndianDate } from '@/lib/date-utils'
 
@@ -31,11 +32,11 @@ const ACTION_ICONS: Record<string, string> = {
 }
 
 const ACTION_COLORS: Record<string, string> = {
-  'payment.received': 'text-green-400 border-green-500/30 bg-green-500/10',
-  'promise.broken': 'text-red-400 border-red-500/30 bg-red-500/10',
-  'dispute.opened': 'text-orange-400 border-orange-500/30 bg-orange-500/10',
-  'escalation.triggered': 'text-red-400 border-red-500/30 bg-red-500/10',
-  default: 'text-gray-400 border-white/10 bg-white/5',
+  'payment.received': 'text-green-700 border-green-200 bg-green-50',
+  'promise.broken': 'text-red-700 border-red-200 bg-red-50',
+  'dispute.opened': 'text-orange-700 border-orange-200 bg-orange-50',
+  'escalation.triggered': 'text-red-700 border-red-200 bg-red-50',
+  default: 'text-stone-500 border-stone-200 bg-white',
 }
 
 function getLabel(action: string, lang: string): string {
@@ -84,34 +85,38 @@ export default function ActivityPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">
-          📜 {lang === 'hi' ? 'Activity Timeline' : 'Activity Timeline'}
-        </h1>
+        <div>
+          <h1 className="text-2xl font-extrabold text-stone-900 flex items-center gap-2">
+            <ScrollText className="w-6 h-6 text-orange-600" />
+            {lang === 'hi' ? 'Activity Timeline' : 'Activity Timeline'}
+          </h1>
+          <p className="text-sm text-stone-500 mt-0.5">
+            {lang === 'hi' ? 'System ne kya-kya kiya, sab hisaab' : 'Everything the system did, accounted'}
+          </p>
+        </div>
         <button
           onClick={() => fetchLogs(1)}
-          className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+          className="text-sm font-bold text-orange-600 hover:text-orange-700 transition-colors inline-flex items-center gap-1.5"
         >
-          {lang === 'hi' ? '↻ Refresh' : '↻ Refresh'}
+          <RefreshCw className="w-4 h-4" /> {lang === 'hi' ? 'Refresh' : 'Refresh'}
         </button>
       </div>
 
       {loading && logs.length === 0 ? (
         <div className="space-y-3">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="skeleton h-16 rounded-xl" />
-          ))}
+          {Array.from({ length: 8 }).map((_, i) => <div key={i} className="skeleton h-20" />)}
         </div>
       ) : logs.length === 0 ? (
-        <div className="text-center py-16">
+        <div className="text-center py-16 glass-card">
           <div className="text-4xl mb-3">📭</div>
-          <p className="text-gray-500">
+          <p className="text-stone-500 font-medium">
             {lang === 'hi' ? 'Abhi koi activity nahi hai' : 'No activity yet'}
           </p>
         </div>
       ) : (
         <div className="relative">
           {/* Timeline line */}
-          <div className="absolute left-5 top-0 bottom-0 w-px bg-white/10" />
+          <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-gradient-to-b from-orange-200 via-amber-100 to-transparent rounded" />
 
           <div className="space-y-3">
             {logs.map((log) => {
@@ -120,37 +125,34 @@ export default function ActivityPage() {
 
               return (
                 <div key={log.id} className="flex gap-4 relative">
-                  {/* Timeline dot */}
-                  <div className={`w-10 h-10 rounded-full border flex items-center justify-center text-sm flex-shrink-0 z-10 ${colorClass}`}>
+                  <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center text-sm flex-shrink-0 z-10 shadow-sm ${colorClass}`}>
                     {icon}
                   </div>
 
-                  {/* Content */}
-                  <div className="flex-1 glass-card p-3 ml-2">
+                  <div className="flex-1 glass-card p-3.5 ml-1">
                     <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-medium text-white">
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-stone-900">
                           {getLabel(log.action, lang)}
                         </p>
-                        <p className="text-xs text-gray-500 mt-0.5">
+                        <p className="text-xs text-stone-500 mt-0.5 font-medium">
                           {log.actor}
                           {log.entity && log.entityId && ` • ${log.entity}:${log.entityId.slice(0, 8)}`}
                         </p>
-                        {/* Key payload details */}
                         {log.payload && Object.keys(log.payload).length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-1.5">
+                          <div className="flex flex-wrap gap-1.5 mt-2">
                             {Object.entries(log.payload)
                               .filter(([k]) => !['merchantId', 'customerId', 'outstandingId'].includes(k))
                               .slice(0, 3)
                               .map(([k, v]) => (
-                                <span key={k} className="text-xs bg-white/5 text-gray-400 px-2 py-0.5 rounded-full">
+                                <span key={k} className="text-[11px] font-medium bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full border border-stone-200">
                                   {k}: {String(v).slice(0, 30)}
                                 </span>
                               ))}
                           </div>
                         )}
                       </div>
-                      <time className="text-xs text-gray-600 whitespace-nowrap flex-shrink-0">
+                      <time className="text-xs text-stone-400 whitespace-nowrap flex-shrink-0 font-medium">
                         {formatIndianDate(log.createdAt)}
                       </time>
                     </div>
@@ -165,7 +167,7 @@ export default function ActivityPage() {
               <button
                 onClick={() => { const p = page + 1; setPage(p); fetchLogs(p) }}
                 disabled={loading}
-                className="bg-white/10 hover:bg-white/15 text-white px-6 py-2.5 rounded-xl text-sm transition-all"
+                className="btn-ghost px-6 py-2.5 text-sm"
               >
                 {loading ? '...' : (lang === 'hi' ? 'Aur load karein' : 'Load more')}
               </button>

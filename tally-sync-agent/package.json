@@ -1,0 +1,1 @@
+{"description":"Tally Prime se Udhari OS tak automatic bill sync","license":"UNLICENSED","main":"sync-agent.js","name":"udharios-tally-sync-agent","private":true,"scripts":{"start":"node sync-agent.js","test":"node sync-agent.js --test"},"version":"1.0.0"}

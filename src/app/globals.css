@@ -1,35 +1,42 @@
 @import "tailwindcss";
 
 /* ─────────────────────────────────────────────────────────────
-   Tailwind v4 theme tokens — maps CSS variables to utilities
+   UDHARI OS — "Bharat Light" theme
+   Warm paper-white background, saffron (kesariya) primary,
+   India-green accents. Built for Indian merchants.
    ───────────────────────────────────────────────────────────── */
 @theme {
-  /* Colors (HSL values without the hsl() wrapper) */
-  --color-background:        hsl(222 47% 4%);
-  --color-foreground:        hsl(210 40% 98%);
-  --color-card:              hsl(222 47% 6%);
-  --color-card-foreground:   hsl(210 40% 98%);
-  --color-popover:           hsl(222 47% 6%);
-  --color-popover-foreground:hsl(210 40% 98%);
-  --color-primary:           hsl(245 82% 67%);
-  --color-primary-foreground:hsl(210 40% 98%);
-  --color-secondary:         hsl(217 32% 17%);
-  --color-secondary-foreground:hsl(210 40% 98%);
-  --color-muted:             hsl(217 32% 17%);
-  --color-muted-foreground:  hsl(215 20% 65%);
-  --color-accent:            hsl(245 82% 67%);
-  --color-accent-foreground: hsl(210 40% 98%);
-  --color-destructive:       hsl(0 84% 60%);
-  --color-destructive-foreground: hsl(210 40% 98%);
-  --color-border:            hsl(217 32% 17%);
-  --color-input:             hsl(217 32% 17%);
-  --color-ring:              hsl(245 82% 67%);
+  /* Base */
+  --color-background:        #FDF9F1;
+  --color-foreground:        #1C1917;
+  --color-card:              #FFFFFF;
+  --color-card-foreground:   #1C1917;
+  --color-popover:           #FFFFFF;
+  --color-popover-foreground:#1C1917;
+
+  /* Brand — saffron / kesariya */
+  --color-primary:           #EA580C;
+  --color-primary-foreground:#FFFFFF;
+  --color-secondary:         #FFF7ED;
+  --color-secondary-foreground:#9A3412;
+  --color-muted:             #F5EFE3;
+  --color-muted-foreground:  #78716C;
+  --color-accent:            #EA580C;
+  --color-accent-foreground: #FFFFFF;
+
+  --color-destructive:       #DC2626;
+  --color-destructive-foreground: #FFFFFF;
+  --color-border:            #EDE4D3;
+  --color-input:             #EDE4D3;
+  --color-ring:              #FDBA74;
 
   /* Custom Udhari colors */
-  --color-success:           hsl(142 71% 45%);
-  --color-warning:           hsl(38 92% 50%);
-  --color-rupee-green:       hsl(142 76% 36%);
-  --color-overdue-red:       hsl(0 84% 60%);
+  --color-success:           #15803D;
+  --color-warning:           #B45309;
+  --color-rupee-green:       #15803D;
+  --color-overdue-red:       #DC2626;
+  --color-brand-deep:        #9A3412;
+  --color-brand-soft:        #FFF7ED;
 
   /* Border radius */
   --radius-sm: 0.5rem;
@@ -39,33 +46,33 @@
 }
 
 /* ─────────────────────────────────────────────────────────────
-   CSS custom properties (for shadcn/ui HSL refs compatibility)
+   CSS custom properties (shadcn/ui compat)
    ───────────────────────────────────────────────────────────── */
 :root {
-  --background: 222 47% 4%;
-  --foreground: 210 40% 98%;
-  --card: 222 47% 6%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222 47% 6%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 245 82% 67%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 217 32% 17%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217 32% 17%;
-  --muted-foreground: 215 20% 65%;
-  --accent: 245 82% 67%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 217 32% 17%;
-  --input: 217 32% 17%;
-  --ring: 245 82% 67%;
+  --background: 36 60% 97%;
+  --foreground: 20 14% 10%;
+  --card: 0 0% 100%;
+  --card-foreground: 20 14% 10%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 20 14% 10%;
+  --primary: 22 90% 48%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 30 100% 96%;
+  --secondary-foreground: 20 80% 30%;
+  --muted: 38 40% 93%;
+  --muted-foreground: 25 8% 47%;
+  --accent: 22 90% 48%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 36 35% 90%;
+  --input: 36 35% 90%;
+  --ring: 24 95% 72%;
   --radius: 0.75rem;
-  --success: 142 71% 45%;
-  --warning: 38 92% 50%;
-  --rupee-green: 142 76% 36%;
-  --overdue-red: 0 84% 60%;
+  --success: 142 70% 29%;
+  --warning: 32 95% 38%;
+  --rupee-green: 142 70% 29%;
+  --overdue-red: 0 72% 51%;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -78,9 +85,10 @@
   }
 
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
+    background-color: #FDF9F1;
+    color: #1C1917;
     font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
   }
 
   /* Big tap targets for mobile shopkeepers */
@@ -98,17 +106,26 @@
    Utility classes
    ───────────────────────────────────────────────────────────── */
 @layer utilities {
-  /* Glassmorphism card */
+  /* White card with warm soft shadow */
   .glass-card {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    border-radius: 0.75rem;
+    background: #FFFFFF;
+    border: 1px solid #F0E6D2;
+    border-radius: 1rem;
+    box-shadow: 0 1px 2px rgba(120, 70, 10, 0.05), 0 10px 30px -14px rgba(120, 70, 10, 0.14);
   }
 
-  /* Gradient text */
+  .card-hover {
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    border-color: #FDBA74;
+    box-shadow: 0 2px 4px rgba(120, 70, 10, 0.06), 0 16px 36px -14px rgba(234, 88, 12, 0.22);
+  }
+
+  /* Saffron gradient text */
   .gradient-text {
-    background: linear-gradient(to right, #818cf8, #c084fc);
+    background: linear-gradient(120deg, #EA580C 10%, #F59E0B 55%, #DC2626 110%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -116,103 +133,188 @@
 
   /* Rupee green */
   .text-rupee {
-    color: hsl(var(--rupee-green));
+    color: #15803D;
   }
 
-  /* Stat card shine effect */
+  /* Stat card */
   .stat-card {
     position: relative;
     overflow: hidden;
-    border-radius: 0.75rem;
+    border-radius: 1rem;
     padding: 1.25rem;
-    border: 1px solid hsl(var(--border));
-    background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+    background: #FFFFFF;
+    border: 1px solid #F0E6D2;
+    box-shadow: 0 1px 2px rgba(120, 70, 10, 0.05), 0 10px 30px -14px rgba(120, 70, 10, 0.14);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
   }
-
-  .stat-card::before {
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(120, 70, 10, 0.06), 0 16px 36px -14px rgba(234, 88, 12, 0.2);
+  }
+  .stat-card::after {
     content: '';
     position: absolute;
-    inset: 0;
-    border-radius: 0.75rem;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #EA580C, #F59E0B);
     opacity: 0;
-    transition: opacity 0.3s;
-    background: linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(168,85,247,0.05) 100%);
+    transition: opacity 0.25s ease;
   }
-
-  .stat-card:hover::before {
+  .stat-card:hover::after {
     opacity: 1;
   }
 
-  /* Status badge colors */
+  /* Shared form field */
+  .field {
+    width: 100%;
+    background: #FFFFFF;
+    border: 1px solid #E7DCC3;
+    border-radius: 0.75rem;
+    padding: 0.8rem 1rem;
+    color: #1C1917;
+    font-size: 0.95rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .field::placeholder {
+    color: #A8A29E;
+  }
+  .field:focus {
+    outline: none;
+    border-color: #EA580C;
+    box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.12);
+  }
+
+  .field-label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #57534E;
+    margin-bottom: 0.4rem;
+  }
+
+  /* Primary button */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #EA580C, #C2410C);
+    color: #FFFFFF;
+    font-weight: 700;
+    border-radius: 0.85rem;
+    box-shadow: 0 8px 20px -8px rgba(234, 88, 12, 0.55);
+    transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  }
+  .btn-primary:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+    box-shadow: 0 12px 26px -8px rgba(234, 88, 12, 0.6);
+  }
+  .btn-primary:active {
+    transform: translateY(0);
+  }
+  .btn-primary:disabled {
+    opacity: 0.55;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: #FFFFFF;
+    color: #44403C;
+    font-weight: 600;
+    border: 1px solid #E7DCC3;
+    border-radius: 0.85rem;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  .btn-ghost:hover {
+    background: #FFF7ED;
+    border-color: #FDBA74;
+  }
+
+  /* Status badges — light variants */
   .badge-upcoming {
-    background: rgba(59, 130, 246, 0.2);
-    color: #60a5fa;
-    border: 1px solid rgba(59, 130, 246, 0.3);
+    background: #EFF6FF;
+    color: #1D4ED8;
+    border: 1px solid #BFDBFE;
   }
-
   .badge-overdue {
-    background: rgba(239, 68, 68, 0.2);
-    color: #f87171;
-    border: 1px solid rgba(239, 68, 68, 0.3);
+    background: #FEF2F2;
+    color: #B91C1C;
+    border: 1px solid #FECACA;
   }
-
   .badge-promised {
-    background: rgba(234, 179, 8, 0.2);
-    color: #facc15;
-    border: 1px solid rgba(234, 179, 8, 0.3);
+    background: #FFFBEB;
+    color: #B45309;
+    border: 1px solid #FDE68A;
   }
-
   .badge-disputed {
-    background: rgba(249, 115, 22, 0.2);
-    color: #fb923c;
-    border: 1px solid rgba(249, 115, 22, 0.3);
+    background: #FFF7ED;
+    color: #C2410C;
+    border: 1px solid #FDBA74;
   }
-
   .badge-paid {
-    background: rgba(34, 197, 94, 0.2);
-    color: #4ade80;
-    border: 1px solid rgba(34, 197, 94, 0.3);
+    background: #F0FDF4;
+    color: #15803D;
+    border: 1px solid #BBF7D0;
   }
-
   .badge-written_off {
-    background: rgba(107, 114, 128, 0.2);
-    color: #9ca3af;
-    border: 1px solid rgba(107, 114, 128, 0.3);
+    background: #F5F5F4;
+    color: #78716C;
+    border: 1px solid #E7E5E4;
   }
 
-  /* Animated pulse for overdue items */
+  /* Soft pulse for overdue items */
   .overdue-pulse {
-    animation: overduePulse 2s ease-in-out infinite;
+    animation: overduePulse 2.4s ease-in-out infinite;
   }
-
   @keyframes overduePulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-    50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.15); }
+    0%, 100% { box-shadow: 0 1px 2px rgba(120,70,10,.05), 0 0 0 0 rgba(220, 38, 38, 0); }
+    50% { box-shadow: 0 1px 2px rgba(120,70,10,.05), 0 0 0 6px rgba(220, 38, 38, 0.10); }
   }
 
-  /* Skeleton loading animation */
+  /* Skeleton loading */
   .skeleton {
-    background: rgba(255, 255, 255, 0.10);
-    border-radius: 0.5rem;
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    background: linear-gradient(90deg, #F5EEDF 25%, #FBF6EA 50%, #F5EEDF 75%);
+    background-size: 200% 100%;
+    border-radius: 0.75rem;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
   }
 
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-  }
-
-  /* Mobile bottom nav */
+  /* Mobile bottom nav — white */
   .bottom-nav {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    background: rgba(17, 24, 39, 0.95);
+    background: rgba(255, 255, 255, 0.96);
     backdrop-filter: blur(12px);
-    border-top: 1px solid rgba(255, 255, 255, 0.10);
+    border-top: 1px solid #F0E6D2;
+    box-shadow: 0 -8px 24px -12px rgba(120, 70, 10, 0.15);
     z-index: 50;
     padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Tricolor accent strip */
+  .tricolor-bar {
+    height: 3px;
+    background: linear-gradient(to right, #FF9933 0%, #FF9933 33%, #F5F5F4 33%, #F5F5F4 66%, #138808 66%, #138808 100%);
+  }
+
+  /* Subtle Indian jaali pattern for hero sections */
+  .pattern-jaali {
+    background-image: url("data:image/svg+xml,%3Csvg width='56' height='56' viewBox='0 0 56 56' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M28 0l7 21 21 7-21 7-7 21-7-21-21-7 21-7z' fill='%23EA580C' fill-opacity='0.05'/%3E%3C/svg%3E");
+  }
+  .pattern-jaali-green {
+    background-image: url("data:image/svg+xml,%3Csvg width='56' height='56' viewBox='0 0 56 56' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M28 0l7 21 21 7-21 7-7 21-7-21-21-7 21-7z' fill='%2315803D' fill-opacity='0.05'/%3E%3C/svg%3E");
   }
 
   /* Amount display */
@@ -222,24 +324,43 @@
     letter-spacing: -0.025em;
     font-variant-numeric: tabular-nums;
   }
+
+  /* Section eyebrow */
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #C2410C;
+  }
+  .eyebrow::before {
+    content: '';
+    width: 1.75rem;
+    height: 2px;
+    background: linear-gradient(90deg, #EA580C, #F59E0B);
+    border-radius: 2px;
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Custom scrollbar
+   Scrollbar
    ───────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: hsl(222 47% 4%);
+  background: #F5EEDF;
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(217 32% 25%);
-  border-radius: 3px;
+  background: #E7DCC3;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(245 82% 67%);
+  background: #EA580C;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -249,7 +370,6 @@
   from { transform: translateY(100%); opacity: 0; }
   to   { transform: translateY(0);    opacity: 1; }
 }
-
 .pwa-prompt {
   animation: slideUp 0.3s ease-out;
 }
@@ -258,7 +378,6 @@
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0);   }
 }
-
 .count-animate {
   animation: countUp 0.5s ease-out forwards;
 }
@@ -267,7 +386,14 @@
   from { transform: translateX(100%); opacity: 0; }
   to   { transform: translateX(0);    opacity: 1; }
 }
-
 .toast-enter {
   animation: toastIn 0.3s ease-out;
+}
+
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.floaty {
+  animation: floaty 5s ease-in-out infinite;
 }

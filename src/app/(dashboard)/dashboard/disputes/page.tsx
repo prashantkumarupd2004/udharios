@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Zap, CheckCircle2 } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatINR, formatIndianDate } from '@/lib/date-utils'
 
@@ -46,9 +47,15 @@ export default function DisputesPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-bold text-white">
-        ⚡ {lang === 'hi' ? 'Disputes' : 'Disputes'}
-      </h1>
+      <div>
+        <h1 className="text-2xl font-extrabold text-stone-900 flex items-center gap-2">
+          <Zap className="w-6 h-6 text-orange-600" />
+          {lang === 'hi' ? 'Disputes' : 'Disputes'}
+        </h1>
+        <p className="text-sm text-stone-500 mt-0.5">
+          {lang === 'hi' ? 'Customers ki shikaayatein — jaldi suljhao' : 'Customer complaints — resolve them fast'}
+        </p>
+      </div>
 
       <div className="flex gap-2">
         {[
@@ -59,10 +66,10 @@ export default function DisputesPage() {
           <button
             key={f.key}
             onClick={() => { setFilter(f.key); setLoading(true) }}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all border ${
               filter === f.key
-                ? 'bg-orange-600 text-white'
-                : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'
+                ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/30'
+                : 'bg-white text-stone-600 border-stone-200 hover:border-orange-300 hover:text-orange-700'
             }`}
           >
             {lang === 'hi' ? f.hi : f.en}
@@ -72,12 +79,12 @@ export default function DisputesPage() {
 
       {loading ? (
         <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton h-28 rounded-xl" />)}
+          {Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton h-32" />)}
         </div>
       ) : disputes.length === 0 ? (
-        <div className="text-center py-16">
+        <div className="text-center py-16 glass-card">
           <div className="text-4xl mb-3">✅</div>
-          <p className="text-gray-500">
+          <p className="text-stone-500 font-medium">
             {lang === 'hi' ? 'Koi dispute nahi hai! Great.' : 'No disputes! Great.'}
           </p>
         </div>
@@ -86,40 +93,42 @@ export default function DisputesPage() {
           {disputes.map(d => (
             <div
               key={d.id}
-              className={`glass-card p-4 ${
-                d.status === 'open' ? 'border-orange-500/20' :
-                d.status === 'resolved' ? 'border-green-500/20' : 'border-white/10'
+              className={`glass-card card-hover p-4 ${
+                d.status === 'open' ? '!border-orange-300' :
+                d.status === 'resolved' ? '!border-green-200' : ''
               }`}
             >
               <div className="flex items-start gap-3">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl flex-shrink-0 ${
-                  d.status === 'open' ? 'bg-orange-500/20' : 'bg-green-500/20'
+                <div className={`w-11 h-11 rounded-full flex items-center justify-center text-xl flex-shrink-0 text-white shadow-md ${
+                  d.status === 'resolved' ? 'bg-green-500 shadow-green-500/25' : 'bg-orange-500 shadow-orange-500/25'
                 }`}>
-                  {d.status === 'resolved' ? '✅' : '⚡'}
+                  {d.status === 'resolved' ? <CheckCircle2 className="w-5 h-5" /> : <Zap className="w-5 h-5" />}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-white text-sm">{d.customer.name}</p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full border ${
+                    <p className="font-bold text-stone-900 text-sm">{d.customer.name}</p>
+                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
                       d.status === 'open' ? 'badge-disputed' :
                       d.status === 'resolved' ? 'badge-paid' : 'badge-written_off'
                     }`}>
                       {d.status === 'open' ? (lang === 'hi' ? 'Khula' : 'Open') :
-                       d.status === 'resolved' ? (lang === 'hi' ? 'Sulja' : 'Resolved') :
+                       d.status === 'resolved' ? (lang === 'hi' ? 'Sulja ✓' : 'Resolved ✓') :
                        (lang === 'hi' ? 'Hataya' : 'Withdrawn')}
                     </span>
                   </div>
 
-                  <p className="text-xs text-gray-400 mt-1 line-clamp-2">{d.reason}</p>
+                  <p className="text-sm text-stone-600 mt-1.5 bg-stone-50 border border-stone-200 rounded-lg px-3 py-2">
+                    “{d.reason}”
+                  </p>
 
                   {d.resolution && (
-                    <p className="text-xs text-green-400 mt-1 italic">
-                      {lang === 'hi' ? 'Resolution:' : 'Resolution:'} {d.resolution}
+                    <p className="text-xs text-green-700 mt-2 italic bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                      ✓ {lang === 'hi' ? 'Resolution:' : 'Resolution:'} {d.resolution}
                     </p>
                   )}
 
-                  <p className="text-xs text-gray-600 mt-1">{formatIndianDate(d.createdAt)}</p>
+                  <p className="text-xs text-stone-400 mt-1.5">{formatIndianDate(d.createdAt)}</p>
 
                   {d.status === 'open' && (
                     <>
@@ -130,19 +139,19 @@ export default function DisputesPage() {
                             onChange={e => setResolution(e.target.value)}
                             placeholder={lang === 'hi' ? 'Resolution detail likhein...' : 'Describe the resolution...'}
                             rows={2}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-600 text-sm focus:outline-none focus:border-green-500 resize-none"
+                            className="field resize-none text-sm"
                           />
                           <div className="flex gap-2">
                             <button
                               onClick={() => handleResolve(d.id)}
                               disabled={!resolution.trim()}
-                              className="bg-green-600 hover:bg-green-500 disabled:bg-green-900 text-white px-4 py-2 rounded-xl text-xs font-medium transition-all"
+                              className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
                             >
                               {lang === 'hi' ? 'Resolve Karo' : 'Mark Resolved'}
                             </button>
                             <button
                               onClick={() => { setResolving(null); setResolution('') }}
-                              className="bg-white/10 text-white px-4 py-2 rounded-xl text-xs"
+                              className="btn-ghost px-4 py-2 text-xs"
                             >
                               {lang === 'hi' ? 'Cancel' : 'Cancel'}
                             </button>
@@ -151,9 +160,9 @@ export default function DisputesPage() {
                       ) : (
                         <button
                           onClick={() => setResolving(d.id)}
-                          className="mt-2 text-xs text-green-400 hover:text-green-300 transition-colors"
+                          className="mt-2 text-xs font-bold text-green-700 hover:text-green-800 transition-colors"
                         >
-                          {lang === 'hi' ? '✓ Resolve Karo' : '✓ Resolve'}
+                          ✓ {lang === 'hi' ? 'Resolve Karo' : 'Resolve'}
                         </button>
                       )}
                     </>
@@ -161,11 +170,11 @@ export default function DisputesPage() {
                 </div>
 
                 <div className="text-right flex-shrink-0">
-                  <p className="text-sm font-bold text-white font-mono">
+                  <p className="text-sm font-bold text-stone-900 amount-display">
                     {formatINR(parseFloat(d.outstanding.amount))}
                   </p>
                   {d.outstanding.invoiceNo && (
-                    <p className="text-xs text-gray-600">#{d.outstanding.invoiceNo}</p>
+                    <p className="text-xs text-stone-400">#{d.outstanding.invoiceNo}</p>
                   )}
                 </div>
               </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Handshake } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatINR, formatIndianDate } from '@/lib/date-utils'
 
@@ -30,9 +31,15 @@ export default function PromisesPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-bold text-white">
-        🤝 {lang === 'hi' ? 'Payment Promises' : 'Payment Promises'}
-      </h1>
+      <div>
+        <h1 className="text-2xl font-extrabold text-stone-900 flex items-center gap-2">
+          <Handshake className="w-6 h-6 text-amber-600" />
+          {lang === 'hi' ? 'Payment Promises' : 'Payment Promises'}
+        </h1>
+        <p className="text-sm text-stone-500 mt-0.5">
+          {lang === 'hi' ? 'Customers ne kab payment ka vaada kiya' : 'When customers promised to pay'}
+        </p>
+      </div>
 
       {/* Filter tabs */}
       <div className="flex gap-2">
@@ -44,10 +51,10 @@ export default function PromisesPage() {
           <button
             key={f.key}
             onClick={() => { setFilter(f.key); setLoading(true) }}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all border ${
               filter === f.key
-                ? 'bg-indigo-600 text-white'
-                : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'
+                ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/30'
+                : 'bg-white text-stone-600 border-stone-200 hover:border-orange-300 hover:text-orange-700'
             }`}
           >
             {lang === 'hi' ? f.hi : f.en}
@@ -57,12 +64,12 @@ export default function PromisesPage() {
 
       {loading ? (
         <div className="space-y-3">
-          {Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-24 rounded-xl" />)}
+          {Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-28" />)}
         </div>
       ) : promises.length === 0 ? (
-        <div className="text-center py-16">
+        <div className="text-center py-16 glass-card">
           <div className="text-4xl mb-3">🤝</div>
-          <p className="text-gray-500">
+          <p className="text-stone-500 font-medium">
             {lang === 'hi' ? 'Is category mein koi promise nahi' : 'No promises in this category'}
           </p>
         </div>
@@ -73,25 +80,25 @@ export default function PromisesPage() {
             return (
               <div
                 key={p.id}
-                className={`glass-card p-4 ${
-                  p.status === 'broken' ? 'border-red-500/20' :
-                  p.status === 'kept' ? 'border-green-500/20' :
-                  expired ? 'border-orange-500/20' : 'border-white/10'
+                className={`glass-card card-hover p-4 ${
+                  p.status === 'broken' ? '!border-red-200' :
+                  p.status === 'kept' ? '!border-green-200' :
+                  expired ? '!border-orange-300' : ''
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-                    p.status === 'kept' ? 'bg-green-500/20 text-green-400' :
-                    p.status === 'broken' ? 'bg-red-500/20 text-red-400' :
-                    'bg-yellow-500/20 text-yellow-400'
+                  <div className={`w-11 h-11 rounded-full flex items-center justify-center text-base font-extrabold flex-shrink-0 text-white shadow-md ${
+                    p.status === 'kept' ? 'bg-green-500 shadow-green-500/25' :
+                    p.status === 'broken' ? 'bg-red-500 shadow-red-500/25' :
+                    'bg-amber-500 shadow-amber-500/25'
                   }`}>
                     {p.customer.name.charAt(0).toUpperCase()}
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-semibold text-white text-sm">{p.customer.name}</p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full border ${
+                      <p className="font-bold text-stone-900 text-sm">{p.customer.name}</p>
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
                         p.status === 'kept' ? 'badge-paid' :
                         p.status === 'broken' ? 'badge-overdue' :
                         expired ? 'badge-disputed' : 'badge-promised'
@@ -101,22 +108,27 @@ export default function PromisesPage() {
                          expired ? (lang === 'hi' ? 'Expired!' : 'Expired!') :
                          (lang === 'hi' ? 'Khula' : 'Open')}
                       </span>
-                      <span className="text-xs text-gray-500 capitalize">{p.source}</span>
+                      <span className="text-xs text-stone-400 capitalize font-medium">{p.source}</span>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {lang === 'hi' ? 'Payment date:' : 'Promised date:'} <span className="text-yellow-400 font-medium">{formatIndianDate(p.promisedDate)}</span>
+                    <p className="text-xs text-stone-500 mt-1.5">
+                      {lang === 'hi' ? 'Payment date:' : 'Promised date:'}{' '}
+                      <span className={`font-bold ${expired ? 'text-orange-700' : 'text-amber-700'}`}>
+                        {formatIndianDate(p.promisedDate)}
+                      </span>
                     </p>
                     {p.notes && (
-                      <p className="text-xs text-gray-600 mt-1 italic">{p.notes}</p>
+                      <p className="text-xs text-stone-500 mt-1 italic bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1.5">
+                        “{p.notes}”
+                      </p>
                     )}
                   </div>
 
                   <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-bold text-white font-mono">
+                    <p className="text-sm font-bold text-stone-900 amount-display">
                       {formatINR(parseFloat(p.outstanding.amount))}
                     </p>
                     {p.outstanding.invoiceNo && (
-                      <p className="text-xs text-gray-600">#{p.outstanding.invoiceNo}</p>
+                      <p className="text-xs text-stone-400">#{p.outstanding.invoiceNo}</p>
                     )}
                   </div>
                 </div>

@@ -143,6 +143,8 @@ model Merchant {
   auditLogs      AuditLog[]
   subscription   Subscription?
   merchantNotifs MerchantNotification[]
+  bills          Bill[]
+  tallyConnection TallyConnection?
 
   @@map("merchants")
 }
@@ -184,6 +186,7 @@ model Customer {
 
   merchant     Merchant      @relation(fields: [merchantId], references: [id], onDelete: Cascade)
   outstandings Outstanding[]
+  bills        Bill[]
   reminderLogs ReminderLog[]
   calls        Call[]
   promises     Promise[]
@@ -499,4 +502,57 @@ model MerchantNotification {
   @@index([merchantId, isRead])
   @@index([createdAt])
   @@map("merchant_notifications")
+}
+
+// ---------------------------------------------------------------------------
+// TALLY INTEGRATION — bills synced from Tally (XML upload or sync agent)
+// ---------------------------------------------------------------------------
+
+enum BillSource {
+  tally_xml
+  tally_agent
+  manual
+}
+
+model Bill {
+  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  merchantId    String     @map("merchant_id") @db.Uuid
+  customerId    String?    @map("customer_id") @db.Uuid
+  billRef       String     @map("bill_ref")
+  partyName     String     @map("party_name")
+  partyPhone    String?    @map("party_phone")
+  amount        Decimal    @db.Decimal(12, 2)
+  pendingAmount Decimal    @map("pending_amount") @db.Decimal(12, 2)
+  billDate      DateTime   @map("bill_date") @db.Date
+  dueDate       DateTime?  @map("due_date") @db.Date
+  voucherType   String?    @map("voucher_type")
+  source        BillSource @default(tally_xml)
+  tallyCompany  String?    @map("tally_company")
+  syncedAt      DateTime   @default(now()) @map("synced_at")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  merchant Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id])
+
+  @@unique([merchantId, billRef, partyName])
+  @@index([merchantId])
+  @@index([merchantId, pendingAmount])
+  @@map("bills")
+}
+
+model TallyConnection {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  merchantId    String    @unique @map("merchant_id") @db.Uuid
+  companyName   String    @map("company_name")
+  apiKeyHash    String    @map("api_key_hash")
+  lastSyncAt    DateTime? @map("last_sync_at")
+  lastBillCount Int       @default(0) @map("last_bill_count")
+  status        String    @default("active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@map("tally_connections")
 }

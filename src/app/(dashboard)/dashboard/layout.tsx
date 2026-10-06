@@ -10,6 +10,7 @@ import {
   ScrollText,
   Settings,
   IndianRupee,
+  Plug,
 } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
 
@@ -19,15 +20,18 @@ const NAV_ITEMS = [
   { href: '/dashboard/outstandings', Icon: ReceiptText, hiLabel: 'Udhaari', enLabel: 'Ledger' },
   { href: '/dashboard/promises', Icon: Handshake, hiLabel: 'Promises', enLabel: 'Promises' },
   { href: '/dashboard/activity', Icon: ScrollText, hiLabel: 'Activity', enLabel: 'Activity' },
+  { href: '/dashboard/integrations', Icon: Plug, hiLabel: 'Tally Sync', enLabel: 'Tally Sync' },
 ]
 
 function BrandMark() {
   return (
     <div className="flex items-center gap-2">
-      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 flex items-center justify-center shadow-md shadow-indigo-500/30">
-        <IndianRupee className="w-4.5 h-4.5 text-white" strokeWidth={2.5} />
+      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-md shadow-orange-500/30">
+        <IndianRupee className="w-4 h-4 text-white" strokeWidth={2.5} />
       </div>
-      <span className="font-bold gradient-text text-lg hidden sm:block tracking-tight">Udhari OS</span>
+      <span className="font-extrabold text-lg hidden sm:block tracking-tight text-stone-900">
+        Udhari <span className="gradient-text">OS</span>
+      </span>
     </div>
   )
 }
@@ -37,10 +41,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { lang, toggleLang } = useLanguage()
 
   return (
-    <div className="min-h-screen bg-gray-950 flex flex-col">
-      {/* Desktop sidebar / Mobile top header */}
-      <header className="bg-gray-900/80 backdrop-blur-md border-b border-white/10 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+    <div className="min-h-screen bg-[#FDF9F1] flex flex-col">
+      <div className="tricolor-bar sticky top-0 z-50" />
+      {/* Desktop header */}
+      <header className="bg-white/90 backdrop-blur-md border-b border-orange-100 sticky top-[3px] z-40 shadow-[0_2px_12px_-6px_rgba(120,70,10,0.12)]">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/dashboard" aria-label="Udhari OS dashboard">
             <BrandMark />
           </Link>
@@ -53,10 +58,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all ${
                     isActive
-                      ? 'bg-indigo-600/25 text-indigo-300 border border-indigo-500/30'
-                      : 'text-gray-400 hover:text-white hover:bg-white/10 border border-transparent'
+                      ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
+                      : 'text-stone-600 hover:text-orange-700 hover:bg-orange-50'
                   }`}
                 >
                   <item.Icon className="w-4 h-4" />
@@ -69,13 +74,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-2">
             <button
               onClick={toggleLang}
-              className="text-xs font-medium text-gray-500 hover:text-gray-300 px-2.5 py-1.5 rounded-lg border border-white/10 hover:border-white/20 transition-all"
+              className="text-xs font-bold text-stone-600 hover:text-orange-600 px-2.5 py-1.5 rounded-lg border border-stone-200 hover:border-orange-300 bg-white transition-all"
             >
               {lang === 'hi' ? 'EN' : 'हिं'}
             </button>
             <Link
               href="/dashboard/settings"
-              className="p-2 text-gray-400 hover:text-white rounded-xl hover:bg-white/10 transition-all"
+              className="p-2 text-stone-500 hover:text-orange-600 rounded-xl hover:bg-orange-50 transition-all"
               aria-label="Settings"
             >
               <Settings className="w-5 h-5" />
@@ -98,11 +103,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               key={item.href}
               href={item.href}
               className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all ${
-                isActive ? 'text-indigo-400' : 'text-gray-600 hover:text-gray-400'
+                isActive ? 'text-orange-600' : 'text-stone-400 hover:text-stone-600'
               }`}
             >
               <item.Icon className="w-5 h-5" />
-              <span className="text-[11px] font-medium">
+              <span className="text-[11px] font-semibold">
                 {lang === 'hi' ? item.hiLabel : item.enLabel}
               </span>
             </Link>

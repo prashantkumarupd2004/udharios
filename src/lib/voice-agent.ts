@@ -34,6 +34,7 @@ export interface VoiceAgentContext {
   amountINR: string
   daysOverdue: number
   paymentLinkUrl?: string
+  billRef?: string
 }
 
 export interface VoiceAgentTurn {
@@ -53,7 +54,8 @@ function getOpeningScript(ctx: VoiceAgentContext): string {
 }
 
 function getPaymentReminderScript(ctx: VoiceAgentContext): string {
-  return `Aapka ${ctx.amountINR} ka payment ${ctx.daysOverdue} din se pending hai. Kya aap aaj payment kar payenge, ya koi date dena chahenge?`
+  const billPart = ctx.billRef ? `Bill number ${ctx.billRef} ka ` : ''
+  return `Aapka ${billPart}${ctx.amountINR} ka payment ${ctx.daysOverdue} din se pending hai. Kya aap aaj payment kar payenge, ya koi date dena chahenge?`
 }
 
 function getPromiseAckScript(date: string): string {
@@ -353,6 +355,6 @@ async function getCustomerPhone(customerId: string): Promise<string> {
 // ---------------------------------------------------------------------------
 
 export async function synthesizeAgentResponse(text: string): Promise<Buffer> {
-  const { audioBase64 } = await synthesizeSpeech(text, 'meera', 'hi-IN', 0.9)
+  const { audioBase64 } = await synthesizeSpeech(text, 'priya', 'hi-IN', 0.9)
   return Buffer.from(audioBase64, 'base64')
 }

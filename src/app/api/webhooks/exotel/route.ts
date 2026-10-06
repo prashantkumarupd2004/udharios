@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
         amountINR: formatINR(outstanding.amount.toNumber()),
         daysOverdue: overdueDays(outstanding.dueDate),
         paymentLinkUrl: outstanding.paymentLink?.url,
+        billRef: outstanding.invoiceNo ?? undefined,
       }
 
       // Determine turn index from existing transcript length
