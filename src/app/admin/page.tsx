@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
   Users, CreditCard, PhoneCall, MessageSquare, IndianRupee,
   ClipboardList, LogOut, Check, X, Loader2, ShieldCheck,
-  TrendingUp, Bell,
+  TrendingUp, Bell, Search, ScrollText, AlertTriangle,
 } from 'lucide-react'
 
 interface Stats {
@@ -80,6 +80,8 @@ export default function AdminDashboard() {
   const [topMerchants, setTopMerchants] = useState<TopMerchant[]>([])
   const [loading, setLoading] = useState(true)
   const [actionId, setActionId] = useState<string | null>(null)
+  const [revenue, setRevenue] = useState<{ daily: { date: string; revenue: number }[]; totalRevenue30d: number; conversionRate: number } | null>(null)
+  const [health, setHealth] = useState<{ alerts: { level: string; message: string }[]; calls: { successRate: number }; messages: { deliveryRate: number } } | null>(null)
 
   useEffect(() => {
     fetch('/api/admin/stats')
@@ -98,6 +100,9 @@ export default function AdminDashboard() {
         setLoading(false)
       })
       .catch(() => setLoading(false))
+
+    fetch('/api/admin/revenue').then(r => r.json()).then(d => { if (d.ok) setRevenue(d) }).catch(() => {})
+    fetch('/api/admin/health').then(r => r.json()).then(d => { if (d.ok) setHealth(d) }).catch(() => {})
   }, [router])
 
   async function handleRequest(id: string, action: 'approve' | 'reject') {
@@ -146,6 +151,14 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Link href="/admin/merchants"
+              className="px-4 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-sm font-bold flex items-center gap-2">
+              <Search className="w-4 h-4" /> Merchants
+            </Link>
+            <Link href="/admin/audit"
+              className="px-4 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-sm font-bold flex items-center gap-2">
+              <ScrollText className="w-4 h-4" /> Audit
+            </Link>
             <Link href="/admin/access-requests"
               className="px-4 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-sm font-bold flex items-center gap-2">
               <ClipboardList className="w-4 h-4" /> Requests
@@ -164,6 +177,49 @@ export default function AdminDashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+        {/* System health alerts */}
+        {health && health.alerts.length > 0 && (
+          <div className="space-y-2">
+            {health.alerts.map((a, i) => (
+              <div key={i} className={`border rounded-2xl p-4 flex items-center gap-3 ${a.level === 'critical' ? 'bg-red-950/40 border-red-800' : 'bg-amber-950/40 border-amber-800'}`}>
+                <AlertTriangle className={`w-5 h-5 shrink-0 ${a.level === 'critical' ? 'text-red-400' : 'text-amber-400'}`} />
+                <p className={`text-sm font-medium ${a.level === 'critical' ? 'text-red-200' : 'text-amber-200'}`}>{a.message}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Revenue chart */}
+        {revenue && (
+          <section className="bg-stone-900/60 border border-stone-800 rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-extrabold">Revenue — last 30 days</h2>
+              <div className="text-right">
+                <p className="text-2xl font-extrabold text-emerald-400">₹{revenue.totalRevenue30d.toLocaleString('en-IN')}</p>
+                <p className="text-stone-500 text-xs">Trial → paid: {revenue.conversionRate}%</p>
+              </div>
+            </div>
+            <div className="flex items-end gap-1 h-32">
+              {revenue.daily.map(d => {
+                const max = Math.max(...revenue.daily.map(x => x.revenue), 1)
+                const h = Math.max(4, (d.revenue / max) * 100)
+                return (
+                  <div key={d.date} className="flex-1 flex flex-col justify-end h-full group relative">
+                    <div className="bg-gradient-to-t from-emerald-700 to-emerald-400 rounded-t" style={{ height: `${h}%` }} />
+                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-stone-800 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-10">
+                      ₹{d.revenue.toLocaleString('en-IN')}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="flex justify-between text-stone-600 text-xs mt-2">
+              <span>{revenue.daily[0]?.date.slice(5)}</span>
+              <span>{revenue.daily[revenue.daily.length - 1]?.date.slice(5)}</span>
+            </div>
+          </section>
+        )}
+
         {/* Pending alert */}
         {pending.length > 0 && (
           <div className="bg-orange-950/40 border border-orange-800 rounded-2xl p-4 flex items-center gap-3">

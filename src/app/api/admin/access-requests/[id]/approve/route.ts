@@ -10,6 +10,7 @@ import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 import { requireAdmin } from '@/lib/admin'
 import { provisionMerchant } from '@/lib/merchant'
+import { appendAuditLog } from '@/lib/audit'
 
 export async function POST(
   _request: NextRequest,
@@ -43,6 +44,16 @@ export async function POST(
     })
 
     logger.info('Access request approved', { requestId: id, merchantId: merchant.id })
+
+    await appendAuditLog({
+      merchantId: merchant.id,
+      actor: admin.email ?? admin.phone ?? 'admin',
+      action: 'admin.access_request.approved',
+      entity: 'access_request',
+      entityId: id,
+      payload: { businessName: req.businessName, phone: req.phone },
+    })
+
     return NextResponse.json({ ok: true, merchantId: merchant.id })
   } catch (err) {
     logger.error('Admin approve error', { error: String(err) })
