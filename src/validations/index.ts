@@ -229,8 +229,11 @@ export const killSwitchSchema = z.object({
 // ---------------------------------------------------------------------------
 
 export const paginationSchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
+  // searchParams.get() null deta hai jab param missing ho — null ko undefined
+  // banao taaki .default() kaam kare (z.coerce.number() null ko 0 bana deta
+  // hai jo .min(1) pe fail karta tha → 500 Server error)
+  page: z.preprocess((v) => v ?? undefined, z.coerce.number().int().min(1).default(1)),
+  limit: z.preprocess((v) => v ?? undefined, z.coerce.number().int().min(1).max(100).default(20)),
 })
 
 // ---------------------------------------------------------------------------
