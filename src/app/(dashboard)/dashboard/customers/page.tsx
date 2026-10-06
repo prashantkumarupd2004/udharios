@@ -237,7 +237,9 @@ export default function CustomersPage() {
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-stone-500 font-medium">+91 {c.phone.replace('+91', '')}</p>
+                <p className="text-sm text-stone-500 font-medium">
+                  {c.phone.startsWith('tally-') ? '—' : c.phone.startsWith('+91') ? c.phone : `+91 ${c.phone}`}
+                </p>
               </div>
               <div className="text-right flex-shrink-0">
                 {c._count.outstandings > 0 ? (
