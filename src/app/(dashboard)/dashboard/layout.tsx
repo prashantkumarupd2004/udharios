@@ -26,11 +26,13 @@ const NAV_ITEMS = [
 function BrandMark() {
   return (
     <div className="flex items-center gap-2">
-      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-md shadow-orange-500/30">
-        <IndianRupee className="w-4 h-4 text-white" strokeWidth={2.5} />
-      </div>
+      <img
+        src="/ugaahi-icon.png"
+        alt="Ugaahi logo"
+        className="w-8 h-8 rounded-lg shadow-md object-cover"
+      />
       <span className="font-extrabold text-lg hidden sm:block tracking-tight text-stone-900">
-        Udhari <span className="gradient-text">OS</span>
+        Ugaahi
       </span>
     </div>
   )
@@ -46,7 +48,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Desktop header */}
       <header className="bg-white/90 backdrop-blur-md border-b border-orange-100 sticky top-[3px] z-40 shadow-[0_2px_12px_-6px_rgba(120,70,10,0.12)]">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/dashboard" aria-label="Udhari OS dashboard">
+          <Link href="/dashboard" aria-label="Ugaahi dashboard">
             <BrandMark />
           </Link>
 

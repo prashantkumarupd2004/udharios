@@ -12,7 +12,7 @@ export const en = {
   },
 
   dashboard: {
-    title: 'Udhari OS',
+    title: 'Ugaahi',
     subtitle: 'Your collection assistant',
     totalOutstanding: 'Total Outstanding',
     totalOverdue: 'Overdue',

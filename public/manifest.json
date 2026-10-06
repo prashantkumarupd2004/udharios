@@ -1,6 +1,6 @@
 {
-  "name": "Udhari OS",
-  "short_name": "Udhari",
+  "name": "Ugaahi",
+  "short_name": "Ugaahi",
   "description": "AI Payment Collection for Indian Merchants",
   "start_url": "/dashboard",
   "display": "standalone",
@@ -22,6 +22,9 @@
     }
   ],
   "screenshots": [],
-  "categories": ["finance", "business"],
+  "categories": [
+    "finance",
+    "business"
+  ],
   "lang": "hi"
 }

@@ -14,7 +14,7 @@ export const hi = {
 
   // Dashboard
   dashboard: {
-    title: 'Udhari OS',
+    title: 'Ugaahi',
     subtitle: 'Aapka collection assistant',
     totalOutstanding: 'Total Baaki',
     totalOverdue: 'Overdue',

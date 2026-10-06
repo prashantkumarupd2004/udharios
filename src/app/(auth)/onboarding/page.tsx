@@ -132,7 +132,7 @@ export default function OnboardingPage() {
             <Store className="w-6 h-6 text-orange-600" />
           </div>
           <div>
-            <p className="font-extrabold text-xl leading-none">Udhari OS</p>
+            <p className="font-extrabold text-xl leading-none">Ugaahi</p>
             <p className="text-orange-100 text-sm mt-1">उधारी वसूली, smart tarike se</p>
           </div>
         </div>
@@ -194,7 +194,7 @@ export default function OnboardingPage() {
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-md shadow-orange-500/25">
           <Store className="w-5 h-5 text-white" />
         </div>
-        <p className="font-extrabold text-stone-900">Udhari OS</p>
+        <p className="font-extrabold text-stone-900">Ugaahi</p>
       </div>
       {stepIndex >= 0 && stepIndex < 4 && (
         <p className="text-xs font-bold text-stone-500 bg-white border border-stone-200 rounded-full px-3 py-1.5">
@@ -243,8 +243,8 @@ export default function OnboardingPage() {
                 </h1>
                 <p className="text-stone-500 mt-3 text-[15px] leading-relaxed max-w-lg mx-auto lg:mx-0">
                   {hi
-                    ? '2 minute me setup karein — uske baad Udhari OS khud yaad dilayega, payment link bhejega aur hisaab rakhega.'
-                    : 'Set up in 2 minutes — then Udhari OS reminds, sends payment links and tracks everything on its own.'}
+                    ? '2 minute me setup karein — uske baad Ugaahi khud yaad dilayega, payment link bhejega aur hisaab rakhega.'
+                    : 'Set up in 2 minutes — then Ugaahi reminds, sends payment links and tracks everything on its own.'}
                 </p>
 
                 <div className="grid sm:grid-cols-3 gap-3 mt-8 text-left">
@@ -633,7 +633,7 @@ export default function OnboardingPage() {
                 </h2>
                 <p className="text-stone-500 mt-2 max-w-md mx-auto">
                   <b className="text-stone-800">{bizName}</b>{' '}
-                  {hi ? 'ab Udhari OS par live hai. Aage kya karna hai:' : 'is now live on Udhari OS. Here’s what’s next:'}
+                  {hi ? 'ab Ugaahi par live hai. Aage kya karna hai:' : 'is now live on Ugaahi. Here’s what’s next:'}
                 </p>
 
                 <div className="grid sm:grid-cols-3 gap-3 mt-8 text-left">

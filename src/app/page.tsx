@@ -102,17 +102,18 @@ function CountUp({ to, suffix = '', duration = 1400 }: { to: number; suffix?: st
 /* ── Brand logo ────────────────────────────────────────────────────── */
 function Logo({ size = 'md' }: { size?: 'md' | 'lg' }) {
   const box = size === 'lg' ? 'w-11 h-11' : 'w-9 h-9'
-  const icon = size === 'lg' ? 'w-6 h-6' : 'w-5 h-5'
   return (
     <div className="flex items-center gap-2.5">
-      <div className={`${box} rounded-xl bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 flex items-center justify-center shadow-lg shadow-orange-500/30`}>
-        <IndianRupee className={`${icon} text-white`} strokeWidth={2.5} />
-      </div>
+      <img
+        src="/ugaahi-icon.png"
+        alt="Ugaahi logo"
+        className={`${box} rounded-xl shadow-lg shadow-orange-500/20 object-cover`}
+      />
       <div className="leading-none">
         <span className="font-display font-extrabold text-xl tracking-tight text-stone-900">
-          Udhari <span className="gradient-text">OS</span>
+          Ugaahi
         </span>
-        <p className="text-[10px] font-semibold tracking-[0.22em] text-orange-700/80 mt-0.5">उधारी वसूली</p>
+        <p className="text-[10px] font-semibold tracking-[0.22em] text-orange-700/80 mt-0.5">उगाही</p>
       </div>
     </div>
   )
@@ -379,7 +380,7 @@ export default function LandingPage() {
       {/* ── Nav ── */}
       <nav className="fixed top-[33px] sm:top-[37px] left-0 right-0 z-50 bg-[#FDF9F1]/85 backdrop-blur-xl border-b border-orange-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link href="/" aria-label="Udhari OS home">
+          <Link href="/" aria-label="Ugaahi home">
             <Logo />
           </Link>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-stone-600 absolute left-1/2 -translate-x-1/2">

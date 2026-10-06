@@ -228,7 +228,7 @@ export default function ServicesPage() {
       <section className="py-16 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-stone-900 text-center tracking-tight">
-            {hi ? 'Udhari OS hi kyun?' : 'Why Udhari OS?'}
+            {hi ? 'Ugaahi hi kyun?' : 'Why Ugaahi?'}
           </h2>
           <div className="grid sm:grid-cols-3 gap-5 mt-10">
             {[

@@ -17,20 +17,20 @@ const sora = Sora({
 })
 
 export const metadata: Metadata = {
-  title: 'Udhari OS — AI Payment Collection for Indian Merchants',
+  title: 'Ugaahi — AI Payment Collection for Indian Merchants',
   description:
-    'WhatsApp reminders, AI voice calls, aur UPI payment links — sab automatic. Apna udhaari vasool karo bina tension ke.',
+    'WhatsApp reminders, AI voice calls, aur UPI payment links — sab automatic. Apni ugahi karo bina tension ke.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Udhari OS',
+    title: 'Ugaahi',
   },
   formatDetection: { telephone: false },
   openGraph: {
     type: 'website',
-    siteName: 'Udhari OS',
-    title: 'Udhari OS — AI Payment Collection',
+    siteName: 'Ugaahi',
+    title: 'Ugaahi — AI Payment Collection',
     description: 'Automate your udhaari collection with WhatsApp & AI voice calls',
   },
 }

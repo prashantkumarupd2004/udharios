@@ -30,15 +30,17 @@ export default function SiteFooter() {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center">
-                <IndianRupee className="w-5 h-5 text-white" strokeWidth={2.5} />
-              </div>
+              <img
+                src="/ugaahi-icon.png"
+                alt="Ugaahi logo"
+                className="w-9 h-9 rounded-xl shadow-lg object-cover"
+              />
               <div className="leading-none">
                 <span className="font-extrabold text-lg text-white">
-                  Udhari <span className="text-orange-400">OS</span>
+                  Ugaahi
                 </span>
                 <p className="text-[10px] font-semibold tracking-[0.22em] text-orange-400/80 mt-0.5">
-                  उधारी वसूली
+                  उगाही
                 </p>
               </div>
             </div>
@@ -111,7 +113,7 @@ export default function SiteFooter() {
 
         <div className="h-1 rounded-full mt-10 opacity-60 bg-gradient-to-r from-orange-500 via-white to-green-600" />
         <p className="text-center text-xs text-stone-500 mt-6">
-          © 2026 Udhari OS.{' '}
+          © 2026 Ugaahi.{' '}
           {lang === 'hi' ? 'Sabhi adhikaar surakshit. 🇮🇳' : 'All rights reserved. 🇮🇳'}
         </p>
       </div>

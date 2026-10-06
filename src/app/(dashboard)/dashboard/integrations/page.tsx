@@ -150,8 +150,8 @@ export default function IntegrationsPage() {
         </h1>
         <p className="text-stone-500 mt-1 text-[15px]">
           {hi
-            ? 'Tally ke bills Udhari OS me — bill number samajh ke automatic reminders'
-            : 'Tally bills into Udhari OS — automatic reminders that understand bill numbers'}
+            ? 'Tally ke bills Ugaahi me — bill number samajh ke automatic reminders'
+            : 'Tally bills into Ugaahi — automatic reminders that understand bill numbers'}
         </p>
       </div>
 
@@ -419,8 +419,8 @@ export default function IntegrationsPage() {
         <h3 className="font-extrabold text-lg mb-2">{hi ? '🤖 Tally Sync Agent (automatic)' : '🤖 Tally Sync Agent (automatic)'}</h3>
         <p className="text-stone-300 text-sm leading-relaxed max-w-3xl">
           {hi
-            ? 'Roz-roz file upload nahi karna? Apne Windows computer par chhota sa Sync Agent install karein — wo har 30 minute me Tally se naye bills nikal kar Udhari OS ko bhej dega. Tally chalta rehna chahiye, bas.'
-            : 'Don’t want to upload files daily? Install the tiny Sync Agent on your Windows computer — it pulls new bills from Tally every 30 minutes and pushes them to Udhari OS. Tally just needs to be running.'}
+            ? 'Roz-roz file upload nahi karna? Apne Windows computer par chhota sa Sync Agent install karein — wo har 30 minute me Tally se naye bills nikal kar Ugaahi ko bhej dega. Tally chalta rehna chahiye, bas.'
+            : 'Don’t want to upload files daily? Install the tiny Sync Agent on your Windows computer — it pulls new bills from Tally every 30 minutes and pushes them to Ugaahi. Tally just needs to be running.'}
         </p>
         <div className="flex flex-wrap gap-2.5 mt-4 text-[13px]">
           {[

@@ -13,7 +13,7 @@ export default function TermsPage() {
     ? [
         {
           t: '1. Service kya hai',
-          b: 'Udhari OS Indian merchants ko udhaar vasuli me madad karta hai — WhatsApp/SMS reminders, Hindi AI voice calls, UPI payment links, reports aur Tally sync. Service "as-is" basis pe milti hai; hum 100% vasuli ki guarantee nahi dete.',
+          b: 'Ugaahi Indian merchants ko udhaar vasuli me madad karta hai — WhatsApp/SMS reminders, Hindi AI voice calls, UPI payment links, reports aur Tally sync. Service "as-is" basis pe milti hai; hum 100% vasuli ki guarantee nahi dete.',
         },
         {
           t: '2. Tumhari zimmedari',
@@ -33,7 +33,7 @@ export default function TermsPage() {
         },
         {
           t: '6. Liability limit',
-          b: 'Kanoon ke dayre me, Udhari OS ki zimmedari tumhare pichle 3 mahine ke paid amount tak seemit hai. Vasuli na hone se hue nuksaan ke liye hum zimmedaar nahi.',
+          b: 'Kanoon ke dayre me, Ugaahi ki zimmedari tumhare pichle 3 mahine ke paid amount tak seemit hai. Vasuli na hone se hue nuksaan ke liye hum zimmedaar nahi.',
         },
         {
           t: '7. Kanoon',
@@ -43,7 +43,7 @@ export default function TermsPage() {
     : [
         {
           t: '1. What the service is',
-          b: 'Udhari OS helps Indian merchants recover credit — WhatsApp/SMS reminders, Hindi AI voice calls, UPI payment links, reports and Tally sync. The service is provided "as-is"; we do not guarantee 100% recovery.',
+          b: 'Ugaahi helps Indian merchants recover credit — WhatsApp/SMS reminders, Hindi AI voice calls, UPI payment links, reports and Tally sync. The service is provided "as-is"; we do not guarantee 100% recovery.',
         },
         {
           t: '2. Your responsibility',
@@ -63,7 +63,7 @@ export default function TermsPage() {
         },
         {
           t: '6. Liability limit',
-          b: 'To the extent permitted by law, Udhari OS\'s liability is limited to what you paid in the last 3 months. We are not liable for losses from unrecovered dues.',
+          b: 'To the extent permitted by law, Ugaahi\'s liability is limited to what you paid in the last 3 months. We are not liable for losses from unrecovered dues.',
         },
         {
           t: '7. Governing law',
@@ -94,7 +94,7 @@ export default function TermsPage() {
             ))}
             <section className="pt-4 border-t border-stone-100">
               <p className="text-sm text-stone-500">
-                {hi ? 'Inhe sweekar karke tum Udhari OS use karne ke liye sahmat ho.' : 'By using Udhari OS you agree to these terms.'}
+                {hi ? 'Inhe sweekar karke tum Ugaahi use karne ke liye sahmat ho.' : 'By using Ugaahi you agree to these terms.'}
               </p>
             </section>
           </div>

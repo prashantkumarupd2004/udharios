@@ -8,14 +8,16 @@ import { useLanguage } from '@/hooks/useLanguage'
 export function Logo() {
   return (
     <div className="flex items-center gap-2.5">
-      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 flex items-center justify-center shadow-lg shadow-orange-500/30">
-        <IndianRupee className="w-5 h-5 text-white" strokeWidth={2.5} />
-      </div>
+      <img
+        src="/ugaahi-icon.png"
+        alt="Ugaahi logo"
+        className="w-9 h-9 rounded-xl shadow-lg shadow-orange-500/20 object-cover"
+      />
       <div className="leading-none">
         <span className="font-extrabold text-xl tracking-tight text-stone-900">
-          Udhari <span className="text-orange-600">OS</span>
+          Ugaahi
         </span>
-        <p className="text-[10px] font-semibold tracking-[0.22em] text-orange-700/80 mt-0.5">उधारी वसूली</p>
+        <p className="text-[10px] font-semibold tracking-[0.22em] text-orange-700/80 mt-0.5">उगाही</p>
       </div>
     </div>
   )
@@ -35,7 +37,7 @@ export default function SiteNav() {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-[#FDF9F1]/85 backdrop-blur-xl border-b border-orange-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-        <Link href="/" aria-label="Udhari OS home">
+        <Link href="/" aria-label="Ugaahi home">
           <Logo />
         </Link>
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-stone-600 absolute left-1/2 -translate-x-1/2">

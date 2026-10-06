@@ -92,13 +92,15 @@ export default function LoginPage() {
 
       <div className="relative w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-xl shadow-orange-500/30 mb-4">
-            <IndianRupee className="w-8 h-8 text-white" strokeWidth={2.5} />
-          </div>
+          <img
+            src="/ugaahi-icon.png"
+            alt="Ugaahi logo"
+            className="w-16 h-16 mx-auto rounded-2xl shadow-xl shadow-orange-500/30 mb-4 object-cover"
+          />
           <h1 className="text-3xl font-extrabold text-stone-900 tracking-tight">
-            Udhari <span className="gradient-text">OS</span>
+            Ugaahi
           </h1>
-          <p className="text-[11px] font-bold tracking-[0.28em] text-orange-700/70 mt-1">उधारी वसूली</p>
+          <p className="text-[11px] font-bold tracking-[0.28em] text-orange-700/70 mt-1">उगाही</p>
           <p className="text-stone-500 text-sm mt-2">{t.tagline}</p>
         </div>
 

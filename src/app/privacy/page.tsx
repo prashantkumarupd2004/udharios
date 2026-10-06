@@ -13,7 +13,7 @@ export default function PrivacyPage() {
     ? [
         {
           t: '1. Hum kaun sa data lete hain',
-          b: 'Udhari OS tumhara naam, phone number, business details, customer list, bill/udhaar records aur payment history store karta hai. OTP login ke liye phone number use hota hai. Call recordings sirf tumhari permission se save hoti hain.',
+          b: 'Ugaahi tumhara naam, phone number, business details, customer list, bill/udhaar records aur payment history store karta hai. OTP login ke liye phone number use hota hai. Call recordings sirf tumhari permission se save hoti hain.',
         },
         {
           t: '2. Data ka istemal',
@@ -33,7 +33,7 @@ export default function PrivacyPage() {
         },
         {
           t: '6. Bachchon ki privacy',
-          b: 'Udhari OS business owners ke liye hai. Hum jaan-boojh kar 18 saal se kam umra ke logon ka data collect nahi karte.',
+          b: 'Ugaahi business owners ke liye hai. Hum jaan-boojh kar 18 saal se kam umra ke logon ka data collect nahi karte.',
         },
         {
           t: '7. Policy me badlaav',
@@ -43,7 +43,7 @@ export default function PrivacyPage() {
     : [
         {
           t: '1. What data we collect',
-          b: 'Udhari OS stores your name, phone number, business details, customer lists, bill/credit records and payment history. Your phone number is used for OTP login. Call recordings are saved only with your permission.',
+          b: 'Ugaahi stores your name, phone number, business details, customer lists, bill/credit records and payment history. Your phone number is used for OTP login. Call recordings are saved only with your permission.',
         },
         {
           t: '2. How we use it',
@@ -63,7 +63,7 @@ export default function PrivacyPage() {
         },
         {
           t: '6. Children\'s privacy',
-          b: 'Udhari OS is for business owners. We do not knowingly collect data from anyone under 18.',
+          b: 'Ugaahi is for business owners. We do not knowingly collect data from anyone under 18.',
         },
         {
           t: '7. Changes to this policy',
