@@ -24,6 +24,7 @@ import {
   Store,
 } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
+import SiteFooter from '@/components/SiteFooter'
 
 /* ── Scroll reveal wrapper ─────────────────────────────────────────── */
 function Reveal({ children, delay = 0, className = '' }: { children: ReactNode; delay?: number; className?: string }) {
@@ -274,6 +275,7 @@ export default function LandingPage() {
           </Link>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-stone-600">
             <a href="#features" className="hover:text-orange-600 transition-colors">Features</a>
+            <Link href="/services" className="hover:text-orange-600 transition-colors">{lang === 'hi' ? 'Services' : 'Services'}</Link>
             <a href="#journey" className="hover:text-orange-600 transition-colors">{lang === 'hi' ? 'Kaise Kaam Karta Hai' : 'How It Works'}</a>
             <a href="#pricing" className="hover:text-orange-600 transition-colors">{lang === 'hi' ? 'Pricing' : 'Pricing'}</a>
             <a href="#faq" className="hover:text-orange-600 transition-colors">FAQ</a>
@@ -647,28 +649,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="bg-stone-900 text-stone-300 py-12 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center">
-                <IndianRupee className="w-5 h-5 text-white" strokeWidth={2.5} />
-              </div>
-              <div className="leading-none">
-                <span className="font-extrabold text-lg text-white">Udhari <span className="gradient-text">OS</span></span>
-                <p className="text-[10px] font-semibold tracking-[0.22em] text-orange-400/80 mt-0.5">उधारी वसूली</p>
-              </div>
-            </div>
-            <div className="flex gap-6 text-sm text-stone-400">
-              <a href="#" className="hover:text-white transition-colors">{lang === 'hi' ? 'Privacy Policy' : 'Privacy Policy'}</a>
-              <a href="#" className="hover:text-white transition-colors">{lang === 'hi' ? 'Terms' : 'Terms'}</a>
-              <a href="mailto:support@udhari.app" className="hover:text-white transition-colors">Support</a>
-            </div>
-          </div>
-          <div className="tricolor-bar mt-8 rounded-full opacity-60" />
-          <p className="text-center text-xs text-stone-500 mt-6">© 2026 Udhari OS. {lang === 'hi' ? 'Sabhi adhikaar surakshit. 🇮🇳' : 'All rights reserved. 🇮🇳'}</p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }
