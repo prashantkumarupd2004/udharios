@@ -57,9 +57,12 @@ export async function placeCall(input: PlaceCallInput): Promise<ExotelCallRespon
     CallerId: EXOTEL_VIRTUAL_NUMBER,
     // Url is requested by Exotel when the customer answers; it MUST return
     // ExoML (our /api/voice/exoml endpoint). Exotel executes the returned
-    // ExoML directly to drive the call. CustomField is passed through as a
-    // GET param so we can resolve the call context.
-    Url: `${APP_URL}/api/voice/exoml`,
+    // ExoML directly to drive the call. The callId is embedded in the Url
+    // itself (in addition to CustomField) so ctx resolves even if Exotel
+    // pre-fetches the Url for validation or doesn't forward CustomField.
+    Url: input.customField
+      ? `${APP_URL}/api/voice/exoml?CustomField=${encodeURIComponent(input.customField)}`
+      : `${APP_URL}/api/voice/exoml`,
     StatusCallback: input.callbackUrl,
     TimeLimit: String(input.timeLimit ?? 300),
     TimeOut: String(input.timeOut ?? 60),
