@@ -37,15 +37,19 @@ export function normalizeTallyDate(v: unknown): string {
   if (/^\d{8}$/.test(s)) {
     return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`
   }
-  // DD-Mon-YYYY e.g. 12-Oct-2024
-  const m = s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/)
+  // DD-Mon-YYYY e.g. 12-Oct-2024, ya DD-Mon-YY e.g. 1-Apr-26
+  const m = s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2}|\d{4})$/)
   if (m) {
     const months: Record<string, string> = {
       jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
       jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
     }
     const mm = months[m[2].toLowerCase()]
-    if (mm) return `${m[3]}-${mm}-${m[1].padStart(2, '0')}`
+    if (mm) {
+      let yyyy = m[3]
+      if (yyyy.length === 2) yyyy = (parseInt(yyyy) > 50 ? '19' : '20') + yyyy
+      return `${yyyy}-${mm}-${m[1].padStart(2, '0')}`
+    }
   }
   // Already ISO-ish
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10)
@@ -66,9 +70,9 @@ function pick(obj: Record<string, unknown>, keys: string[]): string {
 }
 
 const BILL_REF_KEYS = ['billname', 'billref', 'billno', 'billnumber', 'vouchernumber', 'vchno', 'refno', 'invoiceno']
-const PARTY_KEYS = ['partyname', 'ledgername', 'dspvchledger', 'party', 'ledger', 'accountname']
-const AMOUNT_KEYS = ['billamount', 'amount', 'dspvchamt', 'vchamt', 'debitamount']
-const PENDING_KEYS = ['billsdueamt', 'billsosdue', 'billpending', 'pendingamt', 'osamt', 'balance', 'closingbalance', 'netamount']
+const PARTY_KEYS = ['partyname', 'ledgername', 'dspvchledger', 'party', 'ledger', 'accountname', 'billparty']
+const AMOUNT_KEYS = ['billamount', 'amount', 'dspvchamt', 'vchamt', 'debitamount', 'billcl']
+const PENDING_KEYS = ['billsdueamt', 'billsosdue', 'billpending', 'pendingamt', 'osamt', 'balance', 'closingbalance', 'netamount', 'billcl', 'billoverdue']
 const BILL_DATE_KEYS = ['billdate', 'date', 'dspvchdate', 'vchdate']
 const DUE_DATE_KEYS = ['billdue', 'duedate', 'billduedate', 'creditduedate']
 const PHONE_KEYS = ['partyphone', 'phone', 'mobileno', 'contactno']
@@ -79,9 +83,9 @@ function rowToBill(obj: Record<string, unknown>, tallyCompany?: string): TallyBi
   const partyName = pick(obj, PARTY_KEYS)
   if (!billRef || !partyName) return null
 
-  const amount = num(pick(obj, AMOUNT_KEYS))
+  const amount = Math.abs(num(pick(obj, AMOUNT_KEYS)))
   const pendingRaw = pick(obj, PENDING_KEYS)
-  const pendingAmount = pendingRaw ? num(pendingRaw) : amount
+  const pendingAmount = pendingRaw ? Math.abs(num(pendingRaw)) : amount
   const billDate = normalizeTallyDate(pick(obj, BILL_DATE_KEYS))
   const dueDate = normalizeTallyDate(pick(obj, DUE_DATE_KEYS))
 
@@ -102,9 +106,50 @@ function rowToBill(obj: Record<string, unknown>, tallyCompany?: string): TallyBi
 // Tally XML
 // ---------------------------------------------------------------------------
 
-/** Recursively collect candidate row objects from parsed XML. */
-function collectRows(node: unknown, out: Array<Record<string, unknown>>): void {
+/**
+ * Kuch Tally exports me bill data aise hota hai:
+ *   <BILLFIXED><BILLREF>3</BILLREF><BILLPARTY>X</BILLPARTY></BILLFIXED>
+ *   <BILLCL>-200000</BILLCL><BILLDUE>3-Apr-26</BILLDUE>
+ * Sibling tags (amount/due) ko BILLFIXED object me merge karo taaki
+ * row detection (billref + party ek hi object me) kaam kare.
+ * Repeated tags arrays bante hain — index-wise parallel merge.
+ */
+function mergeBillFixedSiblings(node: unknown): void {
   if (Array.isArray(node)) {
+    for (const item of node) mergeBillFixedSiblings(item)
+    return
+  }
+  if (node && typeof node === 'object') {
+    const obj = node as Record<string, unknown>
+    const bfKey = Object.keys(obj).find((k) => k.toLowerCase() === 'billfixed')
+    if (bfKey) {
+      const bfVal = obj[bfKey]
+      const bfArr = Array.isArray(bfVal) ? bfVal : [bfVal]
+      const siblingVals: Record<string, unknown[]> = {}
+      for (const [k, v] of Object.entries(obj)) {
+        if (k === bfKey) continue
+        const lk = k.toLowerCase()
+        if (Array.isArray(v) && v.length === bfArr.length) {
+          siblingVals[lk] = v
+        } else if (v === null || typeof v !== 'object') {
+          siblingVals[lk] = bfArr.map(() => v)
+        }
+      }
+      bfArr.forEach((bf, i) => {
+        if (bf && typeof bf === 'object' && !Array.isArray(bf)) {
+          const rec = bf as Record<string, unknown>
+          for (const [lk, arr] of Object.entries(siblingVals)) {
+            if (!(lk in rec)) rec[lk] = arr[i]
+          }
+        }
+      })
+    }
+    for (const v of Object.values(obj)) mergeBillFixedSiblings(v)
+  }
+}
+
+/** Recursively collect candidate row objects from parsed XML. */
+function collectRows(node: unknown, out: Array<Record<string, unknown>>): void {  if (Array.isArray(node)) {
     for (const item of node) collectRows(item, out)
     return
   }
@@ -132,6 +177,7 @@ export function parseTallyXml(xml: string, tallyCompany?: string): { bills: Tall
   }
 
   const rows: Array<Record<string, unknown>> = []
+  mergeBillFixedSiblings(parsed)
   collectRows(parsed, rows)
 
   const bills: TallyBillInput[] = []

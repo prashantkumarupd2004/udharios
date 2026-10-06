@@ -11,7 +11,7 @@
  *   3. config.json banayein (config.example.json dekhein):
  *      - apiKey: Udhari OS dashboard → Tally Sync → "Tally connect karein" se mili key
  *      - companyName: Tally me company ka exact naam
- *      - serverUrl: aapke Udhari OS ka URL (default https://app.udharios.in)
+ *      - serverUrl: aapke Udhari OS ka URL (default https://udharios.vercel.app)
  *   4. `node sync-agent.js` — ya start-agent.bat par double-click
  *
  * Tally Prime chalta rehna chahiye (port 9000 par XML interface on hota hai).
@@ -32,7 +32,7 @@ const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
 const {
   apiKey,
   companyName,
-  serverUrl = 'https://app.udharios.in',
+  serverUrl = 'https://udharios.vercel.app',
   tallyHost = 'localhost',
   tallyPort = 9000,
   intervalMinutes = 30,

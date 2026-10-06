@@ -13,6 +13,24 @@ import { parseTallyXml, parseTallyCsv, parseTallyLedgers } from '@/lib/tally-par
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
 import { logger } from '@/lib/logger'
 
+/**
+ * Tally XML export UTF-16LE (BOM FF FE) me hota hai — file.text() use karne se
+ * garbage milta hai. BOM dekh kar sahi encoding se decode karo.
+ */
+async function decodeUploadFile(file: File): Promise<string> {
+  const buf = await file.arrayBuffer()
+  const bytes = new Uint8Array(buf)
+  if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) {
+    return new TextDecoder('utf-16le').decode(buf)
+  }
+  if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
+    return new TextDecoder('utf-16be').decode(buf)
+  }
+  // UTF-8 (BOM ho to strip)
+  const text = new TextDecoder('utf-8').decode(buf)
+  return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession()
@@ -31,7 +49,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'File 10MB se chhoti honi chahiye' }, { status: 400 })
     }
 
-    const text = await file.text()
+    const text = await decodeUploadFile(file)
     const name = file.name.toLowerCase()
     const isCsv = name.endsWith('.csv')
 

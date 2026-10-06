@@ -20,7 +20,7 @@ copy config.example.json config.json
 REM    config.json kholo (Notepad me) aur bharo:
 REM    - apiKey: dashboard se mili tally_... wali key
 REM    - companyName: Tally me company ka EXACT naam (Gateway of Tally par jo dikhta hai)
-REM    - serverUrl: https://app.udharios.in (aapka Udhari OS URL)
+REM    - serverUrl: https://udharios.vercel.app (aapka Udhari OS URL)
 
 REM 3. Pehle test karo:
 npm test
