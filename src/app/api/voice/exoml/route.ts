@@ -71,7 +71,27 @@ async function hangupWith(text: string | null, callId: string, turn: number): Pr
 
 async function handleEntry(req: NextRequest): Promise<NextResponse> {
   const url = new URL(req.url)
-  const ctxParam = url.searchParams.get('ctx') ?? ''
+
+  // ctx can arrive three ways:
+  // 1. ?ctx= query param (direct flowUrl use)
+  // 2. ?CustomField= query param (Passthru applet forwards API CustomField)
+  // 3. POST form field CustomField (Passthru applet POST)
+  let ctxParam =
+    url.searchParams.get('ctx') ??
+    url.searchParams.get('CustomField') ??
+    url.searchParams.get('customfield') ??
+    ''
+  if (!ctxParam && req.method === 'POST') {
+    try {
+      const form = await req.formData()
+      ctxParam =
+        (form.get('CustomField') as string) ||
+        (form.get('customfield') as string) ||
+        ''
+    } catch {
+      /* ignore body parse errors */
+    }
+  }
   const ctx = decodeCtx(ctxParam)
 
   if (!ctx) {

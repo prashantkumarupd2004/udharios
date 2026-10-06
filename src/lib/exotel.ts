@@ -25,9 +25,7 @@ export interface PlaceCallInput {
   timeLimit?: number        // Max call duration in seconds (default 300)
   timeOut?: number          // Ring timeout in seconds (default 60)
   record?: boolean          // Record the call
-  customField?: string      // Extra metadata passed back in webhooks
-  flowUrl?: string          // Override: ExoML URL to execute when answered
-                            // (defaults to the EXOTEL_APP_ID flow)
+  customField?: string      // Extra metadata -> passed into the flow via Passthru applet
 }
 
 export interface ExotelCallResponse {
@@ -56,7 +54,11 @@ export async function placeCall(input: PlaceCallInput): Promise<ExotelCallRespon
     From: toNormalized,
     To: EXOTEL_VIRTUAL_NUMBER,
     CallerId: EXOTEL_VIRTUAL_NUMBER,
-    Url: input.flowUrl ?? `https://my.exotel.com/${EXOTEL_SID}/exoml/start_voice/${EXOTEL_APP_ID}`,
+    // Url MUST be the Exotel app/flow URL (my.exotel.com/.../start_voice/{APP_ID}).
+    // When the customer answers, Exotel runs this flow's applets; our
+    // Passthru applet then calls our server, which returns the ExoML.
+    // (Passing our own server URL here directly does not work.)
+    Url: `https://my.exotel.com/${EXOTEL_SID}/exoml/start_voice/${EXOTEL_APP_ID}`,
     StatusCallback: input.callbackUrl,
     TimeLimit: String(input.timeLimit ?? 300),
     TimeOut: String(input.timeOut ?? 60),

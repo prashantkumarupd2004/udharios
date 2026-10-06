@@ -55,7 +55,10 @@ export async function POST(req: NextRequest) {
     billRef: String(body.billRef ?? 'INV-1023'),
   }
 
-  const flowUrl = `${APP_URL}/api/voice/exoml?ctx=${encodeCtx(ctx)}`
+  // NOTE: no flowUrl override — Url must be the Exotel app/flow URL
+  // (my.exotel.com/.../start_voice/{APP_ID}). The app's Passthru applet
+  // calls our /api/voice/exoml, and Exotel forwards CustomField to it,
+  // so the call context travels in CustomField.
   const callbackUrl = `${APP_URL}/api/webhooks/exotel?callId=${callId}`
 
   try {
@@ -73,11 +76,10 @@ export async function POST(req: NextRequest) {
     const result = await placeCall({
       to,
       callbackUrl,
-      flowUrl: `${APP_URL}/api/voice/exoml?ctx=${encodeCtx(ctx)}`,
       timeLimit: 300,
       timeOut: 60,
       record: true,
-      customField: callId,
+      customField: encodeCtx(ctx),
     })
     logger.info('Test AI call placed', { callId, sid: result.Call.Sid, to })
     return NextResponse.json({
