@@ -28,10 +28,12 @@ export async function provisionMerchant(input: ProvisionMerchantInput) {
   if (existing) {
     // Ensure it's marked approved (e.g. approving a request for an old record)
     if (!existing.isApproved) {
-      await prisma.merchant.update({
+      const updated = await prisma.merchant.update({
         where: { id: existing.id },
         data: { isApproved: true },
+        include: { users: { where: { role: 'owner' } } },
       })
+      return updated
     }
     return existing
   }
