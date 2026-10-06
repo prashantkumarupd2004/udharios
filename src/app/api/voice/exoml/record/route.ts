@@ -16,6 +16,7 @@ import { transcribeAudio } from '@/lib/sarvam'
 import { uploadVoiceAudio, downloadRecording } from '@/lib/voice-audio'
 import { synthesizeAgentResponse } from '@/lib/voice-agent'
 import { resolveVoiceCtx } from '@/lib/voice-ctx'
+import { traceVoiceCall } from '@/lib/voice-trace'
 import { logger } from '@/lib/logger'
 import { hangupWith, APP_URL, MAX_TURNS } from '../route'
 
@@ -75,6 +76,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const recordingUrl = (form.get('RecordingUrl') as string) || ''
   const callSid = (form.get('CallSid') as string) || ''
 
+  await traceVoiceCall(ctx.callId, 'record_hit', {
+    turn,
+    callSid,
+    hasRecordingUrl: !!recordingUrl,
+    recordingUrlPrefix: recordingUrl.slice(0, 80),
+  })
+
   logger.info('ExoML record callback', { callId: ctx.callId, turn, callSid, hasRecording: !!recordingUrl })
 
   // Customer stayed silent -> nudge once or twice, then close politely
@@ -97,6 +105,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     // 2. Agent brain decides the next line + outcome
     const result = await processVoiceAgentTurn(audioBuffer, ctx as VoiceAgentContext, turn)
+    await traceVoiceCall(ctx.callId, 'record_turn_done', {
+      turn,
+      customerSpeech: result.customerSpeech?.slice(0, 120),
+      agentResponse: result.agentResponse?.slice(0, 120),
+      outcome: result.outcome,
+    })
 
     // 3. Terminal outcome -> speak closing line, hang up
     if (result.outcome && result.outcome !== 'ongoing') {

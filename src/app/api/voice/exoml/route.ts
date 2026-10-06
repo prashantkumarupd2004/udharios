@@ -18,6 +18,7 @@ import {
 } from '@/lib/voice-agent'
 import { uploadVoiceAudio } from '@/lib/voice-audio'
 import { resolveVoiceCtx } from '@/lib/voice-ctx'
+import { traceVoiceCall } from '@/lib/voice-trace'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
@@ -83,6 +84,14 @@ async function handleEntry(req: NextRequest): Promise<NextResponse> {
   }
 
   const ctx = await resolveVoiceCtx(ref)
+  await traceVoiceCall(ctx?.callId ?? ref?.slice(0, 40) ?? 'unknown', 'entry_hit', {
+    method: req.method,
+    refLength: ref?.length ?? 0,
+    refPrefix: ref?.slice(0, 30),
+    ctxFound: !!ctx,
+    hasGreetingUrl: !!ctx?.greetingUrl,
+    queryKeys: Array.from(url.searchParams.keys()),
+  })
   if (!ctx) {
     logger.error('ExoML entry: could not resolve ctx', { ref: ref?.slice(0, 40) })
     return exoml(`  <Hangup/>`)
@@ -92,7 +101,12 @@ async function handleEntry(req: NextRequest): Promise<NextResponse> {
 
   // Fast path: greeting was pre-synthesized when the call was placed.
   if (ctx.greetingUrl) {
-    return exoml(`  <Play>${ctx.greetingUrl}</Play>\n  ${recordVerb(ctx.callId, 1)}`)
+    const xml = exoml(`  <Play>${ctx.greetingUrl}</Play>\n  ${recordVerb(ctx.callId, 1)}`)
+    await traceVoiceCall(ctx.callId, 'entry_exoml_sent', {
+      playUrl: ctx.greetingUrl,
+      turn: 0,
+    })
+    return xml
   }
 
   try {
