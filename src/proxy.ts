@@ -72,25 +72,10 @@ export async function proxy(request: NextRequest) {
   const response = NextResponse.next({ request })
   const path = request.nextUrl.pathname
 
-  // Always allow public paths
-  const isPublic = PUBLIC_PATH_PREFIXES.some(p =>
-    path === p || path.startsWith(p + '/')
-  )
-
-  // Read JWT cookie
-  const token = request.cookies.get(COOKIE_NAME)?.value ?? null
-  const session = token ? await verifySession(token) : null
-
-  // Redirect unauthenticated users away from protected routes
-  if (!session && !isPublic) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    url.searchParams.set('redirectTo', path)
-    return NextResponse.redirect(url)
-  }
-
-  // Admin routes — separate email+password auth (ugaahi_admin_session).
+  // Admin routes FIRST — separate email+password auth (ugaahi_admin_session).
   // Public: /admin/login and /api/admin/auth/* (login/logout endpoints).
+  // Must run before the merchant-session check below, otherwise /admin/login
+  // gets bounced to the merchant OTP /login page.
   if (path.startsWith('/admin') || path.startsWith('/api/admin')) {
     const isAdminPublic =
       path === '/admin/login' ||
@@ -107,6 +92,23 @@ export async function proxy(request: NextRequest) {
       }
     }
     return response
+  }
+
+  // Always allow public paths
+  const isPublic = PUBLIC_PATH_PREFIXES.some(p =>
+    path === p || path.startsWith(p + '/')
+  )
+
+  // Read JWT cookie
+  const token = request.cookies.get(COOKIE_NAME)?.value ?? null
+  const session = token ? await verifySession(token) : null
+
+  // Redirect unauthenticated users away from protected routes
+  if (!session && !isPublic) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    url.searchParams.set('redirectTo', path)
+    return NextResponse.redirect(url)
   }
 
   // Redirect already-authenticated users away from login
