@@ -8,6 +8,18 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const BUCKET = 'voice-audio'
 
+function appBase(): string {
+  return (process.env.NEXT_PUBLIC_APP_URL ?? 'https://udharios.vercel.app').replace(/\/+$/, '')
+}
+
+/**
+ * Public URL for a voice audio file, served through OUR domain
+ * (/api/voice/audio/...) so Exotel's <Play> fetches it reliably.
+ */
+export function publicAudioUrl(filename: string): string {
+  return `${appBase()}/api/voice/audio/${filename}`
+}
+
 export async function uploadVoiceAudio(
   audio: Buffer,
   filename: string,
@@ -31,7 +43,9 @@ export async function uploadVoiceAudio(
     throw new Error(`Voice audio upload failed: ${res.status}`)
   }
 
-  return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${filename}`
+  // Return the same-domain proxy URL (not the raw Supabase URL) so
+  // Exotel's <Play> fetches it reliably.
+  return publicAudioUrl(filename)
 }
 
 /** Download a call recording (Exotel RecordingUrl) as a Buffer. */
