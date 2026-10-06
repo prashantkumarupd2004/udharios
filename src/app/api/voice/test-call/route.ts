@@ -16,6 +16,7 @@ import {
 } from '@/lib/voice-agent'
 import { saveVoiceCtx } from '@/lib/voice-ctx'
 import { uploadVoiceAudio } from '@/lib/voice-audio'
+import { prepareDtmfCallAudio } from '@/lib/voice-dtmf'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
@@ -66,6 +67,18 @@ export async function POST(req: NextRequest) {
     )
     logger.info('Test call greeting ready', { callId, greetingUrl: ctx.greetingUrl })
 
+    // Also prepare the DTMF flow-builder audio set (personalized Hindi
+    // greeting + 3 option responses) at static URLs, so the Exotel flow
+    // (Greeting applet -> Gather) can play them without ExoML.
+    const dtmfUrls = await prepareDtmfCallAudio({
+      customerName: ctx.customerName,
+      merchantName: ctx.merchantName,
+      amountINR: ctx.amountINR,
+      daysOverdue: ctx.daysOverdue,
+      billRef: ctx.billRef ?? 'INV-1023',
+    })
+    logger.info('Test call DTMF audio ready', { callId, dtmfUrls })
+
     // Exotel truncates CustomField (~400 chars), so the full ctx is stored
     // in voice_call_sessions and only the short callId travels via CustomField.
     await saveVoiceCtx(callId, ctx)
@@ -84,6 +97,7 @@ export async function POST(req: NextRequest) {
       callId,
       exotelSid: result.Call.Sid,
       status: result.Call.Status,
+      dtmfUrls,
     })
   } catch (err) {
     logger.error('Test AI call failed', { error: String(err) })
