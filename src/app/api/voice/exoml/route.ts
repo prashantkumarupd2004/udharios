@@ -101,9 +101,12 @@ async function handleEntry(req: NextRequest): Promise<NextResponse> {
 
   // Fast path: greeting was pre-synthesized when the call was placed.
   if (ctx.greetingUrl) {
-    const xml = exoml(`  <Play>${ctx.greetingUrl}</Play>\n  ${recordVerb(ctx.callId, 1)}`)
+    // TEMP SAY TEST: replace <Play> with <Say> to verify Exotel executes
+    // our ExoML at all. If the user hears this, <Play> audio is the problem.
+    const sayText = 'Hello! This is a test call from Udhari OS. Kya aap sun sakte hain?'
+    const xml = exoml(`  <Say>${sayText}</Say>\n  ${recordVerb(ctx.callId, 1)}`)
     await traceVoiceCall(ctx.callId, 'entry_exoml_sent', {
-      playUrl: ctx.greetingUrl,
+      mode: 'SAY_TEST',
       turn: 0,
     })
     return xml
