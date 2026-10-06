@@ -11,6 +11,7 @@ const EXOTEL_API_TOKEN = process.env.EXOTEL_API_TOKEN!
 const EXOTEL_VIRTUAL_NUMBER = process.env.EXOTEL_VIRTUAL_NUMBER!
 const EXOTEL_APP_ID = process.env.EXOTEL_APP_ID!
 const EXOTEL_SUBDOMAIN = process.env.EXOTEL_SUBDOMAIN ?? 'api.exotel.com'
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://udharios.vercel.app').replace(/\/+$/, '')
 
 function authHeader(): string {
   // Exotel Basic auth = API Key (username) : API Token (password)
@@ -54,11 +55,11 @@ export async function placeCall(input: PlaceCallInput): Promise<ExotelCallRespon
     From: toNormalized,
     To: EXOTEL_VIRTUAL_NUMBER,
     CallerId: EXOTEL_VIRTUAL_NUMBER,
-    // Url MUST be the Exotel app/flow URL (my.exotel.com/.../start_voice/{APP_ID}).
-    // When the customer answers, Exotel runs this flow's applets; our
-    // Passthru applet then calls our server, which returns the ExoML.
-    // (Passing our own server URL here directly does not work.)
-    Url: `https://my.exotel.com/${EXOTEL_SID}/exoml/start_voice/${EXOTEL_APP_ID}`,
+    // Url is requested by Exotel when the customer answers; it MUST return
+    // ExoML (our /api/voice/exoml endpoint). Exotel executes the returned
+    // ExoML directly to drive the call. CustomField is passed through as a
+    // GET param so we can resolve the call context.
+    Url: `${APP_URL}/api/voice/exoml`,
     StatusCallback: input.callbackUrl,
     TimeLimit: String(input.timeLimit ?? 300),
     TimeOut: String(input.timeOut ?? 60),
