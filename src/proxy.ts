@@ -25,6 +25,9 @@ const PUBLIC_PATH_PREFIXES = [
   '/',
   '/login',
   '/onboarding',
+  '/services',
+  '/privacy',
+  '/terms',
   '/api/auth',
   '/api/webhooks',
   '/api/voice', // Exotel ExoML callbacks (no session cookie; test-call has x-test-key guard)
