@@ -33,7 +33,8 @@ function exoml(body: string): NextResponse {
 }
 
 function recordVerb(callId: string, turn: number): string {
-  const action = `${APP_URL}/api/voice/exoml/record?ctx=${encodeURIComponent(callId)}&turn=${turn}`
+  // NOTE: & must be &amp; inside XML attributes, otherwise Exotel's XML parser rejects the whole response.
+  const action = `${APP_URL}/api/voice/exoml/record?ctx=${encodeURIComponent(callId)}&amp;turn=${turn}`
   return `<Record action="${action}" method="POST" maxLength="10" timeout="5" playBeep="false"/>`
 }
 
@@ -101,12 +102,9 @@ async function handleEntry(req: NextRequest): Promise<NextResponse> {
 
   // Fast path: greeting was pre-synthesized when the call was placed.
   if (ctx.greetingUrl) {
-    // TEMP SAY TEST: replace <Play> with <Say> to verify Exotel executes
-    // our ExoML at all. If the user hears this, <Play> audio is the problem.
-    const sayText = 'Hello! This is a test call from Udhari OS. Kya aap sun sakte hain?'
-    const xml = exoml(`  <Say>${sayText}</Say>\n  ${recordVerb(ctx.callId, 1)}`)
+    const xml = exoml(`  <Play>${ctx.greetingUrl}</Play>\n  ${recordVerb(ctx.callId, 1)}`)
     await traceVoiceCall(ctx.callId, 'entry_exoml_sent', {
-      mode: 'SAY_TEST',
+      playUrl: ctx.greetingUrl,
       turn: 0,
     })
     return xml

@@ -44,7 +44,7 @@ async function speakAndRecord(
     audio,
     `call-${callId}-turn-${turn}-${Date.now()}.wav`
   )
-  const action = `${APP_URL}/api/voice/exoml/record?ctx=${encodeURIComponent(callId)}&turn=${turn + 1}`
+  const action = `${APP_URL}/api/voice/exoml/record?ctx=${encodeURIComponent(callId)}&amp;turn=${turn + 1}`
   return exoml(
     `  <Play>${audioUrl}</Play>\n  <Record action="${action}" method="POST" maxLength="10" timeout="5" playBeep="false"/>`
   )
