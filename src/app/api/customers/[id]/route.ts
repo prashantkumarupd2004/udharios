@@ -39,8 +39,8 @@ export async function GET(
           orderBy: { createdAt: 'desc' },
           take: 10,
           select: {
-            id: true, amount: true, promiseDate: true, status: true,
-            createdAt: true,
+            id: true, promisedDate: true, status: true,
+            createdAt: true, notes: true,
           },
         },
       },
