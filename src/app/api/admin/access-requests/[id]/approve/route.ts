@@ -34,6 +34,7 @@ export async function POST(
       phone: req.phone,
       businessName: req.businessName,
       ownerName: req.name,
+      email: req.email ?? undefined,
     })
 
     await prisma.accessRequest.update({

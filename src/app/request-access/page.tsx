@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useLanguage } from '@/hooks/useLanguage'
 import SiteFooter from '@/components/SiteFooter'
 import SiteNav from '@/components/SiteNav'
@@ -26,8 +27,17 @@ const VOLUMES = [
 ]
 
 export default function RequestAccessPage() {
+  return (
+    <Suspense>
+      <RequestAccessForm />
+    </Suspense>
+  )
+}
+
+function RequestAccessForm() {
   const { lang } = useLanguage()
   const hi = lang === 'hi'
+  const searchParams = useSearchParams()
 
   const [form, setForm] = useState({
     name: '',
@@ -39,6 +49,20 @@ export default function RequestAccessPage() {
     monthlyVolume: '',
     message: '',
   })
+
+  // Pre-fill from Google OAuth redirect (?email= &name=)
+  useEffect(() => {
+    const email = searchParams.get('email')
+    const name = searchParams.get('name')
+    if (email || name) {
+      setForm(f => ({
+        ...f,
+        email: email ?? f.email,
+        name: name ?? f.name,
+      }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
 

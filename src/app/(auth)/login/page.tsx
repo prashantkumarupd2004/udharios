@@ -14,6 +14,8 @@ const copy = {
     phoneLabel: 'Apna mobile number daalo',
     sendBtn: IS_DEV ? '🔓 Dev Login (OTP Skip)' : 'OTP Bhejo',
     sendingBtn: 'Loading…',
+    orContinueWith: 'ya',
+    googleBtn: 'Google se Login karo',
     terms: 'Login karke aap hamare Terms aur Privacy Policy se agree karte hain',
     switchLang: 'Switch to English',
     errors: {
@@ -21,6 +23,8 @@ const copy = {
       failed: 'Kuch gadbad hui. Dobara try karo.',
       not_approved: 'Ye number abhi approved nahi hai. Pehle access ke liye apply karo — approval ke baad hi login hoga.',
       pending_review: 'Tumhari request review me hai. Approve hote hi login kar paoge.',
+      google_failed: 'Google login fail ho gaya. Dobara try karo.',
+      google_not_approved: 'Ye Google account approved nahi hai. Pehle access ke liye apply karo.',
     },
   },
   en: {
@@ -28,6 +32,8 @@ const copy = {
     phoneLabel: 'Enter your mobile number',
     sendBtn: IS_DEV ? '🔓 Dev Login (Skip OTP)' : 'Send OTP',
     sendingBtn: 'Loading…',
+    orContinueWith: 'or',
+    googleBtn: 'Continue with Google',
     terms: 'By logging in, you agree to our Terms and Privacy Policy',
     switchLang: 'हिंदी में देखें',
     errors: {
@@ -35,6 +41,8 @@ const copy = {
       failed: 'Something went wrong. Try again.',
       not_approved: 'This number is not approved yet. Apply for access first — login works only after approval.',
       pending_review: 'Your request is under review. You can log in once approved.',
+      google_failed: 'Google login failed. Try again.',
+      google_not_approved: 'This Google account is not approved. Apply for access first.',
     },
   },
 }
@@ -173,6 +181,25 @@ export default function LoginPage() {
               {!loading && <ArrowRight className="w-5 h-5" />}
             </button>
           </form>
+
+          {/* Google OAuth login */}
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px bg-stone-200" />
+            <span className="text-xs font-semibold text-stone-400">{t.orContinueWith}</span>
+            <div className="flex-1 h-px bg-stone-200" />
+          </div>
+          <a
+            href="/api/auth/google"
+            className="flex items-center justify-center gap-3 w-full py-3.5 rounded-xl border-2 border-stone-200 bg-white text-stone-700 font-bold text-base hover:border-stone-300 hover:bg-stone-50 transition-all"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M23.5 12.3c0-.9-.1-1.5-.3-2.3H12v4.5h6.5c-.1 1.1-.8 2.7-2.4 3.8l-.1.1 3.5 2.7.2.1c2.2-2 3.8-5 3.8-8.9z" />
+              <path fill="#34A853" d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-3.8-2.9c-1 .7-2.4 1.2-4.1 1.2-3.1 0-5.8-2.1-6.8-5l-.1.1-3.6 2.8v.1C3.5 21.3 7.5 24 12 24z" />
+              <path fill="#FBBC05" d="M5.2 14.4c-.2-.7-.4-1.5-.4-2.4s.1-1.7.4-2.4l-.1-.1-3.6-2.8-.1.1C.5 8.5 0 10.2 0 12s.5 3.5 1.4 5.2l3.8-2.8z" />
+              <path fill="#EA4335" d="M12 4.7c1.8 0 3 .8 3.7 1.4l3.3-3.2C17.9 1.1 15.2 0 12 0 7.5 0 3.5 2.7 1.4 6.8l3.8 2.9c1-2.9 3.7-5 6.8-5z" />
+            </svg>
+            {t.googleBtn}
+          </a>
 
           <div className="mt-6 flex items-center gap-2 justify-center text-xs text-stone-500">
             <ShieldCheck className="w-4 h-4 text-green-600" />

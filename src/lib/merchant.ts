@@ -14,6 +14,7 @@ export interface ProvisionMerchantInput {
   phone: string // E.164, e.g. +919820021873
   businessName: string
   ownerName?: string
+  email?: string // for Google OAuth login matching
 }
 
 /**
@@ -27,10 +28,15 @@ export async function provisionMerchant(input: ProvisionMerchantInput) {
   })
   if (existing) {
     // Ensure it's marked approved (e.g. approving a request for an old record)
-    if (!existing.isApproved) {
+    // Also backfill email if provided (for Google login matching).
+    const needsUpdate = !existing.isApproved || (!existing.email && input.email)
+    if (needsUpdate) {
       const updated = await prisma.merchant.update({
         where: { id: existing.id },
-        data: { isApproved: true },
+        data: {
+          isApproved: true,
+          ...(input.email && !existing.email ? { email: input.email.toLowerCase() } : {}),
+        },
         include: { users: { where: { role: 'owner' } } },
       })
       return updated
@@ -45,6 +51,7 @@ export async function provisionMerchant(input: ProvisionMerchantInput) {
       plan: 'trial',
       trialEndsAt: addDays(new Date(), 14),
       isApproved: true,
+      email: input.email?.toLowerCase() ?? null,
       users: { create: { role: 'owner', name: input.ownerName ?? '' } },
     },
     include: { users: { where: { role: 'owner' } } },
