@@ -14,6 +14,7 @@ import {
   synthesizeAgentResponse,
   type VoiceAgentContext,
 } from '@/lib/voice-agent'
+import { saveVoiceCtx } from '@/lib/voice-ctx'
 import { uploadVoiceAudio } from '@/lib/voice-audio'
 import { logger } from '@/lib/logger'
 
@@ -21,14 +22,6 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
 const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://udharios1.vercel.app').replace(/\/+$/, '')
-
-function encodeCtx(ctx: VoiceAgentContext): string {
-  return Buffer.from(JSON.stringify(ctx), 'utf8')
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '')
-}
 
 export async function POST(req: NextRequest) {
   const testKey = req.headers.get('x-test-key') ?? ''
@@ -73,13 +66,17 @@ export async function POST(req: NextRequest) {
     )
     logger.info('Test call greeting ready', { callId, greetingUrl: ctx.greetingUrl })
 
+    // Exotel truncates CustomField (~400 chars), so the full ctx is stored
+    // in voice_call_sessions and only the short callId travels via CustomField.
+    await saveVoiceCtx(callId, ctx)
+
     const result = await placeCall({
       to,
       callbackUrl,
       timeLimit: 300,
       timeOut: 60,
       record: true,
-      customField: encodeCtx(ctx),
+      customField: callId,
     })
     logger.info('Test AI call placed', { callId, sid: result.Call.Sid, to })
     return NextResponse.json({

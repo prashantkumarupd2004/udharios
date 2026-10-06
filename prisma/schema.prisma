@@ -556,3 +556,18 @@ model TallyConnection {
 
   @@map("tally_connections")
 }
+
+// ---------------------------------------------------------------------------
+// VOICE CALL SESSIONS — lightweight ctx store for Exotel voice calls.
+// Exotel truncates CustomField (~400 chars), so the full VoiceAgentContext
+// (incl. pre-synthesized greetingUrl) is stored here and only the callId
+// travels via CustomField / Record action URLs.
+// ---------------------------------------------------------------------------
+
+model VoiceCallSession {
+  id        String   @id // our callId, e.g. test-1791266523355
+  ctxJson   String   @map("ctx_json")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("voice_call_sessions")
+}

@@ -4,17 +4,20 @@
  * Exotel POSTs (form-encoded) after the customer finishes speaking:
  *   RecordingUrl -> we download -> Sarvam STT -> voice-agent turn ->
  *   Sarvam TTS -> <Play> + next <Record>, or <Hangup/> when terminal.
+ *
+ * The ctx reference (?ctx=callId) is resolved via resolveVoiceCtx.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import {
   processVoiceAgentTurn,
-  synthesizeAgentResponse,
   type VoiceAgentContext,
 } from '@/lib/voice-agent'
 import { transcribeAudio } from '@/lib/sarvam'
 import { uploadVoiceAudio, downloadRecording } from '@/lib/voice-audio'
+import { synthesizeAgentResponse } from '@/lib/voice-agent'
+import { resolveVoiceCtx } from '@/lib/voice-ctx'
 import { logger } from '@/lib/logger'
-import { decodeCtx, speakAndRecord, hangupWith, APP_URL, MAX_TURNS } from '../route'
+import { hangupWith, APP_URL, MAX_TURNS } from '../route'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -25,17 +28,36 @@ const SILENCE_PROMPT =
 const GRACEFUL_CLOSE =
   'Dhanyavaad! Hum aapse jald sampark karenge. Shubh din!'
 
+function exoml(body: string): NextResponse {
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<Response>\n${body}\n</Response>`
+  return new NextResponse(xml, { headers: { 'Content-Type': 'text/xml' } })
+}
+
+async function speakAndRecord(
+  text: string,
+  callId: string,
+  turn: number
+): Promise<NextResponse> {
+  const audio = await synthesizeAgentResponse(text)
+  const audioUrl = await uploadVoiceAudio(
+    audio,
+    `call-${callId}-turn-${turn}-${Date.now()}.wav`
+  )
+  const action = `${APP_URL}/api/voice/exoml/record?ctx=${encodeURIComponent(callId)}&turn=${turn + 1}`
+  return exoml(
+    `  <Play>${audioUrl}</Play>\n  <Record action="${action}" method="POST" maxLength="10" timeout="5" playBeep="false"/>`
+  )
+}
+
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const url = new URL(req.url)
-  const ctxParam = url.searchParams.get('ctx') ?? ''
+  const ref = url.searchParams.get('ctx') ?? ''
   const turn = parseInt(url.searchParams.get('turn') ?? '1', 10)
-  const ctx = decodeCtx(ctxParam)
+  const ctx = await resolveVoiceCtx(ref)
 
   if (!ctx) {
-    return new NextResponse(
-      `<?xml version="1.0" encoding="UTF-8"?>\n<Response>\n  <Hangup/>\n</Response>`,
-      { headers: { 'Content-Type': 'text/xml' } }
-    )
+    logger.error('ExoML record: could not resolve ctx', { ref: ref?.slice(0, 40) })
+    return exoml(`  <Hangup/>`)
   }
 
   // Safety valve: never loop forever
@@ -59,7 +81,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!recordingUrl) {
     if (turn <= 2) {
       try {
-        return await speakAndRecord(SILENCE_PROMPT, ctx.callId, turn, ctxParam)
+        return await speakAndRecord(SILENCE_PROMPT, ctx.callId, turn)
       } catch (err) {
         logger.error('ExoML silence prompt failed', { error: String(err) })
       }
@@ -87,7 +109,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     // 4. Ongoing -> speak + keep listening
-    return await speakAndRecord(result.agentResponse, ctx.callId, turn, ctxParam)
+    return await speakAndRecord(result.agentResponse, ctx.callId, turn)
   } catch (err) {
     logger.error('ExoML turn failed', { callId: ctx.callId, turn, error: String(err) })
     return hangupWith(GRACEFUL_CLOSE, ctx.callId, turn)
@@ -96,10 +118,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
 // Exotel may probe with GET; keep the loop alive only on POST.
 export async function GET() {
-  return new NextResponse(
-    `<?xml version="1.0" encoding="UTF-8"?>\n<Response>\n  <Hangup/>\n</Response>`,
-    { headers: { 'Content-Type': 'text/xml' } }
-  )
+  return exoml(`  <Hangup/>`)
 }
 
 export { APP_URL }

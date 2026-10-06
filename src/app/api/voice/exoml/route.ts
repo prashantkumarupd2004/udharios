@@ -1,9 +1,11 @@
 /**
  * ExoML voice endpoint — the AI collection agent's live call loop.
  *
- * Exotel hits this URL when the customer answers (via the call's flow Url
- * or a Passthru applet). We reply with ExoML:
- *   1. <Play> the Sarvam-TSS greeting (hosted on Supabase Storage)
+ * Exotel's "Udhari AI Voice" app has a Passthru applet pointing here.
+ * When the customer answers an outbound call, the flow hits this URL
+ * (GET) with the API CustomField (= our callId). We resolve the full
+ * VoiceAgentContext from voice_call_sessions and reply with ExoML:
+ *   1. <Play> the pre-synthesized Sarvam greeting (Supabase Storage URL)
  *   2. <Record> the customer's reply -> POSTs to /api/voice/exoml/record
  *
  * The record handler transcribes with Sarvam STT, runs the voice-agent
@@ -13,42 +15,31 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   processVoiceAgentTurn,
   synthesizeAgentResponse,
-  type VoiceAgentContext,
 } from '@/lib/voice-agent'
 import { uploadVoiceAudio } from '@/lib/voice-audio'
+import { resolveVoiceCtx } from '@/lib/voice-ctx'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://udharios1.vercel.app').replace(/\/+$/, '')
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://udharios.vercel.app').replace(/\/+$/, '')
 const MAX_TURNS = 8
-
-function decodeCtx(raw: string | null): VoiceAgentContext | null {
-  if (!raw) return null
-  try {
-    const json = Buffer.from(raw.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')
-    return JSON.parse(json) as VoiceAgentContext
-  } catch {
-    return null
-  }
-}
 
 function exoml(body: string): NextResponse {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<Response>\n${body}\n</Response>`
   return new NextResponse(xml, { headers: { 'Content-Type': 'text/xml' } })
 }
 
-function recordVerb(ctxParam: string, turn: number): string {
-  const action = `${APP_URL}/api/voice/exoml/record?ctx=${ctxParam}&turn=${turn}`
+function recordVerb(callId: string, turn: number): string {
+  const action = `${APP_URL}/api/voice/exoml/record?ctx=${encodeURIComponent(callId)}&turn=${turn}`
   return `<Record action="${action}" method="POST" maxLength="10" timeout="5" playBeep="false"/>`
 }
 
 async function speakAndRecord(
   text: string,
   callId: string,
-  turn: number,
-  ctxParam: string
+  turn: number
 ): Promise<NextResponse> {
   const audio = await synthesizeAgentResponse(text)
   const audioUrl = await uploadVoiceAudio(
@@ -56,7 +47,7 @@ async function speakAndRecord(
     `call-${callId}-turn-${turn}-${Date.now()}.wav`
   )
   logger.info('ExoML speak', { callId, turn, audioUrl })
-  return exoml(`  <Play>${audioUrl}</Play>\n  ${recordVerb(ctxParam, turn + 1)}`)
+  return exoml(`  <Play>${audioUrl}</Play>\n  ${recordVerb(callId, turn + 1)}`)
 }
 
 async function hangupWith(text: string | null, callId: string, turn: number): Promise<NextResponse> {
@@ -72,68 +63,42 @@ async function hangupWith(text: string | null, callId: string, turn: number): Pr
 async function handleEntry(req: NextRequest): Promise<NextResponse> {
   const url = new URL(req.url)
 
-  // Read form body once (Passthru may POST params)
-  let formEntries: Record<string, string> = {}
-  if (req.method === 'POST') {
-    try {
-      const form = await req.formData()
-      for (const [k, v] of form.entries()) {
-        if (typeof v === 'string') formEntries[k] = v
-      }
-    } catch {
-      /* ignore body parse errors */
-    }
-  }
-
-  // TEMPORARY diagnostic: dump exactly what Exotel's Passthru sends,
-  // so we can see how CustomField arrives. Stored in Supabase Storage.
-  try {
-    const dump = {
-      ts: new Date().toISOString(),
-      method: req.method,
-      query: Object.fromEntries(url.searchParams.entries()),
-      form: formEntries,
-    }
-    const { uploadVoiceAudio: upload } = await import('@/lib/voice-audio')
-    await upload(
-      Buffer.from(JSON.stringify(dump, null, 2)),
-      `debug/passthru-${Date.now()}.json`,
-      'application/json'
-    )
-  } catch {
-    /* diagnostics must never break the call */
-  }
-
-  // ctx can arrive three ways:
-  // 1. ?ctx= query param (direct flowUrl use)
-  // 2. ?CustomField= query param (Passthru applet forwards API CustomField)
-  // 3. POST form field CustomField (Passthru applet POST)
-  let ctxParam =
+  // ctx reference arrives as CustomField (forwarded by the Passthru applet),
+  // either as query param (GET) or form field (POST).
+  let ref =
     url.searchParams.get('ctx') ??
     url.searchParams.get('CustomField') ??
     url.searchParams.get('customfield') ??
-    formEntries['CustomField'] ??
-    formEntries['customfield'] ??
     ''
-  const ctx = decodeCtx(ctxParam)
+  if (!ref && req.method === 'POST') {
+    try {
+      const form = await req.formData()
+      ref =
+        (form.get('CustomField') as string) ||
+        (form.get('customfield') as string) ||
+        ''
+    } catch {
+      /* ignore */
+    }
+  }
 
+  const ctx = await resolveVoiceCtx(ref)
   if (!ctx) {
-    logger.error('ExoML entry: bad ctx')
+    logger.error('ExoML entry: could not resolve ctx', { ref: ref?.slice(0, 40) })
     return exoml(`  <Hangup/>`)
   }
 
   logger.info('ExoML call answered', { callId: ctx.callId, customer: ctx.customerName })
 
-  // Fast path: greeting was pre-synthesized when the call was placed,
-  // so Exotel gets ExoML back in milliseconds (no TTS wait -> no hangup).
+  // Fast path: greeting was pre-synthesized when the call was placed.
   if (ctx.greetingUrl) {
-    return exoml(`  <Play>${ctx.greetingUrl}</Play>\n  ${recordVerb(ctxParam, 1)}`)
+    return exoml(`  <Play>${ctx.greetingUrl}</Play>\n  ${recordVerb(ctx.callId, 1)}`)
   }
 
   try {
-    // Turn 0: opening greeting (mentions bill + amount)
+    // Fallback: synthesize inline (slower; Exotel may hang up if too slow)
     const turnResult = await processVoiceAgentTurn(null, ctx, 0)
-    return await speakAndRecord(turnResult.agentResponse, ctx.callId, 0, ctxParam)
+    return await speakAndRecord(turnResult.agentResponse, ctx.callId, 0)
   } catch (err) {
     logger.error('ExoML entry failed', { callId: ctx.callId, error: String(err) })
     return exoml(`  <Hangup/>`)
@@ -148,4 +113,4 @@ export async function POST(req: NextRequest) {
   return handleEntry(req)
 }
 
-export { MAX_TURNS, decodeCtx, speakAndRecord, hangupWith, APP_URL }
+export { MAX_TURNS, APP_URL, hangupWith }
