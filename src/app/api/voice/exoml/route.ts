@@ -72,6 +72,38 @@ async function hangupWith(text: string | null, callId: string, turn: number): Pr
 async function handleEntry(req: NextRequest): Promise<NextResponse> {
   const url = new URL(req.url)
 
+  // Read form body once (Passthru may POST params)
+  let formEntries: Record<string, string> = {}
+  if (req.method === 'POST') {
+    try {
+      const form = await req.formData()
+      for (const [k, v] of form.entries()) {
+        if (typeof v === 'string') formEntries[k] = v
+      }
+    } catch {
+      /* ignore body parse errors */
+    }
+  }
+
+  // TEMPORARY diagnostic: dump exactly what Exotel's Passthru sends,
+  // so we can see how CustomField arrives. Stored in Supabase Storage.
+  try {
+    const dump = {
+      ts: new Date().toISOString(),
+      method: req.method,
+      query: Object.fromEntries(url.searchParams.entries()),
+      form: formEntries,
+    }
+    const { uploadVoiceAudio: upload } = await import('@/lib/voice-audio')
+    await upload(
+      Buffer.from(JSON.stringify(dump, null, 2)),
+      `debug/passthru-${Date.now()}.json`,
+      'application/json'
+    )
+  } catch {
+    /* diagnostics must never break the call */
+  }
+
   // ctx can arrive three ways:
   // 1. ?ctx= query param (direct flowUrl use)
   // 2. ?CustomField= query param (Passthru applet forwards API CustomField)
@@ -80,18 +112,9 @@ async function handleEntry(req: NextRequest): Promise<NextResponse> {
     url.searchParams.get('ctx') ??
     url.searchParams.get('CustomField') ??
     url.searchParams.get('customfield') ??
+    formEntries['CustomField'] ??
+    formEntries['customfield'] ??
     ''
-  if (!ctxParam && req.method === 'POST') {
-    try {
-      const form = await req.formData()
-      ctxParam =
-        (form.get('CustomField') as string) ||
-        (form.get('customfield') as string) ||
-        ''
-    } catch {
-      /* ignore body parse errors */
-    }
-  }
   const ctx = decodeCtx(ctxParam)
 
   if (!ctx) {
