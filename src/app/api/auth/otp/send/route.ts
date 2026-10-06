@@ -5,8 +5,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendOtpSchema } from '@/validations'
 import { logger } from '@/lib/logger'
-import { normalizePhone, msg91SendOtp } from '@/lib/msg91'
+import { normalizePhone, toE164, msg91SendOtp } from '@/lib/msg91'
 import { checkAndRecordSend } from '@/lib/rateLimit'
+import { isAdminPhone } from '@/lib/admin'
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,6 +25,16 @@ export async function POST(request: NextRequest) {
         { status: 429 }
       )
     }
+
+    // ── TEMPORARY (remove after DLT registration) ──────────────────────
+    // Skip real MSG91 send for admin phones when ADMIN_TEST_OTP is set —
+    // avoids SMS cost + DLT block during testing. Admin enters the fixed
+    // test code on the OTP screen instead.
+    if (process.env.ADMIN_TEST_OTP && isAdminPhone(toE164(mobile91))) {
+      logger.info('Skipped MSG91 send for admin (TEMPORARY test OTP mode)')
+      return NextResponse.json({ ok: true, expiresIn: 300 })
+    }
+    // ──────────────────────────────────────────────────────────────────
 
     const result = await msg91SendOtp(mobile91)
     if (!result.ok) return NextResponse.json({ ok: false, error: 'send_failed' }, { status: 502 })

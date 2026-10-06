@@ -47,10 +47,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify OTP with MSG91
-    const verifyResult = await msg91VerifyOtp(mobile91, parsed.data.otp)
-    if (!verifyResult.ok) {
-      const error = verifyResult.error === 'expired' ? 'otp_expired' : 'wrong_otp'
-      return NextResponse.json({ ok: false, error }, { status: 401 })
+    // ── TEMPORARY (remove after DLT registration) ──────────────────────
+    // If ADMIN_TEST_OTP is set, admin phones can log in with that fixed
+    // code instead of a real MSG91 OTP. Admin-only, never for clients.
+    const adminTestOtp = process.env.ADMIN_TEST_OTP
+    const phoneE164Early = toE164(mobile91)
+    const isTestOtpLogin =
+      !!adminTestOtp && isAdminPhone(phoneE164Early) && parsed.data.otp === adminTestOtp
+    // ──────────────────────────────────────────────────────────────────
+
+    if (!isTestOtpLogin) {
+      const verifyResult = await msg91VerifyOtp(mobile91, parsed.data.otp)
+      if (!verifyResult.ok) {
+        const error = verifyResult.error === 'expired' ? 'otp_expired' : 'wrong_otp'
+        return NextResponse.json({ ok: false, error }, { status: 401 })
+      }
+    } else {
+      logger.info('Admin test OTP login (TEMPORARY bypass)')
     }
 
     const phoneE164 = toE164(mobile91) // +91XXXXXXXXXX
