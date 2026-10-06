@@ -33,29 +33,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'invalid_phone' }, { status: 400 })
     }
 
-    // Our-side verify attempt limiting (MSG91 has its own too)
-    const rateCheck = checkAndRecordVerify(mobile91)
-    if (!rateCheck.allowed) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: 'too_many_attempts',
-          ...(rateCheck.reason === 'cooldown' ? { retryAfterSec: rateCheck.retryAfterSec } : {}),
-        },
-        { status: 429 }
-      )
-    }
-
-    // Verify OTP with MSG91
     // ── TEMPORARY (remove after DLT registration) ──────────────────────
     // If ADMIN_TEST_OTP is set, admin phones can log in with that fixed
-    // code instead of a real MSG91 OTP. Admin-only, never for clients.
+    // code instead of a real MSG91 OTP. Checked BEFORE rate limiting so
+    // testing is never blocked. Admin-only, never for clients.
     const adminTestOtp = process.env.ADMIN_TEST_OTP
     const phoneE164Early = toE164(mobile91)
     const isTestOtpLogin =
       !!adminTestOtp && isAdminPhone(phoneE164Early) && parsed.data.otp === adminTestOtp
     // ──────────────────────────────────────────────────────────────────
 
+    // Our-side verify attempt limiting (MSG91 has its own too)
+    // Skipped for temporary admin test OTP logins.
+    if (!isTestOtpLogin) {
+      const rateCheck = checkAndRecordVerify(mobile91)
+      if (!rateCheck.allowed) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: 'too_many_attempts',
+            ...(rateCheck.reason === 'cooldown' ? { retryAfterSec: rateCheck.retryAfterSec } : {}),
+          },
+          { status: 429 }
+        )
+      }
+    }
+
+    // Verify OTP with MSG91 (skipped for temporary admin test OTP)
     if (!isTestOtpLogin) {
       const verifyResult = await msg91VerifyOtp(mobile91, parsed.data.otp)
       if (!verifyResult.ok) {
