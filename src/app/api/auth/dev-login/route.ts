@@ -7,7 +7,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 import { createSessionToken } from '@/lib/session'
-import { addDays } from '@/lib/date-utils'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -27,39 +26,14 @@ export async function POST(request: NextRequest) {
 
     const phoneE164 = `+91${parsed.data.phone}`
 
-    let merchant = await prisma.merchant.findFirst({
-      where: { phone: phoneE164 },
+    // GATED: dev login also requires an approved merchant
+    const merchant = await prisma.merchant.findFirst({
+      where: { phone: phoneE164, isApproved: true },
       include: { users: { where: { role: 'owner' } } },
     })
 
     if (!merchant) {
-      merchant = await prisma.merchant.create({
-        data: {
-          phone: phoneE164,
-          businessName: '',
-          plan: 'trial',
-          trialEndsAt: addDays(new Date(), 14),
-          users: { create: { role: 'owner', name: '' } },
-        },
-        include: { users: { where: { role: 'owner' } } },
-      })
-      await prisma.reminderRule.create({
-        data: {
-          merchantId: merchant.id,
-          name: 'Default',
-          isDefault: true,
-          stages: [
-            { dayOffset: 1,  channel: 'whatsapp', templateName: 'T1_polite' },
-            { dayOffset: 3,  channel: 'whatsapp', templateName: 'T2_with_link' },
-            { dayOffset: 5,  channel: 'whatsapp', templateName: 'T3_firm' },
-            { dayOffset: 7,  channel: 'voice',    templateName: null },
-            { dayOffset: 10, channel: 'voice',    templateName: null },
-            { dayOffset: 14, channel: 'whatsapp', templateName: 'T4_final' },
-            { dayOffset: 15, channel: 'escalate', templateName: null },
-          ],
-        },
-      })
-      logger.info('[DEV] New merchant created', { merchantId: merchant.id })
+      return NextResponse.json({ ok: false, error: 'not_approved' }, { status: 403 })
     }
 
     const ownerUser = merchant.users[0]

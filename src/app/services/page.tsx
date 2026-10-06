@@ -159,7 +159,7 @@ export default function ServicesPage() {
               : 'We handle your entire collection system — you focus on growing your business. AI calls, WhatsApp reminders and UPI links, all automatic.'}
           </p>
           <Link
-            href="/onboarding"
+            href="/request-access"
             className="inline-flex items-center gap-2 mt-8 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-bold px-8 py-3.5 rounded-2xl shadow-lg shadow-orange-500/30 hover:shadow-xl hover:scale-[1.02] transition-all"
           >
             {hi ? 'Start Now' : 'Start Now'}
@@ -257,7 +257,7 @@ export default function ServicesPage() {
           </div>
           <div className="text-center mt-12">
             <Link
-              href="/onboarding"
+              href="/request-access"
               className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-bold px-8 py-3.5 rounded-2xl shadow-lg shadow-orange-500/30 hover:shadow-xl hover:scale-[1.02] transition-all"
             >
               {hi ? 'Free me Shuru Karo' : 'Start Free'}

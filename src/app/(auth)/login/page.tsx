@@ -19,6 +19,8 @@ const copy = {
     errors: {
       invalid_phone: '10 digit ka valid Indian number daalo (6-9 se shuru)',
       failed: 'Kuch gadbad hui. Dobara try karo.',
+      not_approved: 'Ye number abhi approved nahi hai. Pehle access ke liye apply karo — approval ke baad hi login hoga.',
+      pending_review: 'Tumhari request review me hai. Approve hote hi login kar paoge.',
     },
   },
   en: {
@@ -31,6 +33,8 @@ const copy = {
     errors: {
       invalid_phone: 'Enter valid 10-digit Indian number (starts 6-9)',
       failed: 'Something went wrong. Try again.',
+      not_approved: 'This number is not approved yet. Apply for access first — login works only after approval.',
+      pending_review: 'Your request is under review. You can log in once approved.',
     },
   },
 }
@@ -43,10 +47,12 @@ export default function LoginPage() {
   const [phone, setPhone] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [needsAccess, setNeedsAccess] = useState(false)
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setNeedsAccess(false)
 
     if (phone.length !== 10 || !/^[6-9]/.test(phone)) {
       setError(t.errors.invalid_phone)
@@ -55,6 +61,19 @@ export default function LoginPage() {
 
     setLoading(true)
     try {
+      // Gate: only approved numbers get an OTP
+      const checkRes = await fetch('/api/auth/check-access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      })
+      const check = await checkRes.json()
+      if (!check.ok || !check.approved) {
+        setError(check.hasPendingRequest ? t.errors.pending_review : t.errors.not_approved)
+        setNeedsAccess(true)
+        return
+      }
+
       // In dev: bypass OTP entirely
       const endpoint = IS_DEV ? '/api/auth/dev-login' : '/api/auth/otp/send'
       const res = await fetch(endpoint, {
@@ -136,6 +155,11 @@ export default function LoginPage() {
             {error && (
               <div className="mt-3 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 text-red-700 text-sm font-medium">
                 {error}
+                {needsAccess && (
+                  <a href="/request-access" className="block mt-2 font-bold text-orange-700 hover:underline">
+                    {lang === 'hi' ? '→ Access ke liye apply karo' : '→ Apply for access'}
+                  </a>
+                )}
               </div>
             )}
 
@@ -154,6 +178,13 @@ export default function LoginPage() {
             <ShieldCheck className="w-4 h-4 text-green-600" />
             {lang === 'hi' ? 'OTP se secure login • Data India me safe' : 'Secure OTP login • Data stays in India'}
           </div>
+
+          <p className="text-center text-sm text-stone-600 mt-4">
+            {lang === 'hi' ? 'Naye ho? ' : 'New here? '}
+            <a href="/request-access" className="font-bold text-orange-600 hover:underline">
+              {lang === 'hi' ? 'Access ke liye apply karo' : 'Request access'}
+            </a>
+          </p>
 
           <div className="text-center mt-4">
             <button

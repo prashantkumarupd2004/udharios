@@ -403,7 +403,7 @@ export default function LandingPage() {
             >
               {hi ? 'Login' : 'Login'}
             </Link>
-            <Link href="/login" className="btn-primary hidden sm:inline-flex text-sm px-5 py-2.5">
+            <Link href="/request-access" className="btn-primary hidden sm:inline-flex text-sm px-5 py-2.5">
               {t.landing.hero.cta} <ArrowRight className="w-4 h-4" />
             </Link>
             <button
@@ -486,7 +486,7 @@ export default function LandingPage() {
             </Reveal>
             <Reveal delay={240}>
               <div className="flex flex-col sm:flex-row gap-3.5 mb-11">
-                <Link href="/login" className="btn-primary px-8 py-4 text-base shadow-xl shadow-orange-500/30">
+                <Link href="/request-access" className="btn-primary px-8 py-4 text-base shadow-xl shadow-orange-500/30">
                   {t.landing.hero.cta} <ArrowRight className="w-5 h-5" />
                 </Link>
                 <a href="#journey" className="btn-ghost px-8 py-4 text-base bg-white/70 backdrop-blur">
@@ -885,7 +885,7 @@ export default function LandingPage() {
                     ))}
                   </ul>
                   <Link
-                    href="/login"
+                    href="/request-access"
                     className={`w-full py-4 rounded-2xl text-center font-bold transition-all flex items-center justify-center gap-2 ${
                       plan.highlight ? 'btn-primary text-base shadow-xl shadow-orange-500/30' : 'btn-ghost'
                     }`}
@@ -973,7 +973,7 @@ export default function LandingPage() {
                   : '14 days free. No credit card. 5-minute setup. Your first reminder goes out today.'}
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Link href="/login" className="btn-primary px-10 py-4 text-lg shadow-2xl shadow-orange-600/40">
+                <Link href="/request-access" className="btn-primary px-10 py-4 text-lg shadow-2xl shadow-orange-600/40">
                   {t.landing.hero.cta} <ArrowRight className="w-5 h-5" />
                 </Link>
                 <Link href="/services" className="px-8 py-4 rounded-[0.85rem] font-bold text-white border border-white/20 bg-white/5 backdrop-blur hover:bg-white/10 transition-all inline-flex items-center gap-2">

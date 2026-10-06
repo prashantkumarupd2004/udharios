@@ -33,6 +33,12 @@ enum UserRole {
   staff
 }
 
+enum AccessRequestStatus {
+  pending
+  approved
+  rejected
+}
+
 enum OutstandingStatus {
   upcoming
   overdue
@@ -128,6 +134,7 @@ model Merchant {
   quietStart     String       @default("21:00") @map("quiet_start")
   quietEnd       String       @default("09:00") @map("quiet_end")
   isKillSwitched Boolean      @default(false) @map("is_kill_switched")
+  isApproved     Boolean      @default(false) @map("is_approved")
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
 
@@ -570,4 +577,29 @@ model VoiceCallSession {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("voice_call_sessions")
+}
+
+// ---------------------------------------------------------------------------
+// ACCESS REQUESTS — gated signup: clients apply, admin approves, then login.
+// ---------------------------------------------------------------------------
+
+model AccessRequest {
+  id            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String
+  businessName  String              @map("business_name")
+  phone         String              // E.164, e.g. +919820021873
+  email         String?
+  city          String?
+  businessType  String?             @map("business_type")
+  monthlyVolume String?             @map("monthly_volume")
+  message       String?
+  status        AccessRequestStatus @default(pending)
+  reviewedBy    String?             @map("reviewed_by")
+  reviewedAt    DateTime?           @map("reviewed_at")
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([phone])
+  @@map("access_requests")
 }

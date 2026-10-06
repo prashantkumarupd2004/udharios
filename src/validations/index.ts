@@ -29,6 +29,27 @@ export const retryVoiceSchema = z.object({
 })
 
 // ---------------------------------------------------------------------------
+// Access requests (gated signup)
+// ---------------------------------------------------------------------------
+
+export const accessRequestSchema = z.object({
+  name: z.string().min(2, 'Apna naam likhein').max(100),
+  businessName: z.string().min(2, 'Business ka naam likhein').max(100),
+  phone: z
+    .string()
+    .regex(/^(\+91|91)?[6-9]\d{9}$/, 'Valid Indian mobile number required'),
+  email: z.string().email('Valid email likhein').optional().or(z.literal('')),
+  city: z.string().max(100).optional().or(z.literal('')),
+  businessType: z
+    .enum(['kirana', 'wholesale', 'distributor', 'pharmacy', 'hardware', 'textile', 'electronics', 'other'])
+    .optional(),
+  monthlyVolume: z
+    .enum(['under_1L', '1L_5L', '5L_25L', 'above_25L'])
+    .optional(),
+  message: z.string().max(1000).optional().or(z.literal('')),
+})
+
+// ---------------------------------------------------------------------------
 // Merchant onboarding
 // ---------------------------------------------------------------------------
 

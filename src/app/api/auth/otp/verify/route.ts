@@ -6,14 +6,15 @@
  * Flow:
  *   1. Frontend collects 6-digit OTP from user (/login/otp page)
  *   2. We call MSG91 /otp/verify with { mobile, otp }
- *   3. On success → find/create merchant → set JWT session cookie → return redirectTo
+ *   3. On success → merchant must EXIST and be APPROVED (no auto-create;
+ *      access is granted only via admin-approved AccessRequest)
+ *      → set JWT session cookie → return redirectTo
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 import { normalizePhone, toE164, msg91VerifyOtp } from '@/lib/msg91'
 import { createSessionToken, setSessionCookie } from '@/lib/session'
-import { addDays } from '@/lib/date-utils'
 import { verifyOtpSchema } from '@/validations'
 import { checkAndRecordVerify } from '@/lib/rateLimit'
 
@@ -52,42 +53,16 @@ export async function POST(request: NextRequest) {
 
     const phoneE164 = toE164(mobile91) // +91XXXXXXXXXX
 
-    // Find or create merchant
-    let merchant = await prisma.merchant.findFirst({
+    // GATED ACCESS: merchant must exist AND be approved by admin.
+    // No auto-provisioning here — approval happens via AccessRequest flow.
+    const merchant = await prisma.merchant.findFirst({
       where: { phone: phoneE164 },
       include: { users: { where: { role: 'owner' } } },
     })
-    let isNewUser = false
 
-    if (!merchant) {
-      merchant = await prisma.merchant.create({
-        data: {
-          phone: phoneE164,
-          businessName: '',
-          plan: 'trial',
-          trialEndsAt: addDays(new Date(), 14),
-          users: { create: { role: 'owner', name: '' } },
-        },
-        include: { users: { where: { role: 'owner' } } },
-      })
-      await prisma.reminderRule.create({
-        data: {
-          merchantId: merchant.id,
-          name: 'Default',
-          isDefault: true,
-          stages: [
-            { dayOffset: 1,  channel: 'whatsapp', templateName: 'T1_polite' },
-            { dayOffset: 3,  channel: 'whatsapp', templateName: 'T2_with_link' },
-            { dayOffset: 5,  channel: 'whatsapp', templateName: 'T3_firm' },
-            { dayOffset: 7,  channel: 'voice',    templateName: null },
-            { dayOffset: 10, channel: 'voice',    templateName: null },
-            { dayOffset: 14, channel: 'whatsapp', templateName: 'T4_final' },
-            { dayOffset: 15, channel: 'escalate', templateName: null },
-          ],
-        },
-      })
-      isNewUser = true
-      logger.info('New merchant created', { merchantId: merchant.id })
+    if (!merchant || !merchant.isApproved) {
+      logger.info('Login blocked: number not approved', { phone: phoneE164 })
+      return NextResponse.json({ ok: false, error: 'not_approved' }, { status: 403 })
     }
 
     const ownerUser = merchant.users[0]
@@ -102,9 +77,9 @@ export async function POST(request: NextRequest) {
     })
 
     const redirectTo = !merchant.businessName ? '/onboarding' : '/dashboard'
-    logger.info('Login successful via OTP', { merchantId: merchant.id, isNewUser })
+    logger.info('Login successful via OTP', { merchantId: merchant.id })
 
-    const response = NextResponse.json({ ok: true, isNewUser, redirectTo })
+    const response = NextResponse.json({ ok: true, isNewUser: false, redirectTo })
     setSessionCookie(response, sessionToken)
     return response
   } catch (err) {
