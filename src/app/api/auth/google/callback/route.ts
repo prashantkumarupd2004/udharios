@@ -51,9 +51,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/login?error=google_failed', request.url))
   }
 
-  // Admin emails bypass the gate (auto-provision like admin phones)
+  // Admin emails bypass the gate (auto-provision like admin phones).
+  // Pehle check karo: kya is email ka ASLI merchant pehle se hai?
+  // Agar hai to usi me login karo — nakli google: merchant mat banao.
   if (adminEmails().includes(profile.email)) {
-    const merchant = await provisionMerchant({
+    const existing = await prisma.merchant.findFirst({
+      where: { email: profile.email, NOT: { phone: { startsWith: 'google:' } } },
+      include: { users: { where: { role: 'owner' } } },
+    })
+    const merchant = existing ?? await provisionMerchant({
       phone: `google:${profile.email}`,
       businessName: profile.name || 'Ugaahi Admin',
       ownerName: profile.name,
