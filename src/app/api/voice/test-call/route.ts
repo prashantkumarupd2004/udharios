@@ -15,7 +15,7 @@ import { logger } from '@/lib/logger'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://udharios1.vercel.app'
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://udharios1.vercel.app').replace(/\/+$/, '')
 
 function encodeCtx(ctx: VoiceAgentContext): string {
   return Buffer.from(JSON.stringify(ctx), 'utf8')

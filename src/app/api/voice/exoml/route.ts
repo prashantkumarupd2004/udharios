@@ -21,7 +21,7 @@ import { logger } from '@/lib/logger'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://udharios1.vercel.app'
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://udharios1.vercel.app').replace(/\/+$/, '')
 const MAX_TURNS = 8
 
 function decodeCtx(raw: string | null): VoiceAgentContext | null {
