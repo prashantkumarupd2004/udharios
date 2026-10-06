@@ -9,7 +9,12 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { placeCall } from '@/lib/exotel'
-import type { VoiceAgentContext } from '@/lib/voice-agent'
+import {
+  processVoiceAgentTurn,
+  synthesizeAgentResponse,
+  type VoiceAgentContext,
+} from '@/lib/voice-agent'
+import { uploadVoiceAudio } from '@/lib/voice-audio'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
@@ -54,10 +59,21 @@ export async function POST(req: NextRequest) {
   const callbackUrl = `${APP_URL}/api/webhooks/exotel?callId=${callId}`
 
   try {
+    // Pre-synthesize the greeting BEFORE placing the call, so the ExoML
+    // entry can answer instantly (Exotel hangs up if the first response
+    // takes too long).
+    const turn0 = await processVoiceAgentTurn(null, ctx, 0)
+    const greetingAudio = await synthesizeAgentResponse(turn0.agentResponse)
+    ctx.greetingUrl = await uploadVoiceAudio(
+      greetingAudio,
+      `call-${callId}-greeting-${Date.now()}.wav`
+    )
+    logger.info('Test call greeting ready', { callId, greetingUrl: ctx.greetingUrl })
+
     const result = await placeCall({
       to,
       callbackUrl,
-      flowUrl,
+      flowUrl: `${APP_URL}/api/voice/exoml?ctx=${encodeCtx(ctx)}`,
       timeLimit: 300,
       timeOut: 60,
       record: true,

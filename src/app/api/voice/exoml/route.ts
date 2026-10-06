@@ -81,6 +81,12 @@ async function handleEntry(req: NextRequest): Promise<NextResponse> {
 
   logger.info('ExoML call answered', { callId: ctx.callId, customer: ctx.customerName })
 
+  // Fast path: greeting was pre-synthesized when the call was placed,
+  // so Exotel gets ExoML back in milliseconds (no TTS wait -> no hangup).
+  if (ctx.greetingUrl) {
+    return exoml(`  <Play>${ctx.greetingUrl}</Play>\n  ${recordVerb(ctxParam, 1)}`)
+  }
+
   try {
     // Turn 0: opening greeting (mentions bill + amount)
     const turnResult = await processVoiceAgentTurn(null, ctx, 0)

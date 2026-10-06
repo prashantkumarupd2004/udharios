@@ -35,6 +35,7 @@ export interface VoiceAgentContext {
   daysOverdue: number
   paymentLinkUrl?: string
   billRef?: string
+  greetingUrl?: string // Pre-synthesized turn-0 greeting (fast answer path)
 }
 
 export interface VoiceAgentTurn {
