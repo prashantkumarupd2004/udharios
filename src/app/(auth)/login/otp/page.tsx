@@ -244,17 +244,15 @@ function OtpPageInner() {
                 {resending ? t.verifyingBtn : t.resend}
               </button>
             )}
-            {failedSends >= 1 && (
-              <div>
-                <button
-                  onClick={() => handleResend(true)}
-                  disabled={resending || cooldown > 0}
-                  className="text-stone-500 hover:text-stone-700 font-medium disabled:opacity-50"
-                >
-                  {t.voice}
-                </button>
-              </div>
-            )}
+            <div>
+              <button
+                onClick={() => handleResend(true)}
+                disabled={resending || cooldown > 0}
+                className="text-stone-500 hover:text-stone-700 font-medium disabled:opacity-50"
+              >
+                {t.voice}
+              </button>
+            </div>
             <div>
               <button
                 onClick={() => router.push('/login')}
