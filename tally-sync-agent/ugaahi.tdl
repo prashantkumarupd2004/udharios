@@ -1,80 +1,18 @@
 ; ============================================================
-; Ugaahi TDL Addon — Ledger Master Export with Phone Numbers
+; Ugaahi TDL Addon — Ledger Master with Phone Numbers
 ; ============================================================
-; Ye TDL Tally ke ANDAR chalta hai, isliye saare fields
-; (Primary Mobile No. samet) access kar sakta hai!
+; Tally ke ANDAR chalta hai — saare fields accessible!
 ;
-; Load kaise karein:
-;   1. Is file ko Tally ke saath wale folder me rakhein
-;      (jaise: C:\Program Files\TallyPrime\Ugaahi\ugaahi.tdl)
-;   2. Tally Prime kholein → F12 (Configure)
-;   3. Product & Features → F4 (Manage Local TDLs)
-;   4. "Load TDL" me ye file select karein
-;   5. Tally restart karein
-;
-; Uske baad agent http://localhost:9000 pe is collection ko
-; query kar sakta hai: ID = "Ugaahi Ledger Export"
+; Load: F12 → Product & Features → F4 → ugaahi.tdl select → Restart
+; Agent phir "Ugaahi Ledger Export" collection ko query karega.
 ; ============================================================
 
-[#Menu: Gateway of Tally]
-  Add : Key Item : After : @@LocQuit : Display : Ugaahi Ledger Export
-
-[Key Item: Ugaahi Ledger Export]
-  Key      : Alt + U
-  Action   : Display : Ugaahi Ledger Report
-
-; ------------------------------------------------------------
-; Collection: Saare Sundry Debtors + Creditors with phone
-; ------------------------------------------------------------
 [Collection: Ugaahi Ledger Export]
-  Title           : "Ugaahi Ledger Export"
   Type            : Ledger
   Fetch           : Name, Parent, ClosingBalance
   Compute         : UgaahiPhone : $LedgerPhone
   Compute         : UgaahiMobile : $Mobile
-  Compute         : UgaahiAddress : $Address1
   Filter          : UgaahiPartyFilter
 
 [System: Formulae: UgaahiPartyFilter]
-  Formula : $Parent contains "Sundry Debtors" OR $Parent contains "Sundry Creditors"
-
-; ------------------------------------------------------------
-; Report: Display ke liye (Alt+U se khulega)
-; ------------------------------------------------------------
-[Report: Ugaahi Ledger Report]
-  Title           : "Ugaahi - Customer List with Phone"
-  Form            : Ugaahi Ledger Form
-
-[Form: Ugaahi Ledger Form]
-  Parts           : Ugaahi Ledger Part
-  Width           : 100% Page
-  Height          : 100% Page
-
-[Part: Ugaahi Ledger Part]
-  Lines           : Ugaahi Ledger Line
-  Repeat          : Ugaahi Ledger Line : Ugaahi Ledger Export
-  Scroll          : Vertical
-
-[Line: Ugaahi Ledger Line]
-  Fields          : Ugaahi Name Field, Ugaahi Parent Field, Ugaahi Phone Field, Ugaahi Balance Field
-  Space Bottom    : 1
-
-[Field: Ugaahi Name Field]
-  Use             : Name Field
-  Set as          : $Name
-  Width           : 40
-
-[Field: Ugaahi Parent Field]
-  Use             : Name Field
-  Set as          : $Parent
-  Width           : 25
-
-[Field: Ugaahi Phone Field]
-  Use             : Name Field
-  Set as          : if $$IsEmpty:$LedgerPhone then $Mobile else $LedgerPhone
-  Width           : 20
-
-[Field: Ugaahi Balance Field]
-  Use             : Amount Field
-  Set as          : $ClosingBalance
-  Width           : 15
+  Formula : $Parent contains "Sundry Debtors" or $Parent contains "Sundry Creditors"
