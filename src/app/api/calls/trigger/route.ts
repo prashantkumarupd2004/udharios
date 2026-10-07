@@ -67,13 +67,14 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Place the call via Exotel — hamara dynamic voice URL (merchant-specific script)
+    // Place the call via Exotel — purana dashboard flow URL (stable).
+    // Note: custom voiceUrl se call drop ho raha tha, isliye revert.
+    // Dynamic script ke liye Exotel dashboard me agent prompt update karna hoga.
     let exotelResponse
     try {
       exotelResponse = await placeCall({
         to: outstanding.customer.phone,
         callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/exotel?callId=${callRecord.id}`,
-        voiceUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/voice/connect?callId=${callRecord.id}`,
         record: true,
         customField: JSON.stringify({
           callId: callRecord.id,

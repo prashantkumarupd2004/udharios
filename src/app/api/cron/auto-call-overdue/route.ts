@@ -113,7 +113,6 @@ export async function GET(request: NextRequest) {
         const exotelResponse = await placeCall({
           to: o.customer.phone,
           callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/exotel?callId=${callRecord.id}`,
-          voiceUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/voice/connect?callId=${callRecord.id}`,
           record: true,
           customField: JSON.stringify({
             callId: callRecord.id,
