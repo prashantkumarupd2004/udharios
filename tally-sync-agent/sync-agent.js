@@ -371,13 +371,32 @@ function extractCustomers(xml) {
       const attr = m[0].match(/<LEDGER[^>]*\bNAME="([^"]+)"/i);
       if (attr) name = attr[1].trim();
     }
-    const parent = tag(['PARENT', 'GROUPNAME']);
-    const isDebtor = /sundry debtor/i.test(parent) || /^debtors$/i.test(parent);
-    if (!name || !isDebtor || seen.has(name.toLowerCase())) continue;
+    const parent = tag(['PARENT', 'GROUPNAME', 'PARENTGROUP']);
+    // Debtor check — tolerant: parent me "debtor" ho, ya closing balance debit ho
+    const closingBal = tag(['CLOSINGBALANCE', 'CLOSINGBAL']);
+    const isDebtor = /debtor/i.test(parent) || (parent === '' && closingBal !== '');
+    if (!name || seen.has(name.toLowerCase())) continue;
+    // Agar parent pata hai aur debtor nahi hai to skip; agar parent khaali hai to include karo (server filter karega)
+    if (parent !== '' && !isDebtor) continue;
     seen.add(name.toLowerCase());
+    // Phone — multiple variants + nested address block me bhi dhoondo
+    let phone = tag(['LEDGERPHONE', 'PHONE', 'MOBILENO', 'CONTACTNO', 'MOBILE']) || '';
+    if (!phone) {
+      // Address block ke andar phone dhoondo
+      const addrBlock = block.match(/<ADDRESS[^>]*>([\s\S]*?)<\/ADDRESS>/i);
+      if (addrBlock) {
+        const pm = addrBlock[1].match(/(?:PHONE|MOBILE|MOBILENO)[^>]*>([^<]+)</i);
+        if (pm) phone = pm[1].trim();
+      }
+    }
+    // Koi bhi 10-digit number dhoondo block me (last resort)
+    if (!phone) {
+      const numMatch = block.match(/\b([6-9]\d{9})\b/);
+      if (numMatch) phone = numMatch[1];
+    }
     customers.push({
       name,
-      phone: tag(['LEDGERPHONE', 'PHONE', 'MOBILENO']) || undefined,
+      phone: phone || undefined,
       address: tag(['ADDRESS', 'ADDRESS1']) || undefined,
       gstin: tag(['GSTIN', 'PARTYGSTIN']) || undefined,
     });
@@ -448,10 +467,18 @@ async function main() {
       if (bills.length > 0) console.log('   Pehla bill:', JSON.stringify(bills[0]));
       else console.log('⚠️  Bills parse nahi hue — Tally version ke hisaab se request adjust karni pad sakti hai');
       try {
-        const ledgerXml = await postTally(buildLedgerListRequest());
+        const ledgerXml = await postTally(buildLedgerListRequest(), 60000);
+        console.log(`   📦 Ledger XML size: ${ledgerXml.length} chars`);
         const customers = extractCustomers(ledgerXml);
         console.log(`👥 ${customers.length} customers parse hue (Sundry Debtors)`);
-        if (customers.length > 0) console.log('   Pehla customer:', JSON.stringify(customers[0]));
+        if (customers.length > 0) {
+          console.log('   Pehla customer:', JSON.stringify(customers[0]));
+          const withPhone = customers.filter(c => c.phone).length;
+          console.log(`   📞 ${withPhone}/${customers.length} me phone mila`);
+        } else {
+          console.log('   📋 Raw ledger (pehle 1500 chars):');
+          console.log(ledgerXml.slice(0, 1500));
+        }
       } catch (e) {
         console.log(`⚠️  Ledger list nahi mili: ${e.message}`);
       }
