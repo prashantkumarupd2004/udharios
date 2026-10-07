@@ -30,6 +30,7 @@ export interface SyncResult {
   customersMatched: number
   customersCreated: number
   outstandingsUpserted: number
+  errors?: string[]
 }
 
 export interface TallyCustomerInput {
@@ -129,14 +130,35 @@ export async function syncBillsFromTally(
     customersCreated: 0,
     outstandingsUpserted: 0,
   }
+  const errors: string[] = []
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
   for (const b of bills) {
+    try {
+      await syncOneBill(merchantId, b, source, today, result)
+    } catch (err) {
+      const msg = `Bill ${b.billRef || '?'} (${b.partyName || '?'}) fail: ${err instanceof Error ? err.message : String(err)}`
+      logger.error('Tally bill sync failed for one bill', { merchantId, billRef: b.billRef, error: String(err) })
+      errors.push(msg)
+    }
+  }
+
+  logger.info('Tally bill sync complete', { merchantId, source, ...result, errors: errors.length })
+  return { ...result, errors }
+}
+
+async function syncOneBill(
+  merchantId: string,
+  b: TallyBillInput,
+  source: BillSource,
+  today: Date,
+  result: SyncResult
+): Promise<void> {
     const billRef = b.billRef.trim()
     const partyName = b.partyName.trim()
-    if (!billRef || !partyName) continue
+    if (!billRef || !partyName) return
 
     const pending = Math.max(0, Number(b.pendingAmount) || 0)
     const amount = Number(b.amount) || pending
@@ -220,7 +242,7 @@ export async function syncBillsFromTally(
         })
         result.billsPaid++
       }
-      continue
+      return
     }
 
     const status = dueDate && dueDate < today ? 'overdue' : 'upcoming'
@@ -240,10 +262,6 @@ export async function syncBillsFromTally(
       await prisma.outstanding.create({ data: outstandingData })
     }
     result.outstandingsUpserted++
-  }
-
-  logger.info('Tally bill sync complete', { merchantId, source, ...result })
-  return result
 }
 
 // ---------------------------------------------------------------------------
