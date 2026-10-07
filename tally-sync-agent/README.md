@@ -8,6 +8,12 @@ Windows par chalne wala chhota sa program jo **har 30 minute me Tally Prime se b
 2. **Tally Prime chalta hua** hona chahiye (company khuli ho)
 3. **Node.js 18+** — https://nodejs.org se download karein (LTS version)
 4. **API key** — Udhari OS dashboard → **Tally Sync** page → "Tally connect karein"
+5. **TDL Addon** (phone numbers ke liye!) — `ugaahi.tdl` ko Tally me load karein:
+   - Tally Prime kholein → **F12** (Configure)
+   - **Product & Features** → **F4** (Manage Local TDLs)
+   - **Load TDL** → `ugaahi.tdl` file select karein
+   - Tally **restart** karein
+   - Bina TDL ke bills to sync honge, lekin **phone numbers nahi aayenge!**
 
 ## Setup (5 minute)
 

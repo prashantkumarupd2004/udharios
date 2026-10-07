@@ -81,7 +81,12 @@ function buildOutstandingRequest() {
 
 /**
  * Tally se saare ledgers (customer master) mangne ka request.
- * TDL Collection-based — Debtors + Creditors dono.
+ *
+ * PEHLE: Ugaahi TDL Addon (ugaahi.tdl) Tally me load karein!
+ * TDL ke bina ye "Unknown Request" dega — tab fallback try hoga.
+ *
+ * TDL Collection "Ugaahi Ledger Export" me phone numbers hain
+ * (Tally ke andar se, isliye saare fields accessible).
  */
 function buildLedgerListRequest() {
   return `<ENVELOPE>
@@ -89,7 +94,30 @@ function buildLedgerListRequest() {
     <VERSION>1</VERSION>
     <TALLYREQUEST>Export</TALLYREQUEST>
     <TYPE>Collection</TYPE>
-    <ID>Ugaahi Ledgers</ID>
+    <ID>Ugaahi Ledger Export</ID>
+  </HEADER>
+  <BODY>
+    <DESC>
+      <STATICVARIABLES>
+        <SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>
+        <SVCURRENTCOMPANY>${escapeXml(companyName)}</SVCURRENTCOMPANY>
+      </STATICVARIABLES>
+    </DESC>
+  </BODY>
+</ENVELOPE>`;
+}
+
+/**
+ * Fallback: agar TDL load nahi hai to generic collection try karo.
+ * (Isme phone nahi aayega, lekin naam to aayenge)
+ */
+function buildLedgerListFallbackRequest() {
+  return `<ENVELOPE>
+  <HEADER>
+    <VERSION>1</VERSION>
+    <TALLYREQUEST>Export</TALLYREQUEST>
+    <TYPE>Collection</TYPE>
+    <ID>Ugaahi Ledgers Fallback</ID>
   </HEADER>
   <BODY>
     <DESC>
@@ -99,7 +127,7 @@ function buildLedgerListRequest() {
       </STATICVARIABLES>
       <TDL>
         <TDLMESSAGE>
-          <COLLECTION NAME="Ugaahi Ledgers" ISMODIFY="No" ISFIXED="No" ISINITIALIZE="No" ISOPTION="No" ISINTERNAL="No">
+          <COLLECTION NAME="Ugaahi Ledgers Fallback" ISMODIFY="No" ISFIXED="No" ISINITIALIZE="No" ISOPTION="No" ISINTERNAL="No">
             <TYPE>Ledger</TYPE>
           </COLLECTION>
         </TDLMESSAGE>
@@ -380,9 +408,9 @@ function extractCustomers(xml) {
     if (/^(cash|sales|purchase|bank|capital|stock|profit)/i.test(name)) continue;
     if (parent !== '' && !isParty) continue;
     seen.add(name.toLowerCase());
-    // Phone — multiple variants + nested address block me bhi dhoondo
-    // Tally me "Primary Mobile No." field me hota hai
-    let phone = tag(['PRIMARYMOBILENO', 'LEDGERPHONE', 'PHONE', 'MOBILENO', 'CONTACTNO', 'MOBILE', 'PHONENUMBER']) || '';
+    // Phone — TDL wale computed fields pehle, phir baaki variants
+    // TDL: UgaahiPhone, UgaahiMobile | Normal: Primary Mobile No. etc.
+    let phone = tag(['UGAAHIPHONE', 'UGAAHIMOBILE', 'PRIMARYMOBILENO', 'LEDGERPHONE', 'PHONE', 'MOBILENO', 'CONTACTNO', 'MOBILE', 'PHONENUMBER']) || '';
     // +91 - 8200218733 format ko saaf karo
     if (phone) {
       phone = phone.replace(/\+91[\s-]*/i, '').replace(/[\s-]/g, '').trim();
@@ -429,11 +457,13 @@ async function syncOnce() {
     const bills = extractBills(xml);
     console.log(`   📄 ${bills.length} bills mile`);
 
-    // 2. Customer master (saare Sundry Debtors — bill ho ya na ho)
-    // Ledger list badi ho sakti hai, isliye timeout 60 sec
+    // 2. Customer master — pehle TDL (phone ke saath), phir fallback
     let customers = [];
     try {
-      const ledgerXml = await postTally(buildLedgerListRequest(), 60000);
+      let ledgerXml = await postTally(buildLedgerListRequest(), 60000);
+      if (ledgerXml.includes('Unknown Request')) {
+        ledgerXml = await postTally(buildLedgerListFallbackRequest(), 60000);
+      }
       customers = extractCustomers(ledgerXml);
       console.log(`   👥 ${customers.length} customers mile (master)`);
     } catch (e) {
@@ -481,7 +511,14 @@ async function main() {
       if (bills.length > 0) console.log('   Pehla bill:', JSON.stringify(bills[0]));
       else console.log('⚠️  Bills parse nahi hue — Tally version ke hisaab se request adjust karni pad sakti hai');
       try {
-        const ledgerXml = await postTally(buildLedgerListRequest(), 60000);
+        // Pehle TDL wala try karo (phone ke saath)
+        let ledgerXml = await postTally(buildLedgerListRequest(), 60000);
+        // Agar TDL load nahi hai to "Unknown Request" aayega — fallback try karo
+        if (ledgerXml.includes('Unknown Request')) {
+          console.log('   ⚠️  TDL load nahi hai — fallback ledger try kar raha hu (bina phone)');
+          console.log('   💡 Phone ke liye ugaahi.tdl ko Tally me load karein!');
+          ledgerXml = await postTally(buildLedgerListFallbackRequest(), 60000);
+        }
         console.log(`   📦 Ledger XML size: ${ledgerXml.length} chars`);
         const customers = extractCustomers(ledgerXml);
         console.log(`👥 ${customers.length} customers parse hue (Sundry Debtors)`);
