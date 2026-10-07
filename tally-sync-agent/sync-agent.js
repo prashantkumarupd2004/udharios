@@ -272,7 +272,7 @@ function extractBills(xml) {
 }
 
 // ------------------------------------------------------------------ push
-function pushToCloud(bills, customers, receipts) {
+function pushToCloud(bills, customers, receipts, redirectCount = 0) {
   return new Promise((resolve, reject) => {
     const url = new URL('/api/integrations/tally/sync', serverUrl);
     const body = JSON.stringify({ companyName, bills, customers, receipts });
@@ -285,6 +285,55 @@ function pushToCloud(bills, customers, receipts) {
         timeout: 30000,
       },
       (res) => {
+        // Redirect follow karo (307/308)
+        if ((res.statusCode === 307 || res.statusCode === 308) && res.headers.location && redirectCount < 3) {
+          const newUrl = new URL(res.headers.location, url);
+          console.log(`   🔀 Redirect → ${newUrl.hostname}${newUrl.pathname}`);
+          // serverUrl ko update karo taaki agli baar seedha jaye
+          const origPath = '/api/integrations/tally/sync';
+          const newServerUrl = newUrl.origin;
+          // Temporarily override
+          const oldServerUrl = serverUrl;
+          try {
+            // Recursively call with new base
+            const newFull = newUrl.toString();
+            pushToUrl(newFull, body, redirectCount + 1).then(resolve).catch(reject);
+          } catch (e) { reject(e); }
+          return;
+        }
+        let data = '';
+        res.on('data', (c) => (data += c));
+        res.on('end', () => {
+          if (res.statusCode >= 200 && res.statusCode < 300) resolve(JSON.parse(data));
+          else reject(new Error(`Server error ${res.statusCode}: ${data.slice(0, 200)}`));
+        });
+      }
+    );
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('Udhari OS server timeout')); });
+    req.write(body);
+    req.end();
+  });
+}
+
+/** Kisi bhi full URL pe POST karo (redirect ke liye) */
+function pushToUrl(fullUrl, body, redirectCount = 0) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(fullUrl);
+    const lib = url.protocol === 'https:' ? https : http;
+    const req = lib.request(
+      {
+        hostname: url.hostname, port: url.port || (url.protocol === 'https:' ? 443 : 80),
+        path: url.pathname + url.search, method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body), 'x-tally-api-key': apiKey },
+        timeout: 30000,
+      },
+      (res) => {
+        if ((res.statusCode === 307 || res.statusCode === 308) && res.headers.location && redirectCount < 3) {
+          const newUrl = new URL(res.headers.location, url);
+          pushToUrl(newUrl.toString(), body, redirectCount + 1).then(resolve).catch(reject);
+          return;
+        }
         let data = '';
         res.on('data', (c) => (data += c));
         res.on('end', () => {
