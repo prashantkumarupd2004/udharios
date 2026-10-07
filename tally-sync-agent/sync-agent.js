@@ -408,8 +408,8 @@ function extractCustomers(xml) {
     if (/^(cash|sales|purchase|bank|capital|stock|profit)/i.test(name)) continue;
     if (parent !== '' && !isParty) continue;
     seen.add(name.toLowerCase());
-    // Phone — TDL deep analysis: P1-P5 me se jo mile
-    let phone = tag(['P1', 'P2', 'P3', 'P4', 'P5', 'UGAAHIPHONE', 'UGAAHIMOBILE', 'PRIMARYMOBILENO', 'LEDGERPHONE', 'PHONE', 'MOBILENO', 'CONTACTNO', 'MOBILE', 'PHONENUMBER']) || '';
+    // Phone — TDL deep analysis: P1-P7 me se jo mile
+    let phone = tag(['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'UGAAHIPHONE', 'UGAAHIMOBILE', 'PRIMARYMOBILENO', 'LEDGERPHONE', 'PHONE', 'MOBILENO', 'CONTACTNO', 'MOBILE', 'PHONENUMBER']) || '';
     // +91 - 8200218733 format ko saaf karo
     if (phone) {
       phone = phone.replace(/\+91[\s-]*/i, '').replace(/[\s-]/g, '').trim();
@@ -526,17 +526,21 @@ async function main() {
           const withPhone = customers.filter(c => c.phone).length;
           console.log(`   📞 ${withPhone}/${customers.length} me phone mila`);
           if (withPhone === 0) {
-            // Deep analysis: P1-P5 ki values dikhao
+            // Deep analysis: P1-P7 ki values dikhao
             const ledgerMatch = ledgerXml.match(/<LEDGER NAME="Arpit Pandey"[^>]*>([\s\S]*?)<\/LEDGER>/i);
             if (ledgerMatch) {
-              console.log('   🔬 Deep Analysis — P1-P5 values:');
-              for (let i = 1; i <= 5; i++) {
+              console.log('   🔬 Deep Analysis — P1-P7 values:');
+              for (let i = 1; i <= 7; i++) {
                 const pm = ledgerMatch[1].match(new RegExp(`<P${i}[^>]*>([^<]*)</P${i}>`, 'i'));
                 console.log(`   P${i}: ${pm ? '"' + pm[1].trim() + '"' : '(not found)'}`);
               }
-              const fields = [...ledgerMatch[1].matchAll(/<([A-Z][A-Z0-9.]*)(?:\s[^>]*)?>/g)].map(m => m[1]);
-              const uniqueFields = [...new Set(fields)].slice(0, 40);
-              console.log('   🔍 All fields: ' + uniqueFields.join(', '));
+              // Address block dhoondo
+              const addrMatch = ledgerMatch[1].match(/<ADDRESS[^>]*>([\s\S]{0,500})/i);
+              if (addrMatch) {
+                console.log('   📬 ADDRESS block mila: ' + addrMatch[0].slice(0, 300));
+              } else {
+                console.log('   📬 ADDRESS block nahi mila');
+              }
             }
           }
         } else {

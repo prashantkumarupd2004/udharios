@@ -1,11 +1,7 @@
-; Ugaahi TDL — Deep Phone Analysis
-; 5 possible phone fields ek saath try karega
+; Ugaahi TDL — Address Object Deep Dive
 
 [Collection: Ugaahi Ledger Export]
   Type     : Ledger
-  Fetch    : Name, Parent, ClosingBalance
-  Compute  : P1 : $LedgerPhone
-  Compute  : P2 : $Phone
-  Compute  : P3 : $Mobile
-  Compute  : P4 : $PrimaryMobileNo
-  Compute  : P5 : $ContactNumber
+  Fetch    : Name, Parent, ClosingBalance, Address.*
+  Compute  : P6 : $Address.Phone
+  Compute  : P7 : $Address.Mobile
