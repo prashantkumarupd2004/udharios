@@ -101,7 +101,7 @@ function buildLedgerListRequest() {
         <TDLMESSAGE>
           <COLLECTION NAME="Ugaahi Ledgers" ISMODIFY="No" ISFIXED="No" ISINITIALIZE="No" ISOPTION="No" ISINTERNAL="No">
             <TYPE>Ledger</TYPE>
-            <FETCH>NAME, PARENT, ADDRESS.LIST, PHONENUMBER, MOBILE, LEDGERPHONE, GSTIN, CLOSINGBALANCE</FETCH>
+            <FETCH>NAME, PARENT, ADDRESS.LIST, PHONENUMBER, MOBILE, LEDGERPHONE, PRIMARYMOBILENO, CONTACTNO, GSTIN, CLOSINGBALANCE, MAILINGNAME, PINCODE, STATE</FETCH>
           </COLLECTION>
         </TDLMESSAGE>
       </TDL>
@@ -382,7 +382,12 @@ function extractCustomers(xml) {
     if (parent !== '' && !isParty) continue;
     seen.add(name.toLowerCase());
     // Phone — multiple variants + nested address block me bhi dhoondo
-    let phone = tag(['LEDGERPHONE', 'PHONE', 'MOBILENO', 'CONTACTNO', 'MOBILE', 'PHONENUMBER']) || '';
+    // Tally me "Primary Mobile No." field me hota hai
+    let phone = tag(['PRIMARYMOBILENO', 'LEDGERPHONE', 'PHONE', 'MOBILENO', 'CONTACTNO', 'MOBILE', 'PHONENUMBER']) || '';
+    // +91 - 8200218733 format ko saaf karo
+    if (phone) {
+      phone = phone.replace(/\+91[\s-]*/i, '').replace(/[\s-]/g, '').trim();
+    }
     if (!phone) {
       // Address block ke andar phone dhoondo (ADDRESS.LIST structure)
       const addrMatch = block.match(/<ADDRESS\.LIST>([\s\S]*?)<\/ADDRESS\.LIST>/i);
