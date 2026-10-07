@@ -46,17 +46,15 @@ if (!apiKey || !companyName) {
 // ------------------------------------------------------------ tally query
 /**
  * Tally se bill-wise outstanding receivables mangne ka XML request.
- * NOTE: Tally version ke hisaab se report ka response structure alag ho sakta
- * hai — agent tolerant parser use karta hai, lekin pehli baar --test mode me
- * zaroor check karein.
+ * TDL Collection-based — Tally Prime ke XML API ke liye sahi format.
  */
 function buildOutstandingRequest() {
   return `<ENVELOPE>
   <HEADER>
     <VERSION>1</VERSION>
     <TALLYREQUEST>Export</TALLYREQUEST>
-    <TYPE>Report</TYPE>
-    <ID>Outstanding Receivables</ID>
+    <TYPE>Collection</TYPE>
+    <ID>Ugaahi Bills</ID>
   </HEADER>
   <BODY>
     <DESC>
@@ -64,6 +62,18 @@ function buildOutstandingRequest() {
         <SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>
         <SVCURRENTCOMPANY>${escapeXml(companyName)}</SVCURRENTCOMPANY>
       </STATICVARIABLES>
+      <TDL>
+        <TDLMESSAGE>
+          <COLLECTION NAME="Ugaahi Bills" ISMODIFY="No" ISFIXED="No" ISINITIALIZE="No" ISOPTION="No" ISINTERNAL="No">
+            <TYPE>Voucher</TYPE>
+            <FETCH>DATE, PARTYNAME, VOUCHERNUMBER, VOUCHERTYPENAME, AMOUNT, BASICDUEDATEOFPYMT, LEDGERENTRIES.LIST, BILLALLOCATIONS.LIST</FETCH>
+            <FILTERS>IsSalesBill</FILTERS>
+          </COLLECTION>
+          <SYSTEM TYPE="Formulae" NAME="IsSalesBill">
+            $VOUCHERTYPENAME CONTAINS "Sales"
+          </SYSTEM>
+        </TDLMESSAGE>
+      </TDL>
     </DESC>
   </BODY>
 </ENVELOPE>`;
@@ -71,8 +81,7 @@ function buildOutstandingRequest() {
 
 /**
  * Tally se saare ledgers (customer master) mangne ka request.
- * Agent client-side par sirf "Sundry Debtors" filter karta hai —
- * matlab aapke saare customers, bill ho ya na ho.
+ * TDL Collection-based — Sundry Debtors filter client-side hota hai.
  */
 function buildLedgerListRequest() {
   return `<ENVELOPE>
@@ -80,7 +89,7 @@ function buildLedgerListRequest() {
     <VERSION>1</VERSION>
     <TALLYREQUEST>Export</TALLYREQUEST>
     <TYPE>Collection</TYPE>
-    <ID>List of Accounts</ID>
+    <ID>Ugaahi Ledgers</ID>
   </HEADER>
   <BODY>
     <DESC>
@@ -88,6 +97,14 @@ function buildLedgerListRequest() {
         <SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>
         <SVCURRENTCOMPANY>${escapeXml(companyName)}</SVCURRENTCOMPANY>
       </STATICVARIABLES>
+      <TDL>
+        <TDLMESSAGE>
+          <COLLECTION NAME="Ugaahi Ledgers" ISMODIFY="No" ISFIXED="No" ISINITIALIZE="No" ISOPTION="No" ISINTERNAL="No">
+            <TYPE>Ledger</TYPE>
+            <FETCH>NAME, PARENT, LEDGERPHONE, PHONE, ADDRESS, GSTIN, CLOSINGBALANCE</FETCH>
+          </COLLECTION>
+        </TDLMESSAGE>
+      </TDL>
     </DESC>
   </BODY>
 </ENVELOPE>`;
