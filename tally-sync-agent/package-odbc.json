@@ -1,0 +1,9 @@
+{
+  "name": "ugaahi-tally-odbc-agent",
+  "version": "1.0.0",
+  "description": "Ugaahi Tally ODBC Sync Agent",
+  "main": "sync-agent-odbc.js",
+  "dependencies": {
+    "odbc": "^2.9.0"
+  }
+}
