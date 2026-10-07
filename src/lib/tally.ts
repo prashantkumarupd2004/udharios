@@ -11,6 +11,7 @@ import { createHash, randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { BillSource } from '@prisma/client'
 import { logger } from '@/lib/logger'
+import type { TallyReceiptInput } from '@/lib/tally-parse'
 
 export interface TallyBillInput {
   billRef: string
@@ -262,6 +263,121 @@ async function syncOneBill(
       await prisma.outstanding.create({ data: outstandingData })
     }
     result.outstandingsUpserted++
+}
+
+// ---------------------------------------------------------------------------
+// Receipts / Credit Notes / Debit Notes — pending amount adjust karo
+// ---------------------------------------------------------------------------
+
+export interface ReceiptSyncResult {
+  receiptsApplied: number
+  billsPaidOff: number
+  errors?: string[]
+}
+
+/**
+ * Tally se aaye Receipt / Credit Note / Debit Note ko bills pe apply karo.
+ * - Receipt / Credit Note → pending amount KAM hota hai
+ * - Debit Note → pending amount BADHTA hai
+ * - Agar pending 0 ho jaye → outstanding 'paid' mark, call band!
+ */
+export async function applyTallyReceipts(
+  merchantId: string,
+  receipts: TallyReceiptInput[]
+): Promise<ReceiptSyncResult> {
+  const result: ReceiptSyncResult = { receiptsApplied: 0, billsPaidOff: 0 }
+  const errors: string[] = []
+
+  for (const r of receipts) {
+    try {
+      const partyName = r.partyName.trim()
+      if (!partyName || r.amount <= 0) continue
+
+      // Bill dhundo: pehle billRef se, phir party ke sabse purane pending bill se
+      let bill = null
+      if (r.billRef) {
+        bill = await prisma.bill.findFirst({
+          where: {
+            merchantId,
+            billRef: r.billRef.trim(),
+            pendingAmount: { gt: 0 },
+          },
+          orderBy: { billDate: 'asc' },
+        })
+      }
+      if (!bill) {
+        // Party ke pending bills me se sabse purana uthao (FIFO)
+        bill = await prisma.bill.findFirst({
+          where: {
+            merchantId,
+            partyName: { equals: partyName, mode: 'insensitive' },
+            pendingAmount: { gt: 0 },
+          },
+          orderBy: { billDate: 'asc' },
+        })
+      }
+      if (!bill) {
+        // Koi pending bill nahi — receipt ignore (pehle se paid ya bill sync nahi hua)
+        continue
+      }
+
+      const isIncrease = r.voucherType === 'Debit Note'
+      const newPending = isIncrease
+        ? Number(bill.pendingAmount) + r.amount
+        : Math.max(0, Number(bill.pendingAmount) - r.amount)
+
+      await prisma.bill.update({
+        where: { id: bill.id },
+        data: { pendingAmount: newPending, syncedAt: new Date() },
+      })
+
+      // Outstanding bhi update karo
+      const outstanding = await prisma.outstanding.findFirst({
+        where: { merchantId, invoiceNo: bill.billRef, status: { not: 'paid' } },
+      })
+      if (outstanding) {
+        if (newPending <= 0) {
+          await prisma.outstanding.update({
+            where: { id: outstanding.id },
+            data: { status: 'paid', paidAt: new Date() },
+          })
+          result.billsPaidOff++
+        } else {
+          await prisma.outstanding.update({
+            where: { id: outstanding.id },
+            data: { amount: newPending },
+          })
+        }
+
+        // Payment record banao (Tally receipt se)
+        await prisma.payment.create({
+          data: {
+            razorpayPaymentId: `tally_${r.voucherType.replace(/\s/g, '_')}_${r.receiptRef}_${Date.now()}`,
+            merchantId,
+            outstandingId: outstanding.id,
+            amount: r.amount,
+            method: r.voucherType === 'Receipt' ? 'tally_receipt' : r.voucherType === 'Credit Note' ? 'credit_note' : 'debit_note',
+            paidAt: new Date(r.receiptDate),
+            raw: {
+              source: 'tally',
+              voucherType: r.voucherType,
+              receiptRef: r.receiptRef,
+              billRef: bill.billRef,
+            },
+          },
+        })
+      }
+
+      result.receiptsApplied++
+    } catch (err) {
+      const msg = `Receipt ${r.receiptRef} fail: ${err instanceof Error ? err.message : String(err)}`
+      logger.error('Tally receipt apply failed', { merchantId, receiptRef: r.receiptRef, error: String(err) })
+      errors.push(msg)
+    }
+  }
+
+  logger.info('Tally receipts applied', { merchantId, ...result, errors: errors.length })
+  return { ...result, errors }
 }
 
 // ---------------------------------------------------------------------------

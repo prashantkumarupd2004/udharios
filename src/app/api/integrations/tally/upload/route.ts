@@ -8,8 +8,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
-import { syncBillsFromTally, syncCustomersFromTally } from '@/lib/tally'
-import { parseTallyXml, parseTallyCsv, parseTallyLedgers } from '@/lib/tally-parse'
+import { syncBillsFromTally, syncCustomersFromTally, applyTallyReceipts } from '@/lib/tally'
+import { parseTallyXml, parseTallyCsv, parseTallyLedgers, parseTallyReceipts } from '@/lib/tally-parse'
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
 import { logger } from '@/lib/logger'
 
@@ -78,6 +78,16 @@ export async function POST(request: NextRequest) {
       ? await syncBillsFromTally(session.merchantId, bills, 'tally_xml')
       : { billsUpserted: 0, billsPaid: 0, customersMatched: 0, customersCreated: 0, outstandingsUpserted: 0 }
 
+    // Receipts / Credit Notes / Debit Notes — pending amount adjust karo
+    // (Tally me payment entry hote hi outstanding auto-update!)
+    let receiptsResult = { receiptsApplied: 0, billsPaidOff: 0 }
+    if (!isCsv) {
+      const { receipts } = parseTallyReceipts(text, companyName)
+      if (receipts.length > 0) {
+        receiptsResult = await applyTallyReceipts(session.merchantId, receipts)
+      }
+    }
+
     await appendAuditLog({
       merchantId: session.merchantId,
       actor: 'merchant',
@@ -93,6 +103,8 @@ export async function POST(request: NextRequest) {
       warnings,
       customersFromMaster: masterSynced,
       ...result,
+      receiptsApplied: receiptsResult.receiptsApplied,
+      billsPaidOff: receiptsResult.billsPaidOff,
       customersCreated: result.customersCreated + masterSynced.created,
       customersMatched: result.customersMatched + masterSynced.matched,
     })

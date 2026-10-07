@@ -14,6 +14,17 @@ import { XMLParser } from 'fast-xml-parser'
 import Papa from 'papaparse'
 import type { TallyBillInput } from '@/lib/tally'
 
+/** Receipt / Credit Note / Debit Note — bill ke pending amount ko adjust karne ke liye */
+export interface TallyReceiptInput {
+  receiptRef: string      // receipt voucher number
+  partyName: string
+  amount: number          // receipt amount (positive)
+  receiptDate: string     // YYYY-MM-DD
+  billRef?: string        // kis bill ke against (agar pata ho)
+  voucherType: string     // Receipt / Credit Note / Debit Note
+  tallyCompany?: string
+}
+
 // ---------------------------------------------------------------------------
 // Shared helpers
 // ---------------------------------------------------------------------------
@@ -344,3 +355,69 @@ export const CSV_TEMPLATE =
   'bill_ref,party_name,party_phone,amount,pending_amount,bill_date,due_date,voucher_type\n' +
   'INV-1001,Ramesh Kirana,9876543210,5400,5400,2026-09-20,2026-10-05,Sales\n' +
   'INV-1002,Suresh Traders,,12500,8000,2026-09-25,2026-10-10,Sales\n'
+
+// ---------------------------------------------------------------------------
+// Receipts / Credit Notes / Debit Notes
+// ---------------------------------------------------------------------------
+
+const RECEIPT_REF_KEYS = ['vouchernumber', 'vchno', 'refno', 'receiptno', 'billref']
+const RECEIPT_VCHTYPE_KEYS = ['vouchertypename', 'vchtype', 'vouchertype']
+const RECEIPT_BILL_KEYS = ['billref', 'againstbill', 'billno', 'refbill', 'invoiceno']
+
+/** Voucher type se pata karo: Receipt, Credit Note, ya Debit Note? */
+function classifyVoucher(vchType: string): 'receipt' | 'credit_note' | 'debit_note' | null {
+  const t = vchType.toLowerCase()
+  if (t.includes('receipt')) return 'receipt'
+  if (t.includes('credit') && t.includes('note')) return 'credit_note'
+  if (t.includes('debit') && t.includes('note')) return 'debit_note'
+  return null
+}
+
+/**
+ * Tally XML se Receipt / Credit Note / Debit Note vouchers nikalo.
+ * Ye bills ke pending amount ko adjust karne ke liye use hote hain.
+ */
+export function parseTallyReceipts(xml: string, tallyCompany?: string): {
+  receipts: TallyReceiptInput[]
+  warnings: string[]
+} {
+  const warnings: string[] = []
+  const parser = new XMLParser({ ignoreAttributes: false, trimValues: true })
+  let parsed: unknown
+  try {
+    parsed = parser.parse(xml)
+  } catch {
+    return { receipts: [], warnings: ['XML parse nahi ho paya'] }
+  }
+
+  const rows: Array<Record<string, unknown>> = []
+  collectRows(parsed, rows)
+
+  const receipts: TallyReceiptInput[] = []
+  for (const r of rows) {
+    const vchType = pick(r, RECEIPT_VCHTYPE_KEYS)
+    const kind = classifyVoucher(vchType)
+    if (!kind) continue // Sales voucher ya aur kuch — skip
+
+    const receiptRef = pick(r, RECEIPT_REF_KEYS)
+    const partyName = pick(r, PARTY_KEYS)
+    if (!receiptRef || !partyName) continue
+
+    const amount = Math.abs(num(pick(r, AMOUNT_KEYS)))
+    if (amount <= 0) continue
+
+    const receiptDate = normalizeTallyDate(pick(r, BILL_DATE_KEYS))
+
+    receipts.push({
+      receiptRef,
+      partyName,
+      amount,
+      receiptDate: receiptDate || new Date().toISOString().slice(0, 10),
+      billRef: pick(r, RECEIPT_BILL_KEYS) || undefined,
+      voucherType: kind === 'receipt' ? 'Receipt' : kind === 'credit_note' ? 'Credit Note' : 'Debit Note',
+      tallyCompany,
+    })
+  }
+
+  return { receipts, warnings }
+}
