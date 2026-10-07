@@ -106,29 +106,29 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
         <ArrowLeft className="w-4 h-4" /> {lang === 'hi' ? 'Customers' : 'Customers'}
       </Link>
 
-      {/* ── Hero header ── */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-stone-900 via-stone-800 to-orange-950 p-6 text-white shadow-xl">
-        <div className="absolute -top-16 -right-16 w-56 h-56 bg-orange-500/20 rounded-full blur-3xl" />
-        <div className="absolute -bottom-20 -left-10 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl" />
-        <div className="relative">
+      {/* ── Hero header (Bharat Light theme) ── */}
+      <div className="relative overflow-hidden rounded-3xl bg-white border border-orange-100 p-6 shadow-lg shadow-orange-100/50">
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-500 via-white to-green-600" />
+        <div className="absolute -top-16 -right-16 w-56 h-56 bg-orange-100/60 rounded-full blur-3xl" />
+        <div className="relative pt-1">
           <div className="flex items-start gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-400 to-amber-600 flex items-center justify-center text-2xl font-extrabold shadow-lg shadow-orange-900/40 shrink-0">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-2xl font-extrabold text-white shadow-lg shadow-orange-500/25 shrink-0">
               {customer.name.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl font-extrabold tracking-tight truncate">{customer.name}</h1>
-              <p className="text-stone-300 text-sm flex items-center gap-1.5 mt-1">
+              <h1 className="text-2xl font-extrabold tracking-tight text-stone-900 truncate">{customer.name}</h1>
+              <p className="text-stone-500 text-sm flex items-center gap-1.5 mt-1">
                 <Phone className="w-3.5 h-3.5" /> {phone}
               </p>
-              <div className="flex gap-2 mt-2.5">
+              <div className="flex gap-2 mt-2.5 flex-wrap">
                 {!customer.consent && (
-                  <span className="text-[11px] font-bold bg-red-500/20 text-red-300 border border-red-500/30 px-2.5 py-1 rounded-full">No Consent</span>
+                  <span className="text-[11px] font-bold bg-red-50 text-red-700 border border-red-200 px-2.5 py-1 rounded-full">No Consent</span>
                 )}
                 {customer.optedOut && (
-                  <span className="text-[11px] font-bold bg-stone-500/20 text-stone-300 border border-stone-500/30 px-2.5 py-1 rounded-full">Opted Out</span>
+                  <span className="text-[11px] font-bold bg-stone-100 text-stone-500 border border-stone-200 px-2.5 py-1 rounded-full">Opted Out</span>
                 )}
                 {overdue.length > 0 && (
-                  <span className="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-1 rounded-full flex items-center gap-1">
+                  <span className="text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full flex items-center gap-1">
                     <AlertTriangle className="w-3 h-3" /> {overdue.length} overdue
                   </span>
                 )}
@@ -137,31 +137,31 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
           </div>
 
           {/* Pending hero number */}
-          <div className="mt-5 flex items-end justify-between">
+          <div className="mt-5 flex items-end justify-between bg-gradient-to-r from-red-50 to-orange-50 border border-red-100 rounded-2xl px-5 py-4">
             <div>
-              <p className="text-stone-400 text-xs font-semibold uppercase tracking-wider">kul baaki</p>
-              <p className="text-4xl font-extrabold text-white tracking-tight">₹{totalPending.toLocaleString('en-IN')}</p>
+              <p className="text-red-400 text-xs font-bold uppercase tracking-wider">kul baaki</p>
+              <p className="text-4xl font-extrabold text-red-600 tracking-tight">₹{totalPending.toLocaleString('en-IN')}</p>
             </div>
-            <p className="text-stone-400 text-xs font-medium">{pending.length} outstanding • {customer.bills.length} bills</p>
+            <p className="text-stone-500 text-xs font-medium">{pending.length} outstanding • {customer.bills.length} bills</p>
           </div>
 
           {/* Quick actions */}
-          <div className="flex gap-2.5 mt-5">
+          <div className="flex gap-2.5 mt-4">
             {hasPhone && (
               <>
                 <a href={`tel:${customer.phone}`}
-                  className="flex-1 inline-flex items-center justify-center gap-2 bg-white text-stone-900 font-bold text-sm px-4 py-3 rounded-2xl hover:bg-orange-50 transition-colors shadow">
+                  className="flex-1 inline-flex items-center justify-center gap-2 bg-stone-900 text-white font-bold text-sm px-4 py-3 rounded-2xl hover:bg-stone-800 transition-colors shadow">
                   <Phone className="w-4 h-4" /> Call
                 </a>
                 <a href={`https://wa.me/${customer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Namaste ${customer.name}, aapka ₹${totalPending.toLocaleString('en-IN')} ka payment baaki hai. Kripya jald bhugtan karein.`)}`}
                   target="_blank" rel="noreferrer"
-                  className="flex-1 inline-flex items-center justify-center gap-2 bg-green-500 text-white font-bold text-sm px-4 py-3 rounded-2xl hover:bg-green-600 transition-colors shadow">
+                  className="flex-1 inline-flex items-center justify-center gap-2 bg-green-600 text-white font-bold text-sm px-4 py-3 rounded-2xl hover:bg-green-700 transition-colors shadow">
                   <MessageCircle className="w-4 h-4" /> WhatsApp
                 </a>
               </>
             )}
             <button
-              className="flex-1 inline-flex items-center justify-center gap-2 bg-orange-500 text-white font-bold text-sm px-4 py-3 rounded-2xl hover:bg-orange-600 transition-colors shadow">
+              className="flex-1 inline-flex items-center justify-center gap-2 bg-orange-500 text-white font-bold text-sm px-4 py-3 rounded-2xl hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/25">
               <Bell className="w-4 h-4" /> Remind
             </button>
           </div>
