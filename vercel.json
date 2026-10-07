@@ -1,0 +1,1 @@
+{"crons":[{"path":"/api/cron/auto-call-overdue","schedule":"30 4 * * *"},{"path":"/api/cron/auto-call-overdue","schedule":"30 10 * * *"}]}
