@@ -229,6 +229,87 @@ export default function OutstandingsPage() {
         </button>
       </div>
 
+      {/* Quick Add — ek line me entry (chhote dukaandaar ke liye) */}
+      <div className="glass-card p-4 border-2 border-dashed border-orange-200">
+        <p className="text-xs font-bold text-stone-500 mb-2">
+          ⚡ {lang === 'hi' ? 'Quick Add — ek line likho, entry ban jayegi!' : 'Quick Add — type one line!'}
+        </p>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault()
+            const input = (e.target as HTMLFormElement).quickAdd.value.trim()
+            if (!input) return
+            const { parseQuickAdd } = await import('@/lib/quick-add')
+            const parsed = parseQuickAdd(input)
+            if ('error' in parsed) {
+              alert(parsed.error)
+              return
+            }
+            // Pehle customer dhundo ya banao
+            let customerId = ''
+            const cRes = await fetch(`/api/customers?search=${encodeURIComponent(parsed.name)}&limit=5`)
+            const cData = await cRes.json()
+            const existing = (cData.customers ?? []).find((c: { name: string }) =>
+              c.name.toLowerCase() === parsed.name.toLowerCase()
+            )
+            if (existing) {
+              customerId = existing.id
+            } else {
+              const ncRes = await fetch('/api/customers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  name: parsed.name,
+                  phone: parsed.phone ?? `quick-${Date.now()}`,
+                }),
+              })
+              const ncData = await ncRes.json()
+              if (!ncRes.ok) {
+                alert(ncData.error ?? 'Customer nahi ban paya')
+                return
+              }
+              customerId = ncData.customer?.id ?? ncData.id
+            }
+            // Outstanding banao
+            const oRes = await fetch('/api/outstandings', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                customerId,
+                amount: parsed.amount,
+                dueDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+                notes: `Quick Add: "${input}"`,
+              }),
+            })
+            if (!oRes.ok) {
+              const oData = await oRes.json()
+              alert(oData.error ?? 'Entry nahi ban payi')
+              return
+            }
+            ;(e.target as HTMLFormElement).quickAdd.value = ''
+            await fetch_()
+          }}
+          className="flex gap-2"
+        >
+          <input
+            name="quickAdd"
+            placeholder={lang === 'hi' ? 'Jaise: Ramesh 5000 9876543210' : 'E.g.: Ramesh 5000 9876543210'}
+            className="flex-1 px-4 py-2.5 rounded-xl border border-stone-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
+          />
+          <button
+            type="submit"
+            className="btn-primary px-5 py-2.5 text-sm whitespace-nowrap"
+          >
+            ➕ {lang === 'hi' ? 'Add' : 'Add'}
+          </button>
+        </form>
+        <p className="text-[11px] text-stone-400 mt-1.5">
+          {lang === 'hi'
+            ? 'Naam + amount likho — phone optional hai. Due date 7 din baad auto-set hogi.'
+            : 'Type name + amount — phone optional. Due date auto-set to 7 days.'}
+        </p>
+      </div>
+
       {/* Filter tabs */}
       <div className="flex gap-2 overflow-x-auto pb-1">
         {filters.map(f => (
