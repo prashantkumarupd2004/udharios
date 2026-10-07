@@ -5,7 +5,7 @@
 -- 1. Gateway columns merchants table me
 ALTER TABLE merchants
   ADD COLUMN IF NOT EXISTS payment_gateway TEXT DEFAULT 'upi_vpa',
-  ADD COLUMN IF NOT EXISTS gateway_credentials JSONB DEFAULT '{}'::jsonb,
+  ADD COLUMN IF NOT EXISTS gateway_credentials TEXT,
   ADD COLUMN IF NOT EXISTS gateway_test_mode BOOLEAN DEFAULT true;
 
 -- 2. Valid gateway values ke liye check
