@@ -93,6 +93,102 @@ function buildLedgerListRequest() {
 </ENVELOPE>`;
 }
 
+/**
+ * Tally se Receipt vouchers mangne ka request (pichle 7 din ke).
+ * Receipt = customer ne payment diya → pending auto-kam!
+ */
+function buildReceiptRequest() {
+  const today = new Date();
+  const weekAgo = new Date(today.getTime() - 7 * 24 * 3600 * 1000);
+  const fmt = (d) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+  return `<ENVELOPE>
+  <HEADER>
+    <VERSION>1</VERSION>
+    <TALLYREQUEST>Export</TALLYREQUEST>
+    <TYPE>Collection</TYPE>
+    <ID>Ugaahi Receipts</ID>
+  </HEADER>
+  <BODY>
+    <DESC>
+      <STATICVARIABLES>
+        <SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>
+        <SVCURRENTCOMPANY>${escapeXml(companyName)}</SVCURRENTCOMPANY>
+        <SVFROMDATE>${fmt(weekAgo)}</SVFROMDATE>
+        <SVTODATE>${fmt(today)}</SVTODATE>
+      </STATICVARIABLES>
+      <TDL>
+        <TDLMESSAGE>
+          <COLLECTION NAME="Ugaahi Receipts" ISMODIFY="No" ISFIXED="No" ISINITIALIZE="No" ISOPTION="No" ISINTERNAL="No">
+            <TYPE>Voucher</TYPE>
+            <FETCH>DATE, PARTYNAME, VOUCHERNUMBER, VOUCHERTYPENAME, AMOUNT, LEDGERENTRIES.LIST, BILLALLOCATIONS.LIST</FETCH>
+            <FILTERS>IsReceipt</FILTERS>
+          </COLLECTION>
+          <SYSTEM TYPE="Formulae" NAME="IsReceipt">
+            $VOUCHERTYPENAME CONTAINS "Receipt" OR $VOUCHERTYPENAME CONTAINS "Credit Note" OR $VOUCHERTYPENAME CONTAINS "Debit Note"
+          </SYSTEM>
+        </TDLMESSAGE>
+      </TDL>
+    </DESC>
+  </BODY>
+</ENVELOPE>`;
+}
+
+/**
+ * Receipt / Credit Note / Debit Note vouchers parse karna.
+ * Ye bills ke pending amount ko adjust karte hain.
+ */
+function extractReceipts(xml) {
+  const receipts = [];
+  const rowRe = /<(?:VOUCHER)[^>]*>([\s\S]*?)<\/(?:VOUCHER)>/gi;
+  let m;
+  while ((m = rowRe.exec(xml)) !== null) {
+    const block = m[1];
+    const tag = (names) => {
+      for (const n of names) {
+        const r = new RegExp(`<${n}[^>]*>([^<]*)<\\/${n}>`, 'i');
+        const f = block.match(r);
+        if (f && f[1].trim()) return f[1].trim();
+      }
+      return '';
+    };
+    const vchType = tag(['VOUCHERTYPENAME', 'VCHTYPE']);
+    const t = vchType.toLowerCase();
+    let kind = null;
+    if (t.includes('receipt')) kind = 'Receipt';
+    else if (t.includes('credit') && t.includes('note')) kind = 'Credit Note';
+    else if (t.includes('debit') && t.includes('note')) kind = 'Debit Note';
+    if (!kind) continue;
+
+    const receiptRef = tag(['VOUCHERNUMBER', 'VCHNO', 'REFNO']);
+    const partyName = tag(['PARTYNAME', 'LEDGERNAME', 'PARTYLEDGERNAME']);
+    if (!receiptRef || !partyName) continue;
+
+    const toNum = (s) => { const n = Number(String(s).replace(/[₹,\s]/g, '')); return isNaN(n) ? 0 : n; };
+    const amount = Math.abs(toNum(tag(['AMOUNT', 'DSPVCHAMT'])));
+    if (amount <= 0) continue;
+
+    const toDate = (s) => {
+      s = String(s).trim();
+      if (/^\d{8}$/.test(s)) return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
+      return s || undefined;
+    };
+
+    // Bill reference (agar receipt kisi bill ke against hai)
+    const billRef = tag(['BILLREF', 'AGAINSTBILL', 'BILLNO']) || undefined;
+
+    receipts.push({
+      receiptRef,
+      partyName,
+      amount,
+      receiptDate: toDate(tag(['DATE', 'DSPVCHDATE'])) || new Date().toISOString().slice(0, 10),
+      billRef,
+      voucherType: kind,
+      tallyCompany: companyName,
+    });
+  }
+  return receipts;
+}
+
 function escapeXml(s) {
   return String(s).replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]));
 }
@@ -159,10 +255,10 @@ function extractBills(xml) {
 }
 
 // ------------------------------------------------------------------ push
-function pushToCloud(bills, customers) {
+function pushToCloud(bills, customers, receipts) {
   return new Promise((resolve, reject) => {
     const url = new URL('/api/integrations/tally/sync', serverUrl);
-    const body = JSON.stringify({ companyName, bills, customers });
+    const body = JSON.stringify({ companyName, bills, customers, receipts });
     const lib = url.protocol === 'https:' ? https : http;
     const req = lib.request(
       {
@@ -244,12 +340,24 @@ async function syncOnce() {
       console.log(`   ⚠️  Customer master nahi mila: ${e.message} — sirf bills sync honge`);
     }
 
-    if (bills.length === 0 && customers.length === 0) {
+    // 3. Receipts / Credit Notes / Debit Notes (pichle 7 din) — payment auto-track!
+    let receipts = [];
+    try {
+      const receiptXml = await postTally(buildReceiptRequest());
+      if (receiptXml && receiptXml.length > 100) {
+        receipts = extractReceipts(receiptXml);
+        console.log(`   💰 ${receipts.length} receipts/notes mile`);
+      }
+    } catch (e) {
+      console.log(`   ⚠️  Receipts nahi mile: ${e.message} — sirf bills sync honge`);
+    }
+
+    if (bills.length === 0 && customers.length === 0 && receipts.length === 0) {
       console.log('   ⚠️  Kuch parse nahi hua — --dump flag se raw XML dekhein');
       return;
     }
-    const result = await pushToCloud(bills, customers);
-    console.log(`   ✅ Sync complete: ${result.billsUpserted} bills, ${result.customersCreated} naye customers, ${result.outstandingsUpserted} udhaari records`);
+    const result = await pushToCloud(bills, customers, receipts);
+    console.log(`   ✅ Sync complete: ${result.billsUpserted} bills, ${result.customersCreated} naye customers, ${result.outstandingsUpserted} udhaari records, ${result.receiptsApplied || 0} receipts applied`);
   } catch (err) {
     console.error(`   ❌ Error: ${err.message}`);
     console.error('   💡 Check karein: (1) Tally Prime chal raha hai? (2) Company khuli hai? (3) Internet on hai?');

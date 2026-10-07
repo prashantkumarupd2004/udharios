@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { syncBillsFromTally, syncCustomersFromTally, verifyTallyApiKey } from '@/lib/tally'
+import { syncBillsFromTally, syncCustomersFromTally, applyTallyReceipts, verifyTallyApiKey } from '@/lib/tally'
 import { logger } from '@/lib/logger'
 import { z } from 'zod'
 
@@ -29,10 +29,21 @@ const billSchema = z.object({
   tallyCompany: z.string().max(120).optional(),
 })
 
+const receiptSchema = z.object({
+  receiptRef: z.string().min(1).max(60),
+  partyName: z.string().min(1).max(120),
+  amount: z.number().min(0),
+  receiptDate: z.string().min(8),
+  billRef: z.string().max(60).optional(),
+  voucherType: z.enum(['Receipt', 'Credit Note', 'Debit Note']),
+  tallyCompany: z.string().max(120).optional(),
+})
+
 const schema = z.object({
   companyName: z.string().max(120).optional(),
   bills: z.array(billSchema).max(5000),
   customers: z.array(customerSchema).max(10000).optional(),
+  receipts: z.array(receiptSchema).max(5000).optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -53,6 +64,12 @@ export async function POST(request: NextRequest) {
 
     const result = await syncBillsFromTally(conn.merchantId, data.bills, 'tally_agent')
 
+    // Receipts / Credit Notes / Debit Notes — pending auto-adjust!
+    let receiptsResult = { receiptsApplied: 0, billsPaidOff: 0 }
+    if (data.receipts && data.receipts.length > 0) {
+      receiptsResult = await applyTallyReceipts(conn.merchantId, data.receipts)
+    }
+
     await prisma.tallyConnection.update({
       where: { id: conn.id },
       data: {
@@ -67,6 +84,8 @@ export async function POST(request: NextRequest) {
       syncedAt: new Date().toISOString(),
       customersFromMaster: masterSynced,
       ...result,
+      receiptsApplied: receiptsResult.receiptsApplied,
+      billsPaidOff: receiptsResult.billsPaidOff,
       customersCreated: result.customersCreated + masterSynced.created,
       customersMatched: result.customersMatched + masterSynced.matched,
     })

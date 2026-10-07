@@ -35,6 +35,10 @@ REM    Ya: start-agent.bat par double-click
 
 - Agent har 30 minute me Tally se **saare customers (Sundry Debtors)** nikalega — bill ho ya na ho, sab auto-add
 - Phir naye/pending bills lega → customers match honge, udhaari records banenge
+- **Receipts / Credit Notes / Debit Notes** (pichle 7 din) bhi lega:
+  - 💰 **Receipt** (payment mila) → pending **auto-kam**, full pay pe **Paid ✓** + call band!
+  - ↩️ **Credit Note** (maal wapas) → pending kam
+  - ➕ **Debit Note** (extra charge) → pending badhega
 - **Reminders apne aap** — WhatsApp aur voice call me bill number bolega:
   > "Bill number INV-1023 ka ₹5,400 ka payment 12 din se pending hai"
 - Bill Tally me pay ho gaya → agli sync me Udhari OS me bhi **Paid ✓**
