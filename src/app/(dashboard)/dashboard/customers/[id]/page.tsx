@@ -113,8 +113,42 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
     setSaving(false)
   }
 
-  const triggerCall = async (outstandingId: string) => {
-    if (!hasPhone) {
+  const [markingPaid, setMarkingPaid] = useState<string | null>(null)
+
+  const markPaid = async (outstandingId: string) => {
+    const method = window.prompt('Payment kaise mila? (cash / upi / bank_transfer)', 'cash')
+    if (method === null) return // cancel
+    if (!['cash', 'upi', 'bank_transfer', 'other'].includes(method.trim())) {
+      setCallMsg('Method cash, upi, bank_transfer ya other me se likho')
+      return
+    }
+    setMarkingPaid(outstandingId)
+    try {
+      const res = await fetch(`/api/outstandings/${outstandingId}/mark-paid`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ method: method.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setCallMsg(data.error ?? 'Paid mark nahi ho paya')
+      } else {
+        setCallMsg('✅ Payment received mark ho gaya!')
+        // list refresh karo
+        setCustomer(c => c ? {
+          ...c,
+          outstandings: c.outstandings.map(o =>
+            o.id === outstandingId ? { ...o, status: 'paid' as const } : o
+          ),
+        } : c)
+      }
+    } catch {
+      setCallMsg('Network error — dobara try karo')
+    }
+    setMarkingPaid(null)
+  }
+
+  const triggerCall = async (outstandingId: string) => {    if (!hasPhone) {
       setCallMsg('Pehle customer ka mobile number add karo')
       return
     }
@@ -314,6 +348,14 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                         {calling === o.id ? 'Calling...' : 'Call karo'}
                       </button>
                     )}
+                    <button
+                      onClick={() => markPaid(o.id)}
+                      disabled={markingPaid === o.id}
+                      className="mt-1.5 w-full inline-flex items-center justify-center gap-1 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition-colors"
+                    >
+                      {markingPaid === o.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                      {markingPaid === o.id ? 'Saving...' : 'Paid ✓'}
+                    </button>
                   </div>
                 </div>
               )
