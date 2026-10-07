@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Settings as SettingsIcon, Store, MoonStar, Languages, LogOut, Crown } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
+import PaymentGatewaySettings from './PaymentGatewaySettings'
 
 interface MerchantSettings {
   businessName: string
@@ -127,8 +128,10 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Quiet hours */}
-      <div className="glass-card p-5 space-y-4">
+      {/* Payment Gateway */}
+      <PaymentGatewaySettings />
+
+      {/* Quiet hours */}      <div className="glass-card p-5 space-y-4">
         <h2 className="font-bold text-stone-900 flex items-center gap-2">
           <MoonStar className="w-4 h-4 text-indigo-500" />
           {lang === 'hi' ? 'Quiet Hours' : 'Quiet Hours'}

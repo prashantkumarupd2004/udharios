@@ -154,6 +154,11 @@ model Merchant {
   bills          Bill[]
   tallyConnection TallyConnection?
 
+  // Payment gateway config (multi-gateway support)
+  paymentGateway     String? @map("payment_gateway") @default("upi_vpa")
+  gatewayCredentials String? @map("gateway_credentials") // encrypted JSON
+  gatewayTestMode    Boolean @map("gateway_test_mode") @default(true)
+
   @@map("merchants")
 }
 
@@ -328,7 +333,8 @@ model PaymentLink {
   id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   merchantId     String            @map("merchant_id") @db.Uuid
   outstandingId  String            @unique @map("outstanding_id") @db.Uuid
-  razorpayLinkId String            @unique @map("razorpay_link_id")
+  gateway        String            @default("razorpay") // razorpay|cashfree|payu|phonepe|upi_vpa
+  gatewayLinkId  String            @unique @map("gateway_link_id") // was razorpay_link_id
   url            String
   shortUrl       String?           @map("short_url")
   amount         Decimal           @db.Decimal(12, 2)
