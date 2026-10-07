@@ -101,7 +101,7 @@ function buildLedgerListRequest() {
         <TDLMESSAGE>
           <COLLECTION NAME="Ugaahi Ledgers" ISMODIFY="No" ISFIXED="No" ISINITIALIZE="No" ISOPTION="No" ISINTERNAL="No">
             <TYPE>Ledger</TYPE>
-            <FETCH>NAME, PARENT, LEDGERPHONE, PHONE, ADDRESS, GSTIN, CLOSINGBALANCE</FETCH>
+            <FETCH>NAME, PARENT, ADDRESS.LIST, PHONENUMBER, MOBILE, LEDGERPHONE, GSTIN, CLOSINGBALANCE</FETCH>
           </COLLECTION>
         </TDLMESSAGE>
       </TDL>
@@ -372,17 +372,27 @@ function extractCustomers(xml) {
       if (attr) name = attr[1].trim();
     }
     const parent = tag(['PARENT', 'GROUPNAME', 'PARENTGROUP']);
-    // Debtor check — tolerant: parent me "debtor" ho, ya closing balance debit ho
+    // Debtor YA Creditor — dono chalenge (Tally me ulta bhi ho sakta hai)
+    // Bills se aaye hue parties customers hain, chahe group kuch bhi ho
     const closingBal = tag(['CLOSINGBALANCE', 'CLOSINGBAL']);
-    const isDebtor = /debtor/i.test(parent) || (parent === '' && closingBal !== '');
+    const isParty = /debtor|creditor/i.test(parent) || (parent === '' && closingBal !== '');
     if (!name || seen.has(name.toLowerCase())) continue;
-    // Agar parent pata hai aur debtor nahi hai to skip; agar parent khaali hai to include karo (server filter karega)
-    if (parent !== '' && !isDebtor) continue;
+    // Sirf generic groups skip karo (Cash, Sales, Purchase, etc.)
+    if (/^(cash|sales|purchase|bank|capital|stock|profit)/i.test(name)) continue;
+    if (parent !== '' && !isParty) continue;
     seen.add(name.toLowerCase());
     // Phone — multiple variants + nested address block me bhi dhoondo
-    let phone = tag(['LEDGERPHONE', 'PHONE', 'MOBILENO', 'CONTACTNO', 'MOBILE']) || '';
+    let phone = tag(['LEDGERPHONE', 'PHONE', 'MOBILENO', 'CONTACTNO', 'MOBILE', 'PHONENUMBER']) || '';
     if (!phone) {
-      // Address block ke andar phone dhoondo
+      // Address block ke andar phone dhoondo (ADDRESS.LIST structure)
+      const addrMatch = block.match(/<ADDRESS\.LIST>([\s\S]*?)<\/ADDRESS\.LIST>/i);
+      if (addrMatch) {
+        const pm = addrMatch[1].match(/(?:PHONE|MOBILE|MOBILENO|PHONENUMBER)[^>]*>([^<]+)</i);
+        if (pm) phone = pm[1].trim();
+      }
+    }
+    if (!phone) {
+      // Koi bhi ADDRESS tag ke andar
       const addrBlock = block.match(/<ADDRESS[^>]*>([\s\S]*?)<\/ADDRESS>/i);
       if (addrBlock) {
         const pm = addrBlock[1].match(/(?:PHONE|MOBILE|MOBILENO)[^>]*>([^<]+)</i);
@@ -476,8 +486,15 @@ async function main() {
           const withPhone = customers.filter(c => c.phone).length;
           console.log(`   📞 ${withPhone}/${customers.length} me phone mila`);
         } else {
-          console.log('   📋 Raw ledger (pehle 1500 chars):');
-          console.log(ledgerXml.slice(0, 1500));
+          // Debug: pehle LEDGER block ka structure dikhao
+          const ledgerMatch = ledgerXml.match(/<LEDGER[^>]*>([\s\S]{0,2000})/i);
+          if (ledgerMatch) {
+            console.log('   🔍 Pehle LEDGER block ka structure:');
+            console.log(ledgerMatch[0].slice(0, 2000));
+          } else {
+            console.log('   ⚠️  LEDGER tag hi nahi mila! Raw (pehle 1500 chars):');
+            console.log(ledgerXml.slice(0, 1500));
+          }
         }
       } catch (e) {
         console.log(`⚠️  Ledger list nahi mili: ${e.message}`);
