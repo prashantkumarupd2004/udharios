@@ -193,10 +193,10 @@ function escapeXml(s) {
   return String(s).replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]));
 }
 
-function postTally(xml) {
+function postTally(xml, timeoutMs = 20000) {
   return new Promise((resolve, reject) => {
     const req = http.request(
-      { host: tallyHost, port: tallyPort, path: '/', method: 'POST', headers: { 'Content-Length': Buffer.byteLength(xml) }, timeout: 20000 },
+      { host: tallyHost, port: tallyPort, path: '/', method: 'POST', headers: { 'Content-Length': Buffer.byteLength(xml) }, timeout: timeoutMs },
       (res) => {
         let data = '';
         res.on('data', (c) => (data += c));
@@ -331,9 +331,10 @@ async function syncOnce() {
     console.log(`   📄 ${bills.length} bills mile`);
 
     // 2. Customer master (saare Sundry Debtors — bill ho ya na ho)
+    // Ledger list badi ho sakti hai, isliye timeout 60 sec
     let customers = [];
     try {
-      const ledgerXml = await postTally(buildLedgerListRequest());
+      const ledgerXml = await postTally(buildLedgerListRequest(), 60000);
       customers = extractCustomers(ledgerXml);
       console.log(`   👥 ${customers.length} customers mile (master)`);
     } catch (e) {
@@ -371,6 +372,11 @@ async function main() {
     try {
       const xml = await postTally(buildOutstandingRequest());
       console.log(`✅ Tally jawab de raha hai (${xml.length} chars)`);
+      // Agar jawab bahut chhota hai to raw dikhao — debugging ke liye
+      if (xml.length < 500) {
+        console.log('📋 Raw response:');
+        console.log(xml.slice(0, 1000));
+      }
       const bills = extractBills(xml);
       console.log(`📄 ${bills.length} bills parse hue`);
       if (bills.length > 0) console.log('   Pehla bill:', JSON.stringify(bills[0]));
