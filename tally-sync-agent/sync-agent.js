@@ -466,6 +466,16 @@ async function main() {
     console.log('💾 Raw Tally response tally-response.xml me save ho gaya');
     return;
   }
+  if (args.includes('--dump-ledger')) {
+    console.log('🔍 Ledger XML dump kar raha hu...');
+    const xml = await postTally(buildLedgerListRequest(), 60000);
+    fs.writeFileSync(path.join(__dirname, 'tally-ledger.xml'), xml);
+    console.log(`💾 Ledger XML tally-ledger.xml me save ho gaya (${xml.length} chars)`);
+    // Pehle 2000 chars dikhao
+    console.log('📋 Pehle 2000 chars:');
+    console.log(xml.slice(0, 2000));
+    return;
+  }
 
   console.log('🚀 Udhari OS Tally Sync Agent chalu');
   console.log(`   Company: ${companyName} | Har ${intervalMinutes} min me sync`);
