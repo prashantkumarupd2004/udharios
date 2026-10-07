@@ -27,6 +27,7 @@ export interface PlaceCallInput {
   timeOut?: number          // Ring timeout in seconds (default 60)
   record?: boolean          // Record the call
   customField?: string      // Extra metadata -> passed into the flow via Passthru applet
+  voiceUrl?: string         // Dynamic voice URL — hamara /api/voice/connect (merchant-specific script)
 }
 
 export interface ExotelCallResponse {
@@ -55,9 +56,10 @@ export async function placeCall(input: PlaceCallInput): Promise<ExotelCallRespon
     From: toNormalized,
     To: EXOTEL_VIRTUAL_NUMBER,
     CallerId: EXOTEL_VIRTUAL_NUMBER,
-    // Url is the Exotel app/flow URL. The flow's Voicebot applet connects
-    // the call to our configured Exotel AI voice agent (Udhari Collection).
-    Url: `https://my.exotel.com/${EXOTEL_SID}/exoml/start_voice/${EXOTEL_APP_ID}`,
+    // Dynamic voice URL: hamara /api/voice/connect har merchant ke hisaab se
+    // personalized Hindi script bolta hai. Agar voiceUrl na diya ho to purana
+    // Exotel dashboard flow use hoga (static agent).
+    Url: input.voiceUrl ?? `https://my.exotel.com/${EXOTEL_SID}/exoml/start_voice/${EXOTEL_APP_ID}`,
     StatusCallback: input.callbackUrl,
     TimeLimit: String(input.timeLimit ?? 300),
     TimeOut: String(input.timeOut ?? 60),

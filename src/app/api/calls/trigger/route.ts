@@ -67,12 +67,13 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Place the call via Exotel
+    // Place the call via Exotel — hamara dynamic voice URL (merchant-specific script)
     let exotelResponse
     try {
       exotelResponse = await placeCall({
         to: outstanding.customer.phone,
         callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/exotel?callId=${callRecord.id}`,
+        voiceUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/voice/connect?callId=${callRecord.id}`,
         record: true,
         customField: JSON.stringify({
           callId: callRecord.id,
