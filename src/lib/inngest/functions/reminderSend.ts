@@ -157,7 +157,7 @@ export const sendStagedReminder = inngest.createFunction(
             )
 
             // DB me save karo
-            await prisma.paymentLink.upsert({
+            const saved = await prisma.paymentLink.upsert({
               where: { outstandingId },
               create: {
                 merchantId,
@@ -181,7 +181,9 @@ export const sendStagedReminder = inngest.createFunction(
               outstandingId,
               gateway: gatewayId,
             })
-            return link.shortUrl
+            // WhatsApp button ke liye redirect URL (Meta ko poora URL format chahiye)
+            const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://udharios.vercel.app'
+            return `${baseUrl}/p/${saved.id}`
           } catch (err) {
             logger.warn('Auto payment link failed — fallback to UPI/bank', {
               outstandingId,

@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
           include: {
             merchant: { select: { businessName: true } },
             customer: { select: { name: true, phone: true } },
-            paymentLink: { select: { url: true } },
+            paymentLink: { select: { id: true, url: true } },
           },
         },
       },
@@ -66,7 +66,10 @@ export async function POST(request: NextRequest) {
         customerName: outstanding.customer.name,
         amountINR: formatINR(outstanding.amount.toNumber()),
         daysOverdue: overdueDays(outstanding.dueDate),
-        paymentLinkUrl: outstanding.paymentLink?.url,
+        // WhatsApp button ke liye redirect URL (Meta ko poora URL format chahiye)
+        paymentLinkUrl: outstanding.paymentLink
+          ? `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://udharios.vercel.app'}/p/${outstanding.paymentLink.id}`
+          : undefined,
         billRef: outstanding.invoiceNo ?? undefined,
       }
 
