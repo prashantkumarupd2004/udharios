@@ -1,7 +1,7 @@
 /**
  * GET /api/cron/retry-failed-calls — Failed calls ko auto-retry karo.
  *
- * Schedule: har 2 ghante (Vercel cron)
+ * Schedule: roz ek baar (Vercel Hobby limit — daily only)
  *
  * Logic:
  * - Pichle 24 ghante me failed calls (no-answer/busy/failed) dhundo
