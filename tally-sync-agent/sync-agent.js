@@ -81,7 +81,7 @@ function buildOutstandingRequest() {
 
 /**
  * Tally se saare ledgers (customer master) mangne ka request.
- * TDL Collection-based — Sundry Debtors filter client-side hota hai.
+ * TDL Collection-based — Debtors + Creditors dono.
  */
 function buildLedgerListRequest() {
   return `<ENVELOPE>
@@ -101,7 +101,6 @@ function buildLedgerListRequest() {
         <TDLMESSAGE>
           <COLLECTION NAME="Ugaahi Ledgers" ISMODIFY="No" ISFIXED="No" ISINITIALIZE="No" ISOPTION="No" ISINTERNAL="No">
             <TYPE>Ledger</TYPE>
-            <FETCH>NAME, PARENT, ADDRESS.LIST, PHONENUMBER, MOBILE, LEDGERPHONE, PRIMARYMOBILENO, CONTACTNO, GSTIN, CLOSINGBALANCE, MAILINGNAME, PINCODE, STATE</FETCH>
           </COLLECTION>
         </TDLMESSAGE>
       </TDL>
@@ -490,6 +489,22 @@ async function main() {
           console.log('   Pehla customer:', JSON.stringify(customers[0]));
           const withPhone = customers.filter(c => c.phone).length;
           console.log(`   📞 ${withPhone}/${customers.length} me phone mila`);
+          if (withPhone === 0) {
+            // Debug: LEDGER me kaun-kaun se fields hain, dikhao
+            const ledgerMatch = ledgerXml.match(/<LEDGER NAME="Arpit Pandey"[^>]*>([\s\S]*?)<\/LEDGER>/i);
+            if (ledgerMatch) {
+              const fields = [...ledgerMatch[1].matchAll(/<([A-Z][A-Z0-9.]*)(?:\s[^>]*)?>/g)].map(m => m[1]);
+              const uniqueFields = [...new Set(fields)].slice(0, 40);
+              console.log('   🔍 Arpit Pandey ke LEDGER me ye fields hain:');
+              console.log('   ' + uniqueFields.join(', '));
+              // Phone jaisa kuch dhoondo
+              const phoneLike = ledgerMatch[1].match(/[^<>]*(?:mobile|phone)[^<>]*>/gi);
+              if (phoneLike) {
+                console.log('   📱 Phone-related tags:');
+                phoneLike.slice(0, 5).forEach(t => console.log('   ' + t.slice(0, 120)));
+              }
+            }
+          }
         } else {
           // Debug: pehle LEDGER block ka structure dikhao
           const ledgerMatch = ledgerXml.match(/<LEDGER[^>]*>([\s\S]{0,2000})/i);
