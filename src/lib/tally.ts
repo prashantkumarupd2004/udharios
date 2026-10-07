@@ -86,6 +86,10 @@ export async function syncCustomersFromTally(
           merchantId,
           name,
           phone: phone || `tally-ledger-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          // Tally ke existing debtors hain — pending dues ke transactional
+          // reminders ke liye consent implied hai (business relationship)
+          consent: true,
+          consentAt: new Date(),
           notes: [
             'Auto-added from Tally customer master',
             c.address ? `Address: ${c.address}` : '',
@@ -159,6 +163,9 @@ export async function syncBillsFromTally(
           merchantId,
           name: partyName,
           phone: b.partyPhone?.trim() || `tally-${billRef}`,
+          // Bill wala existing debtor — transactional reminders ke liye consent implied
+          consent: true,
+          consentAt: new Date(),
           notes: `Auto-created from Tally bill ${billRef}`,
         },
       })

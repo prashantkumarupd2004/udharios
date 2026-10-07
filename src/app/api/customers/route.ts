@@ -54,13 +54,25 @@ export async function GET(request: NextRequest) {
               outstandings: { where: { status: { notIn: ['paid', 'written_off'] } } },
             },
           },
+          outstandings: {
+            where: { status: { notIn: ['paid', 'written_off'] } },
+            select: { amount: true, status: true },
+          },
         },
       }),
       prisma.customer.count({ where }),
     ])
 
+    // Pending total per customer
+    const withPending = customers.map(c => ({
+      ...c,
+      outstandings: undefined,
+      pendingTotal: c.outstandings.reduce((s, o) => s + Number(o.amount), 0),
+      overdueCount: c.outstandings.filter(o => o.status === 'overdue').length,
+    }))
+
     return NextResponse.json({
-      customers,
+      customers: withPending,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     })
   } catch (err) {

@@ -27,7 +27,29 @@ export async function POST() {
 
     let created = 0
     let matched = 0
+    let consentFixed = 0
     const seen = new Set<string>()
+
+    // Pehle: Tally se aaye purane customers ka consent fix karo
+    // (existing debtors — transactional reminders ke liye implied consent)
+    const tallyCustomers = await prisma.customer.findMany({
+      where: {
+        merchantId,
+        consent: false,
+        OR: [
+          { notes: { contains: 'Tally', mode: 'insensitive' } },
+          { phone: { startsWith: 'tally-' } },
+        ],
+      },
+      select: { id: true },
+    })
+    if (tallyCustomers.length > 0) {
+      const upd = await prisma.customer.updateMany({
+        where: { id: { in: tallyCustomers.map(c => c.id) } },
+        data: { consent: true, consentAt: new Date() },
+      })
+      consentFixed = upd.count
+    }
 
     for (const b of bills) {
       const partyName = (b.partyName ?? '').trim()
@@ -73,7 +95,7 @@ export async function POST() {
       }
     }
 
-    return NextResponse.json({ ok: true, created, matched, totalParties: seen.size })
+    return NextResponse.json({ ok: true, created, matched, consentFixed, totalParties: seen.size })
   } catch (err) {
     logger.error('Backfill customers error', { error: String(err) })
     return NextResponse.json({ error: 'Server error' }, { status: 500 })

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Search, Plus, Upload, X } from 'lucide-react'
+import { Search, Plus, Upload, X, Users, IndianRupee, CheckCircle2, AlertTriangle, Phone } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
 
 interface Customer {
@@ -12,7 +12,14 @@ interface Customer {
   consent: boolean
   optedOut: boolean
   _count: { outstandings: number }
+  pendingTotal: number
+  overdueCount: number
   createdAt: string
+}
+
+function fmtPhone(p: string) {
+  if (!p || p.startsWith('tally-')) return '—'
+  return p.startsWith('+91') ? p : `+91 ${p}`
 }
 
 function AddCustomerModal({ onClose, onSuccess, lang }: { onClose: () => void; onSuccess: () => void; lang: string }) {
@@ -135,6 +142,7 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [showAdd, setShowAdd] = useState(false)
+  const [filter, setFilter] = useState<'all' | 'pending' | 'overdue' | 'clear'>('all')
 
   const fetchCustomers = useCallback(async () => {
     const params = search ? `?search=${encodeURIComponent(search)}` : ''
@@ -149,30 +157,68 @@ export default function CustomersPage() {
     return () => clearTimeout(timer)
   }, [fetchCustomers])
 
+  const filtered = customers.filter(c => {
+    if (filter === 'pending') return c._count.outstandings > 0
+    if (filter === 'overdue') return c.overdueCount > 0
+    if (filter === 'clear') return c._count.outstandings === 0
+    return true
+  })
+
+  const totalPending = customers.reduce((s, c) => s + (c.pendingTotal ?? 0), 0)
+  const pendingCount = customers.filter(c => c._count.outstandings > 0).length
+  const overdueCount = customers.filter(c => c.overdueCount > 0).length
+
+  const tabs = [
+    { k: 'all', label: lang === 'hi' ? 'Sab' : 'All', count: customers.length },
+    { k: 'pending', label: lang === 'hi' ? 'Baaki' : 'Pending', count: pendingCount },
+    { k: 'overdue', label: 'Overdue', count: overdueCount },
+    { k: 'clear', label: lang === 'hi' ? 'Clear' : 'Clear', count: customers.length - pendingCount },
+  ] as const
+
   return (
     <div className="space-y-5">
+      {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-stone-900">
-            👥 {lang === 'hi' ? 'Customers' : 'Customers'}
-          </h1>
-          <p className="text-sm text-stone-500 mt-0.5">
-            {customers.length} {lang === 'hi' ? 'kul customers' : 'total customers'}
-          </p>
+          <h1 className="text-2xl font-extrabold text-stone-900">👥 {lang === 'hi' ? 'Customers' : 'Customers'}</h1>
+          <p className="text-sm text-stone-500 mt-0.5">{customers.length} {lang === 'hi' ? 'kul customers' : 'total customers'}</p>
         </div>
         <div className="flex gap-2">
           <Link href="/dashboard/customers/import" className="btn-ghost px-3 py-2.5 text-sm">
             <Upload className="w-4 h-4" /> {lang === 'hi' ? 'Import' : 'Import'}
           </Link>
-          <button
-            onClick={() => setShowAdd(true)}
-            className="btn-primary px-4 py-2.5 text-sm"
-            id="open-add-customer-btn"
-          >
+          <button onClick={() => setShowAdd(true)} className="btn-primary px-4 py-2.5 text-sm" id="open-add-customer-btn">
             <Plus className="w-4 h-4" strokeWidth={2.5} /> {lang === 'hi' ? 'Naya Customer' : 'Add Customer'}
           </button>
         </div>
       </div>
+
+      {/* Summary cards */}
+      {!loading && customers.length > 0 && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-white border border-orange-100 rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <Users className="w-4 h-4 text-orange-500" />
+              <p className="text-[11px] font-bold text-stone-500 uppercase tracking-wide">{lang === 'hi' ? 'Kul' : 'Total'}</p>
+            </div>
+            <p className="text-2xl font-extrabold text-stone-900">{customers.length}</p>
+          </div>
+          <div className="bg-white border border-red-100 rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <IndianRupee className="w-4 h-4 text-red-500" />
+              <p className="text-[11px] font-bold text-stone-500 uppercase tracking-wide">{lang === 'hi' ? 'Kul Baaki' : 'Pending'}</p>
+            </div>
+            <p className="text-2xl font-extrabold text-red-600">₹{totalPending.toLocaleString('en-IN')}</p>
+          </div>
+          <div className="bg-white border border-emerald-100 rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <p className="text-[11px] font-bold text-stone-500 uppercase tracking-wide">{lang === 'hi' ? 'Clear' : 'Clear'}</p>
+            </div>
+            <p className="text-2xl font-extrabold text-emerald-600">{customers.length - pendingCount}</p>
+          </div>
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative">
@@ -189,20 +235,42 @@ export default function CustomersPage() {
         />
       </div>
 
+      {/* Filter tabs */}
+      {!loading && customers.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {tabs.map(t => (
+            <button
+              key={t.k}
+              onClick={() => setFilter(t.k)}
+              className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
+                filter === t.k
+                  ? 'bg-stone-900 text-white shadow'
+                  : 'bg-white border border-stone-200 text-stone-600 hover:border-orange-300'
+              }`}
+            >
+              {t.label}
+              <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-md ${filter === t.k ? 'bg-white/20' : 'bg-stone-100'}`}>
+                {t.count}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Customer list */}
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => <div key={i} className="skeleton h-20" />)}
         </div>
-      ) : customers.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="text-center py-16 glass-card">
           <div className="text-4xl mb-3">👤</div>
           <p className="text-stone-500 mb-4 font-medium">
-            {search
+            {search || filter !== 'all'
               ? (lang === 'hi' ? 'Koi customer nahi mila' : 'No customers found')
               : (lang === 'hi' ? 'Abhi koi customer nahi hai' : 'No customers yet')}
           </p>
-          {!search && (
+          {!search && filter === 'all' && (
             <button onClick={() => setShowAdd(true)} className="text-orange-600 font-semibold text-sm hover:underline">
               {lang === 'hi' ? 'Pehla customer add karein →' : 'Add your first customer →'}
             </button>
@@ -210,51 +278,52 @@ export default function CustomersPage() {
         </div>
       ) : (
         <div className="space-y-2.5">
-          {customers.map(c => (
-            <Link
-              key={c.id}
-              href={`/dashboard/customers/${c.id}`}
-              className="glass-card card-hover p-4 flex items-center gap-3 group"
-            >
-              <div className={`w-11 h-11 rounded-full flex items-center justify-center text-base font-extrabold flex-shrink-0 ${
-                c.optedOut ? 'bg-stone-200 text-stone-500' : 'bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/25'
-              }`}>
-                {c.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-bold text-stone-900 group-hover:text-orange-700 transition-colors truncate">
-                    {c.name}
+          {filtered.map(c => {
+            const hasPending = c._count.outstandings > 0
+            const isOverdue = c.overdueCount > 0
+            return (
+              <Link
+                key={c.id}
+                href={`/dashboard/customers/${c.id}`}
+                className={`bg-white border rounded-2xl p-4 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-orange-200 transition-all group ${isOverdue ? 'border-l-4 border-l-red-400' : 'border-stone-100'}`}
+              >
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-extrabold flex-shrink-0 ${
+                  c.optedOut ? 'bg-stone-100 text-stone-400' : 'bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/20'
+                }`}>
+                  {c.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-bold text-stone-900 group-hover:text-orange-700 transition-colors truncate">{c.name}</p>
+                    {c.optedOut && (
+                      <span className="text-[10px] font-bold bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">Opted Out</span>
+                    )}
+                  </div>
+                  <p className="text-sm text-stone-500 font-medium flex items-center gap-1.5 mt-0.5">
+                    <Phone className="w-3 h-3" /> {fmtPhone(c.phone)}
                   </p>
-                  {c.optedOut && (
-                    <span className="text-[11px] font-semibold bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full border border-stone-200">
-                      {lang === 'hi' ? 'Opt Out' : 'Opted Out'}
-                    </span>
-                  )}
-                  {!c.consent && (
-                    <span className="text-[11px] font-semibold bg-red-50 text-red-700 px-2 py-0.5 rounded-full border border-red-200">
-                      {lang === 'hi' ? 'No Consent' : 'No Consent'}
+                </div>
+                <div className="text-right flex-shrink-0">
+                  {hasPending ? (
+                    <>
+                      <p className={`text-lg font-extrabold ${isOverdue ? 'text-red-600' : 'text-stone-900'}`}>
+                        ₹{(c.pendingTotal ?? 0).toLocaleString('en-IN')}
+                      </p>
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${isOverdue ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+                        {isOverdue && <AlertTriangle className="w-3 h-3" />}
+                        {c._count.outstandings} {c._count.outstandings === 1 ? (lang === 'hi' ? 'baaki' : 'due') : (lang === 'hi' ? 'baaki' : 'dues')}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full inline-flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> {lang === 'hi' ? 'Clear' : 'Clear'}
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-stone-500 font-medium">
-                  {c.phone.startsWith('tally-') ? '—' : c.phone.startsWith('+91') ? c.phone : `+91 ${c.phone}`}
-                </p>
-              </div>
-              <div className="text-right flex-shrink-0">
-                {c._count.outstandings > 0 ? (
-                  <span className="text-xs font-bold bg-red-50 text-red-700 border border-red-200 px-2.5 py-1 rounded-full">
-                    {c._count.outstandings} {lang === 'hi' ? 'baaki' : 'outstanding'}
-                  </span>
-                ) : (
-                  <span className="text-xs font-semibold bg-green-50 text-green-700 border border-green-200 px-2.5 py-1 rounded-full">
-                    ✓ {lang === 'hi' ? 'Clear' : 'Clear'}
-                  </span>
-                )}
-              </div>
-              <span className="text-stone-300 group-hover:text-orange-500 group-hover:translate-x-0.5 transition-all font-bold">→</span>
-            </Link>
-          ))}
+                <span className="text-stone-300 group-hover:text-orange-500 group-hover:translate-x-0.5 transition-all font-bold">→</span>
+              </Link>
+            )
+          })}
         </div>
       )}
 
@@ -264,3 +333,4 @@ export default function CustomersPage() {
     </div>
   )
 }
+
