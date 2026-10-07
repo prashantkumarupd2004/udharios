@@ -21,11 +21,33 @@ function xmlEscape(s: string): string {
 }
 
 export async function GET(request: NextRequest) {
-  const callId = request.nextUrl.searchParams.get('callId')
+  const params = request.nextUrl.searchParams
+  const callId = params.get('callId')
 
-  // Default fallback (agar callId na mile)
+  // Query params se direct lo — DB query nahi, instant response (Exotel timeout se bachne ke liye)
+  const merchantName = params.get('merchant') || ''
+  const customerName = params.get('customer') || ''
+  const amount = params.get('amount') || ''
+  const billRef = params.get('bill') || ''
+  const days = params.get('days') || ''
+
   const fallbackSay = 'Namaste! Ye ek payment reminder call hai. Kripya apne vyapari se sampark karein. Dhanyavaad!'
 
+  // Agar query params me data hai to direct use karo (fast path)
+  if (merchantName && customerName && amount) {
+    const greeting = xmlEscape(
+      `Namaste ${customerName} ji! Main ${merchantName} ki taraf se bol rahi hun. ` +
+      `Aapka ${billRef ? `bill number ${billRef} ka ` : ''}${amount} ka bhugtan ` +
+      `${days ? `${days} din se ` : ''}baaki hai. Kripya jald se jald settle karein. Dhanyavaad!`
+    )
+    const exoml = `<Response><Say voice="female" language="hi-IN">${greeting}</Say><Pause length="2"/><Say voice="female" language="hi-IN">${xmlEscape(
+      `Ek baar phir — ${merchantName} se ${amount} ka payment baaki hai. Kripya jald bhugtan karein. Dhanyavaad, namaste!`
+    )}</Say></Response>`
+    logger.info('Dynamic voice ExoML served (fast path)', { callId, merchantName })
+    return new NextResponse(exoml, { headers: { 'Content-Type': 'text/xml' } })
+  }
+
+  // Fallback: DB se nikalo (purana tareeka)
   if (!callId) {
     return new NextResponse(
       `<Response><Say voice="female" language="hi-IN">${fallbackSay}</Say></Response>`,
