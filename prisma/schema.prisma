@@ -159,6 +159,12 @@ model Merchant {
   gatewayCredentials String? @map("gateway_credentials") // encrypted JSON
   gatewayTestMode    Boolean @map("gateway_test_mode") @default(true)
 
+  // Bank details — bina gateway wale merchants ke liye (WhatsApp me jayega)
+  accountHolderName String? @map("account_holder_name")
+  accountNumber     String? @map("account_number")
+  bankName          String? @map("bank_name")
+  ifscCode          String? @map("ifsc_code")
+
   @@map("merchants")
 }
 

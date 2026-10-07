@@ -45,3 +45,10 @@ CREATE INDEX IF NOT EXISTS idx_payment_links_outstanding
 
 COMMENT ON COLUMN merchants.gateway_credentials IS
   'Encrypted JSON: gateway API keys. App layer pe encrypt/decrypt hota hai.';
+
+-- Bank details for non-gateway merchants (WhatsApp fallback)
+ALTER TABLE merchants
+  ADD COLUMN IF NOT EXISTS account_holder_name TEXT,
+  ADD COLUMN IF NOT EXISTS account_number TEXT,
+  ADD COLUMN IF NOT EXISTS bank_name TEXT,
+  ADD COLUMN IF NOT EXISTS ifsc_code TEXT;

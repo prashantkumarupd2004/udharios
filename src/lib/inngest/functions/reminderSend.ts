@@ -8,10 +8,15 @@ import {
   getWhatsAppProvider,
   buildT1Polite,
   buildT2WithLink,
+  buildT2WithUpiOrBank,
+  buildMerchantPaymentInfo,
   buildT3Firm,
   buildT4Final,
   isOptOutMessage,
 } from '@/lib/providers/WhatsappProvider'
+import { getGateway, isGatewayReady } from '@/lib/payments'
+import { decryptCredentials } from '@/lib/payments/crypto'
+import type { GatewayId } from '@/lib/payments/types'
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
 import { logger } from '@/lib/logger'
 import { isWithinSendingWindow, overdueDays, formatINR, formatIndianDate } from '@/lib/date-utils'
@@ -105,6 +110,93 @@ export const sendStagedReminder = inngest.createFunction(
 
       let components: ReturnType<typeof buildT1Polite> = []
 
+      // ---------------------------------------------------------------
+      // Payment link ensure karo (T2 ke liye) — auto-create ya fallback
+      // ---------------------------------------------------------------
+      let paymentUrl: string | null = outstanding.paymentLink?.url ?? null
+      let fallbackPaymentInfo: string | null = null
+
+      const needsLink = stage.templateName === 'T2_with_link'
+
+      if (needsLink && !paymentUrl) {
+        // Pehle payment link banane ki koshish karo (merchant ke gateway se)
+        paymentUrl = await step.run('ensure-payment-link', async () => {
+          try {
+            const m = outstanding.merchant
+            const gatewayId = (m.paymentGateway ?? 'upi_vpa') as GatewayId
+            if (!isGatewayReady(gatewayId)) return null
+
+            let credentials: Record<string, string> = {}
+            if (gatewayId === 'upi_vpa') {
+              if (!m.upiVpa) return null
+              credentials = { vpa: m.upiVpa }
+            } else {
+              if (!m.gatewayCredentials) return null
+              try {
+                credentials = decryptCredentials(m.gatewayCredentials)
+              } catch {
+                return null
+              }
+            }
+
+            const gateway = getGateway(gatewayId)
+            const amountPaise = Math.round(Number(outstanding.amount) * 100)
+            const link = await gateway.createPaymentLink(
+              {
+                amount: amountPaise,
+                description: `${m.businessName} — Udhaari Payment`,
+                customerName: outstanding.customer.name,
+                customerPhone: outstanding.customer.phone,
+                referenceId: outstandingId,
+                notes: { merchant_id: merchantId, outstanding_id: outstandingId },
+                expiryDate: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
+                callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/payment/success`,
+              },
+              credentials,
+              m.gatewayTestMode ?? true,
+            )
+
+            // DB me save karo
+            await prisma.paymentLink.upsert({
+              where: { outstandingId },
+              create: {
+                merchantId,
+                outstandingId,
+                gateway: gatewayId,
+                gatewayLinkId: link.linkId,
+                url: link.shortUrl,
+                shortUrl: link.shortUrl,
+                amount: outstanding.amount,
+                status: 'created',
+              },
+              update: {
+                gateway: gatewayId,
+                gatewayLinkId: link.linkId,
+                url: link.shortUrl,
+                shortUrl: link.shortUrl,
+                status: 'created',
+              },
+            })
+            logger.info('Auto-created payment link for reminder', {
+              outstandingId,
+              gateway: gatewayId,
+            })
+            return link.shortUrl
+          } catch (err) {
+            logger.warn('Auto payment link failed — fallback to UPI/bank', {
+              outstandingId,
+              error: String(err).slice(0, 120),
+            })
+            return null
+          }
+        })
+
+        // Link nahi bana to UPI/bank fallback
+        if (!paymentUrl) {
+          fallbackPaymentInfo = buildMerchantPaymentInfo(outstanding.merchant)
+        }
+      }
+
       switch (stage.templateName) {
         case 'T1_polite':
           components = buildT1Polite(
@@ -115,12 +207,30 @@ export const sendStagedReminder = inngest.createFunction(
           )
           break
         case 'T2_with_link':
-          components = buildT2WithLink(
-            outstanding.customer.name,
-            amountINR,
-            outstanding.invoiceNo ?? outstandingId.slice(0, 8),
-            outstanding.paymentLink?.url ?? ''
-          )
+          if (paymentUrl) {
+            components = buildT2WithLink(
+              outstanding.customer.name,
+              amountINR,
+              outstanding.invoiceNo ?? outstandingId.slice(0, 8),
+              paymentUrl
+            )
+          } else if (fallbackPaymentInfo) {
+            // Bina gateway wale merchant — UPI/bank details bhejo
+            components = buildT2WithUpiOrBank(
+              outstanding.customer.name,
+              amountINR,
+              outstanding.invoiceNo ?? outstandingId.slice(0, 8),
+              fallbackPaymentInfo
+            )
+          } else {
+            // Kuch nahi hai to polite reminder bhej do
+            components = buildT1Polite(
+              outstanding.customer.name,
+              outstanding.merchant.businessName,
+              amountINR,
+              formatIndianDate(outstanding.dueDate)
+            )
+          }
           break
         case 'T3_firm':
           components = buildT3Firm(

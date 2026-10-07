@@ -331,8 +331,7 @@ export function buildT2WithLink(
   ]
 }
 
-export function buildT3Firm(
-  customerName: string,
+export function buildT3Firm(  customerName: string,
   amountINR: string,
   overdueDays: number,
   merchantName: string
@@ -367,6 +366,58 @@ export function buildT4Final(
       ],
     },
   ]
+}
+
+/**
+ * T2 variant — bina gateway wale merchants ke liye.
+ * Payment link ki jagah UPI ID ya bank account details bhejta hai.
+ *
+ * Template me ye parameters honge:
+ *   1. customerName, 2. amountINR, 3. invoiceNo,
+ *   4. upiId ya "Bank: X, A/c: Y, IFSC: Z"
+ */
+export function buildT2WithUpiOrBank(
+  customerName: string,
+  amountINR: string,
+  invoiceNo: string,
+  paymentInfo: string,
+): WhatsAppMessage['components'] {
+  return [
+    {
+      type: 'body',
+      parameters: [
+        { type: 'text', text: customerName },
+        { type: 'text', text: amountINR },
+        { type: 'text', text: invoiceNo },
+        { type: 'text', text: paymentInfo },
+      ],
+    },
+  ]
+}
+
+/**
+ * Merchant ke payment details se WhatsApp me bhejne layak string banao.
+ * Priority: UPI ID > Bank Account
+ * Returns null agar kuch nahi hai.
+ */
+export function buildMerchantPaymentInfo(merchant: {
+  upiVpa?: string | null
+  accountHolderName?: string | null
+  accountNumber?: string | null
+  bankName?: string | null
+  ifscCode?: string | null
+}): string | null {
+  if (merchant.upiVpa) {
+    return `UPI: ${merchant.upiVpa}`
+  }
+  if (merchant.accountNumber) {
+    const parts = [`A/c: ${merchant.accountNumber}`]
+    if (merchant.bankName) parts.push(`Bank: ${merchant.bankName}`)
+    if (merchant.ifscCode) parts.push(`IFSC: ${merchant.ifscCode}`)
+    if (merchant.accountHolderName) parts.push(`Name: ${merchant.accountHolderName}`)
+    return parts.join(', ')
+  }
+  return null
 }
 
 // ---------------------------------------------------------------------------

@@ -15,6 +15,10 @@ interface MerchantSettings {
   plan: string
   trialEndsAt: string | null
   isKillSwitched: boolean
+  accountHolderName: string | null
+  accountNumber: string | null
+  bankName: string | null
+  ifscCode: string | null
 }
 
 export default function SettingsPage() {
@@ -28,6 +32,10 @@ export default function SettingsPage() {
     upiVpa: '',
     quietStart: '21:00',
     quietEnd: '09:00',
+    accountHolderName: '',
+    accountNumber: '',
+    bankName: '',
+    ifscCode: '',
   })
 
   useEffect(() => {
@@ -40,6 +48,10 @@ export default function SettingsPage() {
           upiVpa: d.merchant.upiVpa ?? '',
           quietStart: d.merchant.quietStart,
           quietEnd: d.merchant.quietEnd,
+          accountHolderName: d.merchant.accountHolderName ?? '',
+          accountNumber: d.merchant.accountNumber ?? '',
+          bankName: d.merchant.bankName ?? '',
+          ifscCode: d.merchant.ifscCode ?? '',
         })
         setLoading(false)
       })
@@ -125,6 +137,60 @@ export default function SettingsPage() {
           <p className="text-xs text-stone-400 mt-1">
             {lang === 'hi' ? 'Payment links me auto-fill hoga' : 'Auto-filled in payment links'}
           </p>
+        </div>
+      </div>
+
+      {/* Bank details — bina gateway wale merchants ke liye */}
+      <div className="glass-card p-5 space-y-4">
+        <h2 className="font-bold text-stone-900 flex items-center gap-2">
+          <Store className="w-4 h-4 text-blue-600" />
+          {lang === 'hi' ? 'Bank Details' : 'Bank Details'}
+          <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">
+            {lang === 'hi' ? 'bina gateway walo ke liye' : 'for non-gateway'}
+          </span>
+        </h2>
+        <p className="text-xs text-stone-500">
+          {lang === 'hi'
+            ? 'Agar payment gateway nahi hai to WhatsApp reminder me ye details jayengi'
+            : 'If no payment gateway, these details go in WhatsApp reminders'}
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="field-label">{lang === 'hi' ? 'Khata Holder Naam' : 'Account Holder'}</label>
+            <input
+              value={form.accountHolderName}
+              onChange={e => setForm(p => ({ ...p, accountHolderName: e.target.value }))}
+              placeholder="Ramesh Kumar"
+              className="field"
+            />
+          </div>
+          <div>
+            <label className="field-label">{lang === 'hi' ? 'Khata Number' : 'Account Number'}</label>
+            <input
+              value={form.accountNumber}
+              onChange={e => setForm(p => ({ ...p, accountNumber: e.target.value }))}
+              placeholder="1234567890"
+              className="field"
+            />
+          </div>
+          <div>
+            <label className="field-label">{lang === 'hi' ? 'Bank Naam' : 'Bank Name'}</label>
+            <input
+              value={form.bankName}
+              onChange={e => setForm(p => ({ ...p, bankName: e.target.value }))}
+              placeholder="HDFC Bank"
+              className="field"
+            />
+          </div>
+          <div>
+            <label className="field-label">IFSC Code</label>
+            <input
+              value={form.ifscCode}
+              onChange={e => setForm(p => ({ ...p, ifscCode: e.target.value.toUpperCase() }))}
+              placeholder="HDFC0001234"
+              className="field"
+            />
+          </div>
         </div>
       </div>
 

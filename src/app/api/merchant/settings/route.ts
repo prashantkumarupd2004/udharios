@@ -32,6 +32,10 @@ export async function GET(request: NextRequest) {
         plan: true,
         trialEndsAt: true,
         isKillSwitched: true,
+        accountHolderName: true,
+        accountNumber: true,
+        bankName: true,
+        ifscCode: true,
       },
     })
 
@@ -50,7 +54,10 @@ export async function PATCH(request: NextRequest) {
     if (!merchantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await request.json()
-    const { businessName, upiVpa, quietStart, quietEnd } = body
+    const {
+      businessName, upiVpa, quietStart, quietEnd,
+      accountHolderName, accountNumber, bankName, ifscCode,
+    } = body
 
     const merchant = await prisma.merchant.update({
       where: { id: merchantId },
@@ -59,6 +66,10 @@ export async function PATCH(request: NextRequest) {
         ...(upiVpa !== undefined && { upiVpa }),
         ...(quietStart && { quietStart }),
         ...(quietEnd && { quietEnd }),
+        ...(accountHolderName !== undefined && { accountHolderName }),
+        ...(accountNumber !== undefined && { accountNumber }),
+        ...(bankName !== undefined && { bankName }),
+        ...(ifscCode !== undefined && { ifscCode }),
       },
     })
 
