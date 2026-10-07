@@ -282,7 +282,7 @@ function pushToCloud(bills, customers, receipts, redirectCount = 0) {
         hostname: url.hostname, port: url.port || (url.protocol === 'https:' ? 443 : 80),
         path: url.pathname, method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body), 'x-tally-api-key': apiKey },
-        timeout: 30000,
+        timeout: 120000,
       },
       (res) => {
         // Redirect follow karo (307/308)
@@ -326,7 +326,7 @@ function pushToUrl(fullUrl, body, redirectCount = 0) {
         hostname: url.hostname, port: url.port || (url.protocol === 'https:' ? 443 : 80),
         path: url.pathname + url.search, method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body), 'x-tally-api-key': apiKey },
-        timeout: 30000,
+        timeout: 120000,
       },
       (res) => {
         if ((res.statusCode === 307 || res.statusCode === 308) && res.headers.location && redirectCount < 3) {
