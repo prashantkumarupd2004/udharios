@@ -68,6 +68,8 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const [phoneInput, setPhoneInput] = useState('')
   const [saving, setSaving] = useState(false)
   const [phoneError, setPhoneError] = useState('')
+  const [calling, setCalling] = useState<string | null>(null)
+  const [callMsg, setCallMsg] = useState('')
 
   const loadCustomer = () => {
     setLoading(true)
@@ -109,6 +111,31 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
       setPhoneError('Network error')
     }
     setSaving(false)
+  }
+
+  const triggerCall = async (outstandingId: string) => {
+    if (!hasPhone) {
+      setCallMsg('Pehle customer ka mobile number add karo')
+      return
+    }
+    setCalling(outstandingId)
+    setCallMsg('')
+    try {
+      const res = await fetch('/api/calls/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ outstandingId }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setCallMsg(data.error ?? 'Call start nahi ho payi')
+      } else {
+        setCallMsg('📞 Call shuru ho gayi! Customer ko AI reminder call jayegi.')
+      }
+    } catch {
+      setCallMsg('Network error — dobara try karo')
+    }
+    setCalling(null)
   }
 
   if (loading) {
@@ -216,6 +243,11 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
       </div>
 
       {/* ── Stats strip ── */}
+      {callMsg && (
+        <div className={`rounded-2xl px-4 py-3 text-sm font-semibold border ${callMsg.startsWith('📞') ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+          {callMsg}
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-3">
         <div className="glass-card p-4 text-center">
           <Receipt className="w-4 h-4 text-stone-400 mx-auto mb-1.5" />
@@ -272,6 +304,16 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                     <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${isOd ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
                       {isOd ? 'overdue' : o.status}
                     </span>
+                    {hasPhone && (
+                      <button
+                        onClick={() => triggerCall(o.id)}
+                        disabled={calling === o.id}
+                        className="mt-1.5 w-full inline-flex items-center justify-center gap-1 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition-colors"
+                      >
+                        {calling === o.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Phone className="w-3 h-3" />}
+                        {calling === o.id ? 'Calling...' : 'Call karo'}
+                      </button>
+                    )}
                   </div>
                 </div>
               )
