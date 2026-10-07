@@ -110,18 +110,9 @@ export async function GET(request: NextRequest) {
           },
         })
 
-        const voiceParams = new URLSearchParams({
-          callId: callRecord.id,
-          merchant: o.merchant.businessName,
-          customer: o.customer.name,
-          amount: `₹${Number(o.amount).toLocaleString('en-IN')}`,
-          bill: o.invoiceNo ?? '',
-          days: String(Math.max(0, Math.floor((Date.now() - new Date(o.dueDate).getTime()) / 86400000))),
-        })
         const exotelResponse = await placeCall({
           to: o.customer.phone,
           callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/exotel?callId=${callRecord.id}`,
-          voiceUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/voice/connect?${voiceParams.toString()}`,
           record: true,
           customField: JSON.stringify({
             callId: callRecord.id,
