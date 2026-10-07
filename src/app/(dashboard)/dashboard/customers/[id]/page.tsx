@@ -2,7 +2,11 @@
 
 import { useEffect, useState, use } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Phone, Loader2, IndianRupee, FileText, CalendarCheck } from 'lucide-react'
+import {
+  ArrowLeft, Phone, Loader2, IndianRupee, FileText, CalendarCheck,
+  MessageCircle, Bell, Clock, CheckCircle2, AlertTriangle, Wallet,
+  TrendingUp, Receipt,
+} from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
 
 interface Outstanding {
@@ -23,6 +27,14 @@ interface Bill {
   dueDate: string | null
 }
 
+interface PromiseItem {
+  id: string
+  promisedDate: string
+  status: string
+  createdAt: string
+  notes: string | null
+}
+
 interface Customer {
   id: string
   name: string
@@ -32,12 +44,17 @@ interface Customer {
   notes: string | null
   outstandings: Outstanding[]
   bills: Bill[]
+  promises: PromiseItem[]
 }
 
 function fmtPhone(p: string) {
-  // tally-xxx jaise placeholder phones ko +91 mat lagao
   if (!p || p.startsWith('tally-')) return '—'
   return p.startsWith('+91') ? p : `+91 ${p.replace(/^\+91/, '')}`
+}
+
+function daysOverdue(dueDate: string) {
+  const diff = Math.floor((Date.now() - new Date(dueDate).getTime()) / 86400000)
+  return diff > 0 ? diff : 0
 }
 
 export default function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -77,86 +94,200 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   }
 
   const pending = customer.outstandings.filter(o => !['paid', 'written_off'].includes(o.status))
+  const overdue = pending.filter(o => o.status === 'overdue')
+  const totalBilled = customer.bills.reduce((s, b) => s + Number(b.amount), 0)
+  const collected = totalBilled - totalPending
+  const phone = fmtPhone(customer.phone)
+  const hasPhone = phone !== '—'
 
   return (
-    <div className="space-y-5 max-w-3xl">
+    <div className="space-y-5 max-w-3xl pb-8">
       <Link href="/dashboard/customers" className="inline-flex items-center gap-2 text-stone-500 hover:text-orange-600 font-medium text-sm">
         <ArrowLeft className="w-4 h-4" /> {lang === 'hi' ? 'Customers' : 'Customers'}
       </Link>
 
-      {/* Header card */}
-      <div className="glass-card p-5">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 text-white flex items-center justify-center text-xl font-extrabold shadow-md shadow-orange-500/25">
-            {customer.name.charAt(0).toUpperCase()}
+      {/* ── Hero header ── */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-stone-900 via-stone-800 to-orange-950 p-6 text-white shadow-xl">
+        <div className="absolute -top-16 -right-16 w-56 h-56 bg-orange-500/20 rounded-full blur-3xl" />
+        <div className="absolute -bottom-20 -left-10 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl" />
+        <div className="relative">
+          <div className="flex items-start gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-400 to-amber-600 flex items-center justify-center text-2xl font-extrabold shadow-lg shadow-orange-900/40 shrink-0">
+              {customer.name.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl font-extrabold tracking-tight truncate">{customer.name}</h1>
+              <p className="text-stone-300 text-sm flex items-center gap-1.5 mt-1">
+                <Phone className="w-3.5 h-3.5" /> {phone}
+              </p>
+              <div className="flex gap-2 mt-2.5">
+                {!customer.consent && (
+                  <span className="text-[11px] font-bold bg-red-500/20 text-red-300 border border-red-500/30 px-2.5 py-1 rounded-full">No Consent</span>
+                )}
+                {customer.optedOut && (
+                  <span className="text-[11px] font-bold bg-stone-500/20 text-stone-300 border border-stone-500/30 px-2.5 py-1 rounded-full">Opted Out</span>
+                )}
+                {overdue.length > 0 && (
+                  <span className="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-1 rounded-full flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" /> {overdue.length} overdue
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="flex-1">
-            <h1 className="text-xl font-extrabold text-stone-900">{customer.name}</h1>
-            <p className="text-stone-500 text-sm flex items-center gap-1.5">
-              <Phone className="w-3.5 h-3.5" /> {fmtPhone(customer.phone)}
-            </p>
+
+          {/* Pending hero number */}
+          <div className="mt-5 flex items-end justify-between">
+            <div>
+              <p className="text-stone-400 text-xs font-semibold uppercase tracking-wider">kul baaki</p>
+              <p className="text-4xl font-extrabold text-white tracking-tight">₹{totalPending.toLocaleString('en-IN')}</p>
+            </div>
+            <p className="text-stone-400 text-xs font-medium">{pending.length} outstanding • {customer.bills.length} bills</p>
           </div>
-          {!customer.consent && (
-            <span className="text-[11px] font-semibold bg-red-50 text-red-700 px-2.5 py-1 rounded-full border border-red-200">No Consent</span>
-          )}
-        </div>
-        <div className="mt-4 bg-red-50 border border-red-100 rounded-2xl p-4 flex items-center gap-3">
-          <IndianRupee className="w-5 h-5 text-red-500" />
-          <div>
-            <p className="text-2xl font-extrabold text-red-700">₹{totalPending.toLocaleString('en-IN')}</p>
-            <p className="text-red-500 text-xs font-medium">kul baaki • {pending.length} outstanding</p>
+
+          {/* Quick actions */}
+          <div className="flex gap-2.5 mt-5">
+            {hasPhone && (
+              <>
+                <a href={`tel:${customer.phone}`}
+                  className="flex-1 inline-flex items-center justify-center gap-2 bg-white text-stone-900 font-bold text-sm px-4 py-3 rounded-2xl hover:bg-orange-50 transition-colors shadow">
+                  <Phone className="w-4 h-4" /> Call
+                </a>
+                <a href={`https://wa.me/${customer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Namaste ${customer.name}, aapka ₹${totalPending.toLocaleString('en-IN')} ka payment baaki hai. Kripya jald bhugtan karein.`)}`}
+                  target="_blank" rel="noreferrer"
+                  className="flex-1 inline-flex items-center justify-center gap-2 bg-green-500 text-white font-bold text-sm px-4 py-3 rounded-2xl hover:bg-green-600 transition-colors shadow">
+                  <MessageCircle className="w-4 h-4" /> WhatsApp
+                </a>
+              </>
+            )}
+            <button
+              className="flex-1 inline-flex items-center justify-center gap-2 bg-orange-500 text-white font-bold text-sm px-4 py-3 rounded-2xl hover:bg-orange-600 transition-colors shadow">
+              <Bell className="w-4 h-4" /> Remind
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Outstandings */}
-      <div className="glass-card p-5">
-        <h2 className="font-extrabold text-stone-900 mb-3">Baaki hisaab ({pending.length})</h2>
+      {/* ── Stats strip ── */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="glass-card p-4 text-center">
+          <Receipt className="w-4 h-4 text-stone-400 mx-auto mb-1.5" />
+          <p className="text-lg font-extrabold text-stone-900">₹{totalBilled.toLocaleString('en-IN')}</p>
+          <p className="text-stone-500 text-[11px] font-semibold uppercase tracking-wide">total billed</p>
+        </div>
+        <div className="glass-card p-4 text-center">
+          <Wallet className="w-4 h-4 text-emerald-500 mx-auto mb-1.5" />
+          <p className="text-lg font-extrabold text-emerald-600">₹{Math.max(0, collected).toLocaleString('en-IN')}</p>
+          <p className="text-stone-500 text-[11px] font-semibold uppercase tracking-wide">collected</p>
+        </div>
+        <div className="glass-card p-4 text-center border-red-100">
+          <TrendingUp className="w-4 h-4 text-red-500 mx-auto mb-1.5" />
+          <p className="text-lg font-extrabold text-red-600">₹{totalPending.toLocaleString('en-IN')}</p>
+          <p className="text-stone-500 text-[11px] font-semibold uppercase tracking-wide">pending</p>
+        </div>
+      </div>
+
+      {/* ── Outstandings ── */}
+      <section>
+        <h2 className="font-extrabold text-stone-900 mb-3 flex items-center gap-2">
+          <Clock className="w-4 h-4 text-orange-500" /> Baaki hisaab
+          <span className="text-xs font-bold bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full">{pending.length}</span>
+        </h2>
         {pending.length === 0 ? (
-          <p className="text-stone-500 text-sm">✓ Sab clear hai!</p>
+          <div className="glass-card p-6 text-center">
+            <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
+            <p className="text-stone-700 font-bold">Sab clear hai! 🎉</p>
+            <p className="text-stone-500 text-sm">Is customer ka koi baaki nahi hai.</p>
+          </div>
         ) : (
-          <div className="space-y-2.5">
-            {pending.map(o => (
-              <div key={o.id} className="flex items-center justify-between bg-stone-50 border border-stone-100 rounded-xl px-4 py-3">
-                <div>
-                  <p className="font-bold text-stone-900 text-sm">{o.invoiceNo ?? '—'}</p>
-                  <p className="text-stone-500 text-xs">Due: {new Date(o.dueDate).toLocaleDateString('en-IN')}</p>
+          <div className="space-y-3">
+            {pending.map(o => {
+              const od = daysOverdue(o.dueDate)
+              const isOd = o.status === 'overdue' || od > 0
+              return (
+                <div key={o.id}
+                  className={`glass-card p-4 flex items-center gap-4 border-l-4 ${isOd ? 'border-l-red-500' : 'border-l-amber-400'}`}>
+                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${isOd ? 'bg-red-100' : 'bg-amber-100'}`}>
+                    <FileText className={`w-5 h-5 ${isOd ? 'text-red-600' : 'text-amber-600'}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-stone-900">{o.invoiceNo ? `Bill ${o.invoiceNo}` : 'Outstanding'}</p>
+                    <p className={`text-xs font-medium flex items-center gap-1 ${isOd ? 'text-red-600' : 'text-stone-500'}`}>
+                      <CalendarCheck className="w-3 h-3" />
+                      Due {new Date(o.dueDate).toLocaleDateString('en-IN')}
+                      {od > 0 && <span className="font-bold">• {od} din overdue</span>}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className={`text-lg font-extrabold ${isOd ? 'text-red-600' : 'text-stone-900'}`}>
+                      ₹{Number(o.amount).toLocaleString('en-IN')}
+                    </p>
+                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${isOd ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {isOd ? 'overdue' : o.status}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-extrabold text-red-600">₹{Number(o.amount).toLocaleString('en-IN')}</p>
-                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${o.status === 'overdue' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
-                    {o.status}
-                  </span>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
-      </div>
+      </section>
 
-      {/* Bills */}
+      {/* ── Bills ── */}
       {customer.bills.length > 0 && (
-        <div className="glass-card p-5">
+        <section>
           <h2 className="font-extrabold text-stone-900 mb-3 flex items-center gap-2">
-            <FileText className="w-4 h-4 text-stone-400" /> Bills ({customer.bills.length})
+            <FileText className="w-4 h-4 text-stone-400" /> Bills
+            <span className="text-xs font-bold bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full">{customer.bills.length}</span>
           </h2>
-          <div className="space-y-2.5">
+          <div className="glass-card divide-y divide-stone-100">
             {customer.bills.map(b => (
-              <div key={b.id} className="flex items-center justify-between bg-stone-50 border border-stone-100 rounded-xl px-4 py-3">
+              <div key={b.id} className="flex items-center justify-between px-4 py-3.5">
                 <div>
                   <p className="font-bold text-stone-900 text-sm">Bill {b.billRef}</p>
-                  <p className="text-stone-500 text-xs flex items-center gap-1">
-                    <CalendarCheck className="w-3 h-3" /> {new Date(b.billDate).toLocaleDateString('en-IN')}
-                  </p>
+                  <p className="text-stone-500 text-xs">{new Date(b.billDate).toLocaleDateString('en-IN')}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-stone-900 text-sm">₹{Number(b.amount).toLocaleString('en-IN')}</p>
-                  <p className="text-red-600 text-xs font-semibold">baaki ₹{Number(b.pendingAmount).toLocaleString('en-IN')}</p>
+                  {Number(b.pendingAmount) > 0 ? (
+                    <p className="text-red-600 text-xs font-bold">baaki ₹{Number(b.pendingAmount).toLocaleString('en-IN')}</p>
+                  ) : (
+                    <p className="text-emerald-600 text-xs font-bold flex items-center gap-1 justify-end">
+                      <CheckCircle2 className="w-3 h-3" /> paid
+                    </p>
+                  )}
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </section>
+      )}
+
+      {/* ── Promises ── */}
+      {customer.promises.length > 0 && (
+        <section>
+          <h2 className="font-extrabold text-stone-900 mb-3 flex items-center gap-2">
+            <CalendarCheck className="w-4 h-4 text-stone-400" /> Promises
+            <span className="text-xs font-bold bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full">{customer.promises.length}</span>
+          </h2>
+          <div className="space-y-2.5">
+            {customer.promises.map(p => (
+              <div key={p.id} className="glass-card px-4 py-3 flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-stone-900 text-sm">
+                    {new Date(p.promisedDate).toLocaleDateString('en-IN')} ko dene ka wada
+                  </p>
+                  {p.notes && <p className="text-stone-500 text-xs mt-0.5">{p.notes}</p>}
+                </div>
+                <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
+                  p.status === 'kept' ? 'bg-emerald-100 text-emerald-700' :
+                  p.status === 'broken' ? 'bg-red-100 text-red-700' :
+                  'bg-amber-100 text-amber-700'
+                }`}>{p.status}</span>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
     </div>
   )
