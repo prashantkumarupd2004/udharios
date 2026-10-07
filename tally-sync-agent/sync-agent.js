@@ -180,7 +180,7 @@ function extractReceipts(xml) {
     const partyName = tag(['PARTYNAME', 'LEDGERNAME', 'PARTYLEDGERNAME']);
     if (!receiptRef || !partyName) continue;
 
-    const toNum = (s) => { const n = Number(String(s).replace(/[₹,\s]/g, '')); return isNaN(n) ? 0 : n; };
+    const toNum = (s) => { const n = Number(String(s).replace(/[₹,\s]/g, '')); return isNaN(n) ? 0 : Math.abs(n); };
     const amount = Math.abs(toNum(tag(['AMOUNT', 'DSPVCHAMT'])));
     if (amount <= 0) continue;
 
@@ -248,7 +248,7 @@ function extractBills(xml) {
     const partyName = tag(['PARTYNAME', 'LEDGERNAME', 'DSPVCHLEDGER', 'PARTYLEDGERNAME']);
     if (!billRef || !partyName) continue;
 
-    const toNum = (s) => { const n = Number(String(s).replace(/[₹,\s]/g, '')); return isNaN(n) ? 0 : n; };
+    const toNum = (s) => { const n = Number(String(s).replace(/[₹,\s]/g, '')); return isNaN(n) ? 0 : Math.abs(n); };
     const toDate = (s) => {
       s = String(s).trim();
       if (/^\d{8}$/.test(s)) return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
