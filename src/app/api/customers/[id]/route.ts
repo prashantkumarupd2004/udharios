@@ -60,3 +60,68 @@ export async function GET(
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
 }
+
+/**
+ * PATCH /api/customers/[id] — Update customer (phone, name, notes, consent)
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getSession()
+    if (!session?.merchantId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const { id } = await params
+    const body = await request.json()
+
+    const existing = await prisma.customer.findFirst({
+      where: { id, merchantId: session.merchantId },
+    })
+    if (!existing) {
+      return NextResponse.json({ error: 'Customer nahi mila' }, { status: 404 })
+    }
+
+    const data: Record<string, unknown> = {}
+
+    // Phone update — normalize +91, duplicate check
+    if (typeof body.phone === 'string') {
+      const raw = body.phone.replace(/\D/g, '')
+      const phone = raw.length === 10 ? `+91${raw}` : raw.length === 12 && raw.startsWith('91') ? `+${raw}` : body.phone.trim()
+      if (!/^\+91\d{10}$/.test(phone)) {
+        return NextResponse.json({ error: 'Sahi 10-digit mobile number daalo' }, { status: 400 })
+      }
+      if (phone !== existing.phone) {
+        const dup = await prisma.customer.findFirst({
+          where: { merchantId: session.merchantId, phone, id: { not: id } },
+        })
+        if (dup) {
+          return NextResponse.json({ error: `Ye number pehle se ${dup.name} ke paas hai` }, { status: 409 })
+        }
+      }
+      data.phone = phone
+    }
+    if (typeof body.name === 'string' && body.name.trim()) {
+      data.name = body.name.trim()
+    }
+    if (typeof body.notes === 'string') {
+      data.notes = body.notes.trim() || null
+    }
+    if (typeof body.consent === 'boolean') {
+      data.consent = body.consent
+      data.consentAt = body.consent ? new Date() : null
+    }
+
+    const customer = await prisma.customer.update({
+      where: { id },
+      data,
+    })
+
+    logger.info('Customer updated', { merchantId: session.merchantId, customerId: id })
+    return NextResponse.json({ customer })
+  } catch (err) {
+    logger.error('PATCH /api/customers/[id] error', { error: String(err) })
+    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+  }
+}

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   ArrowLeft, Phone, Loader2, IndianRupee, FileText, CalendarCheck,
   MessageCircle, Bell, Clock, CheckCircle2, AlertTriangle, Wallet,
-  TrendingUp, Receipt,
+  TrendingUp, Receipt, Pencil, X,
 } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
 
@@ -64,8 +64,13 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const [totalPending, setTotalPending] = useState(0)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [editingPhone, setEditingPhone] = useState(false)
+  const [phoneInput, setPhoneInput] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [phoneError, setPhoneError] = useState('')
 
-  useEffect(() => {
+  const loadCustomer = () => {
+    setLoading(true)
     fetch(`/api/customers/${id}`)
       .then(async r => {
         if (r.status === 404) { setNotFound(true); return null }
@@ -79,7 +84,32 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
         setLoading(false)
       })
       .catch(() => setLoading(false))
-  }, [id])
+  }
+
+  useEffect(loadCustomer, [id])
+
+  const savePhone = async () => {
+    setSaving(true)
+    setPhoneError('')
+    try {
+      const res = await fetch(`/api/customers/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phoneInput }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setPhoneError(data.error ?? 'Save nahi ho paya')
+        setSaving(false)
+        return
+      }
+      setEditingPhone(false)
+      loadCustomer()
+    } catch {
+      setPhoneError('Network error')
+    }
+    setSaving(false)
+  }
 
   if (loading) {
     return <div className="flex items-center justify-center py-24"><Loader2 className="w-8 h-8 text-orange-500 animate-spin" /></div>
@@ -117,9 +147,26 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
             </div>
             <div className="flex-1 min-w-0">
               <h1 className="text-2xl font-extrabold tracking-tight text-stone-900 truncate">{customer.name}</h1>
-              <p className="text-stone-500 text-sm flex items-center gap-1.5 mt-1">
-                <Phone className="w-3.5 h-3.5" /> {phone}
-              </p>
+              <div className="flex items-center gap-1.5 mt-1">
+                <p className="text-stone-500 text-sm flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5" /> {phone}
+                </p>
+                <button
+                  onClick={() => { setPhoneInput(customer.phone.startsWith('tally-') ? '' : customer.phone.replace('+91', '')); setPhoneError(''); setEditingPhone(true) }}
+                  className="p-1.5 rounded-lg text-orange-600 hover:bg-orange-50 transition-colors"
+                  title={hasPhone ? 'Number badlo' : 'Number add karo'}
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              {!hasPhone && (
+                <button
+                  onClick={() => { setPhoneInput(''); setPhoneError(''); setEditingPhone(true) }}
+                  className="mt-1.5 text-xs font-bold text-orange-600 hover:underline"
+                >
+                  + Mobile number add karo (WhatsApp/call ke liye)
+                </button>
+              )}
               <div className="flex gap-2 mt-2.5 flex-wrap">
                 {!customer.consent && (
                   <span className="text-[11px] font-bold bg-red-50 text-red-700 border border-red-200 px-2.5 py-1 rounded-full">No Consent</span>
@@ -288,6 +335,44 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
             ))}
           </div>
         </section>
+      )}
+      {/* ── Phone edit modal ── */}
+      {editingPhone && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/50 backdrop-blur-sm" onClick={() => setEditingPhone(false)}>
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-extrabold text-stone-900">
+                {hasPhone ? 'Number badlo' : 'Mobile number add karo'}
+              </h3>
+              <button onClick={() => setEditingPhone(false)} className="p-1.5 rounded-lg text-stone-400 hover:bg-stone-100">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-stone-500 mb-3">
+              <span className="font-bold text-stone-700">{customer.name}</span> ka 10-digit mobile number daalo — WhatsApp reminders aur calls isi pe jayenge.
+            </p>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="bg-stone-100 border border-stone-200 rounded-xl px-3 py-3 text-sm font-bold text-stone-600">+91</span>
+              <input
+                type="tel"
+                value={phoneInput}
+                onChange={e => setPhoneInput(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                placeholder="98765 43210"
+                maxLength={10}
+                autoFocus
+                className="field !mb-0 tracking-widest text-lg font-bold"
+              />
+            </div>
+            {phoneError && <p className="text-red-600 text-sm font-medium mb-3">{phoneError}</p>}
+            <button
+              onClick={savePhone}
+              disabled={saving || phoneInput.length !== 10}
+              className="btn-primary w-full py-3 disabled:opacity-50"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save karo'}
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )
