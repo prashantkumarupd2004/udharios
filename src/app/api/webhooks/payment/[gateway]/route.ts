@@ -96,12 +96,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 
   // Signature verify karo
+  // NOTE: Cashfree ka scheme hai HMAC(secret, timestamp + body)
+  // Isliye Cashfree ke liye timestamp header ko body ke aage jodna padta hai
   const sigHeader =
     request.headers.get('x-razorpay-signature') ??
     request.headers.get('x-webhook-signature') ??
     request.headers.get('x-verify') ??
     ''
-  if (sigHeader && !gateway.verifyWebhookSignature(rawBody, sigHeader, merchantCreds)) {
+  let verifyBody: Buffer | string = rawBody
+  if (gatewayId === 'cashfree') {
+    const timestamp = request.headers.get('x-webhook-timestamp') ?? ''
+    verifyBody = timestamp + rawString
+  }
+  if (sigHeader && !gateway.verifyWebhookSignature(verifyBody, sigHeader, merchantCreds)) {
     logger.warn('Webhook signature mismatch', { gateway: gatewayId, merchantId })
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
   }
