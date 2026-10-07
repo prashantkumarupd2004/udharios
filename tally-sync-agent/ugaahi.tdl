@@ -1,18 +1,11 @@
-; ============================================================
-; Ugaahi TDL Addon — Ledger Master with Phone Numbers
-; ============================================================
-; Tally ke ANDAR chalta hai — saare fields accessible!
-;
-; Load: F12 → Product & Features → F4 → ugaahi.tdl select → Restart
-; Agent phir "Ugaahi Ledger Export" collection ko query karega.
-; ============================================================
+; Ugaahi TDL — Deep Phone Analysis
+; 5 possible phone fields ek saath try karega
 
 [Collection: Ugaahi Ledger Export]
-  Type            : Ledger
-  Fetch           : Name, Parent, ClosingBalance
-  Compute         : UgaahiPhone : $LedgerPhone
-  Compute         : UgaahiMobile : $Mobile
-  Filter          : UgaahiPartyFilter
-
-[System: Formulae: UgaahiPartyFilter]
-  Formula : $Parent contains "Sundry Debtors" or $Parent contains "Sundry Creditors"
+  Type     : Ledger
+  Fetch    : Name, Parent, ClosingBalance
+  Compute  : P1 : $LedgerPhone
+  Compute  : P2 : $Phone
+  Compute  : P3 : $Mobile
+  Compute  : P4 : $PrimaryMobileNo
+  Compute  : P5 : $ContactNumber

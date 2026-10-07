@@ -408,9 +408,8 @@ function extractCustomers(xml) {
     if (/^(cash|sales|purchase|bank|capital|stock|profit)/i.test(name)) continue;
     if (parent !== '' && !isParty) continue;
     seen.add(name.toLowerCase());
-    // Phone — TDL wale computed fields pehle, phir baaki variants
-    // TDL: UgaahiPhone, UgaahiMobile | Normal: Primary Mobile No. etc.
-    let phone = tag(['UGAAHIPHONE', 'UGAAHIMOBILE', 'PRIMARYMOBILENO', 'LEDGERPHONE', 'PHONE', 'MOBILENO', 'CONTACTNO', 'MOBILE', 'PHONENUMBER']) || '';
+    // Phone — TDL deep analysis: P1-P5 me se jo mile
+    let phone = tag(['P1', 'P2', 'P3', 'P4', 'P5', 'UGAAHIPHONE', 'UGAAHIMOBILE', 'PRIMARYMOBILENO', 'LEDGERPHONE', 'PHONE', 'MOBILENO', 'CONTACTNO', 'MOBILE', 'PHONENUMBER']) || '';
     // +91 - 8200218733 format ko saaf karo
     if (phone) {
       phone = phone.replace(/\+91[\s-]*/i, '').replace(/[\s-]/g, '').trim();
@@ -527,19 +526,17 @@ async function main() {
           const withPhone = customers.filter(c => c.phone).length;
           console.log(`   📞 ${withPhone}/${customers.length} me phone mila`);
           if (withPhone === 0) {
-            // Debug: LEDGER me kaun-kaun se fields hain, dikhao
+            // Deep analysis: P1-P5 ki values dikhao
             const ledgerMatch = ledgerXml.match(/<LEDGER NAME="Arpit Pandey"[^>]*>([\s\S]*?)<\/LEDGER>/i);
             if (ledgerMatch) {
+              console.log('   🔬 Deep Analysis — P1-P5 values:');
+              for (let i = 1; i <= 5; i++) {
+                const pm = ledgerMatch[1].match(new RegExp(`<P${i}[^>]*>([^<]*)</P${i}>`, 'i'));
+                console.log(`   P${i}: ${pm ? '"' + pm[1].trim() + '"' : '(not found)'}`);
+              }
               const fields = [...ledgerMatch[1].matchAll(/<([A-Z][A-Z0-9.]*)(?:\s[^>]*)?>/g)].map(m => m[1]);
               const uniqueFields = [...new Set(fields)].slice(0, 40);
-              console.log('   🔍 Arpit Pandey ke LEDGER me ye fields hain:');
-              console.log('   ' + uniqueFields.join(', '));
-              // Phone jaisa kuch dhoondo
-              const phoneLike = ledgerMatch[1].match(/[^<>]*(?:mobile|phone)[^<>]*>/gi);
-              if (phoneLike) {
-                console.log('   📱 Phone-related tags:');
-                phoneLike.slice(0, 5).forEach(t => console.log('   ' + t.slice(0, 120)));
-              }
+              console.log('   🔍 All fields: ' + uniqueFields.join(', '));
             }
           }
         } else {
