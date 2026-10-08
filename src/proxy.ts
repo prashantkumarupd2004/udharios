@@ -42,6 +42,7 @@ const PUBLIC_PATH_PREFIXES = [
   '/api/auth',
   '/api/access-requests',
   '/api/webhooks',
+  '/api/exotel/voicebot-url', // Exotel Voicebot dynamic URL (per-call, no session; called by Exotel servers)
   '/api/voice', // Exotel ExoML callbacks (no session cookie; test-call has x-test-key guard)
   '/api/integrations/tally/sync', // Tally sync agent (x-tally-api-key header auth, no session)
   '/api/integrations/tally/status', // Tally sync status check (same API key auth)
