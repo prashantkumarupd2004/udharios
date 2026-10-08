@@ -53,9 +53,19 @@ export const accessRequestSchema = z.object({
 // Merchant onboarding
 // ---------------------------------------------------------------------------
 
+export const BUSINESS_CATEGORIES = [
+  'kirana', 'wholesale', 'distributor', 'pharmacy', 'hardware', 'general',
+  'restaurant', 'clothing', 'electronics', 'mobile', 'furniture', 'auto',
+  'stationery', 'salon', 'dairy', 'jewellery', 'footwear', 'agriculture', 'transport',
+] as const
+
 export const onboardingSchema = z.object({
   businessName: z.string().min(2, 'Business name required').max(100),
-  category: z.enum(['kirana', 'wholesale', 'distributor', 'pharmacy', 'hardware', 'general']),
+  ownerName: z.string().min(2, 'Owner name required').max(100),
+  city: z.string().min(2, 'City required').max(50),
+  address: z.string().max(200).optional(),
+  gstNumber: z.string().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z\d]{1}[Z]{1}[A-Z\d]{1}$/, 'Valid GST number').optional().or(z.literal('')),
+  category: z.enum(BUSINESS_CATEGORIES),
   upiVpa: z
     .string()
     .regex(/^[\w.\-+]+@[\w]+$/, 'Valid UPI VPA required (e.g. merchant@upi)')

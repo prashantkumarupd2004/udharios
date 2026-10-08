@@ -25,6 +25,10 @@ export async function POST(request: NextRequest) {
       where: { id: session.merchantId },
       data: {
         businessName: data.businessName,
+        ownerName:    data.ownerName,
+        city:         data.city,
+        address:      data.address || null,
+        gstNumber:    data.gstNumber || null,
         category:     data.category,
         upiVpa:       data.upiVpa,
         quietStart:   data.quietStart,

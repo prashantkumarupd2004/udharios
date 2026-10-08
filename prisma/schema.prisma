@@ -126,6 +126,10 @@ model Merchant {
   id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   phone          String       @unique
   businessName   String       @map("business_name")
+  ownerName      String?      @map("owner_name")
+  city           String?      @map("city")
+  address        String?      @map("address")
+  gstNumber      String?      @map("gst_number")
   category       String       @default("general")
   upiVpa         String?      @map("upi_vpa")
   logoUrl        String?      @map("logo_url")

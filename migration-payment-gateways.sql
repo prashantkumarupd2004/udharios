@@ -71,3 +71,9 @@ CREATE INDEX IF NOT EXISTS idx_verifications_merchant
   ON verifications (merchant_id, check_type);
 CREATE INDEX IF NOT EXISTS idx_verifications_customer
   ON verifications (customer_id);
+
+-- Merchant profile fields — enhanced onboarding
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS owner_name TEXT;
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS city TEXT;
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS gst_number TEXT;

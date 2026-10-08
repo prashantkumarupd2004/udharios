@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation'
 import {
   Store, ArrowRight, ArrowLeft, Check, BadgeCheck, Clock, BellRing,
   MessageCircle, Phone, IndianRupee, ShieldCheck, Sparkles, Pencil,
-  ChevronRight, Timer, Quote, CreditCard, MoonStar,
+  ChevronRight, Timer, Quote, CreditCard, MoonStar, UtensilsCrossed,
+  Shirt, Cpu, Smartphone, Sofa, Car, BookOpen, Scissors, Milk,
+  Gem, Footprints, Tractor, Truck, MapPin, User, FileText,
 } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
 
@@ -14,10 +16,23 @@ import { useLanguage } from '@/hooks/useLanguage'
 const CATEGORIES = [
   { value: 'kirana', label: 'Kirana Store', hi: 'किराना स्टोर', desc: 'Daily needs & grocery', icon: Store },
   { value: 'wholesale', label: 'Wholesale', hi: 'थोक व्यापार', desc: 'Bulk goods & supply', icon: CreditCard },
-  { value: 'distributor', label: 'Distributor', hi: 'डिस्ट्रीब्यूटर', desc: 'Brands & territory', icon: Phone },
+  { value: 'distributor', label: 'Distributor', hi: 'डिस्ट्रीब्यूटर', desc: 'Brands & territory', icon: Truck },
   { value: 'pharmacy', label: 'Pharmacy', hi: 'दवाई की दुकान', desc: 'Medicines & care', icon: BadgeCheck },
   { value: 'hardware', label: 'Hardware', hi: 'हार्डवेयर', desc: 'Tools & materials', icon: ShieldCheck },
-  { value: 'general', label: 'General Store', hi: 'जनरल स्टोर', desc: 'Everything else', icon: Sparkles },
+  { value: 'restaurant', label: 'Restaurant / Dhaba', hi: 'रेस्टोरेंट / ढाबा', desc: 'Food & dining', icon: UtensilsCrossed },
+  { value: 'clothing', label: 'Clothing', hi: 'कपड़े की दुकान', desc: 'Garments & fashion', icon: Shirt },
+  { value: 'electronics', label: 'Electronics', hi: 'इलेक्ट्रॉनिक्स', desc: 'Gadgets & appliances', icon: Cpu },
+  { value: 'mobile', label: 'Mobile Shop', hi: 'मोबाइल शॉप', desc: 'Phones & accessories', icon: Smartphone },
+  { value: 'furniture', label: 'Furniture', hi: 'फर्नीचर', desc: 'Home & office', icon: Sofa },
+  { value: 'auto', label: 'Auto Parts', hi: 'ऑटो पार्ट्स', desc: 'Vehicle spares', icon: Car },
+  { value: 'stationery', label: 'Stationery', hi: 'स्टेशनरी', desc: 'Books & office', icon: BookOpen },
+  { value: 'salon', label: 'Salon / Beauty', hi: 'सैलून / ब्यूटी', desc: 'Grooming & care', icon: Scissors },
+  { value: 'dairy', label: 'Dairy', hi: 'डेयरी', desc: 'Milk & products', icon: Milk },
+  { value: 'jewellery', label: 'Jewellery', hi: 'ज्वेलरी', desc: 'Gold & ornaments', icon: Gem },
+  { value: 'footwear', label: 'Footwear', hi: 'जूते-चप्पल', desc: 'Shoes & sandals', icon: Footprints },
+  { value: 'agriculture', label: 'Agriculture', hi: 'कृषि', desc: 'Seeds & supplies', icon: Tractor },
+  { value: 'transport', label: 'Transport', hi: 'ट्रांसपोर्ट', desc: 'Logistics & cargo', icon: Truck },
+  { value: 'general', label: 'Other', hi: 'अन्य', desc: 'Everything else', icon: Sparkles },
 ]
 
 const STEP_META = [
@@ -67,6 +82,10 @@ export default function OnboardingPage() {
 
   const [form, setForm] = useState({
     businessName: '',
+    ownerName: '',
+    city: '',
+    address: '',
+    gstNumber: '',
     category: '',
     upiVpa: '',
     quietStart: '21:00',
@@ -75,7 +94,10 @@ export default function OnboardingPage() {
   const set = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }))
 
   const nameOk = form.businessName.trim().length >= 3
+  const ownerOk = form.ownerName.trim().length >= 2
+  const cityOk = form.city.trim().length >= 2
   const catOk = !!form.category
+  const gstOk = form.gstNumber.trim() === '' || /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z\d]{1}[Z]{1}[A-Z\d]{1}$/.test(form.gstNumber.trim().toUpperCase())
   const upiOk = form.upiVpa.trim() === '' || UPI_RE.test(form.upiVpa.trim())
   const bizName = form.businessName.trim() || (hi ? 'Aapka Business' : 'Your Business')
 
@@ -83,7 +105,7 @@ export default function OnboardingPage() {
 
   const nextFromBusiness = () => {
     setTriedNext(true)
-    if (nameOk && catOk) { setTriedNext(false); setScreen(2) }
+    if (nameOk && ownerOk && cityOk && catOk && gstOk) { setTriedNext(false); setScreen(2) }
   }
   const nextFromPayments = () => {
     if (upiOk) setScreen(3)
@@ -96,7 +118,12 @@ export default function OnboardingPage() {
       const res = await fetch('/api/merchant/onboard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, upiVpa: form.upiVpa.trim() || undefined }),
+        body: JSON.stringify({
+          ...form,
+          upiVpa: form.upiVpa.trim() || undefined,
+          address: form.address.trim() || undefined,
+          gstNumber: form.gstNumber.trim().toUpperCase() || undefined,
+        }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -278,32 +305,118 @@ export default function OnboardingPage() {
             {screen === 1 && (
               <div>
                 <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-900">
-                  {hi ? 'Aapki dukaan ka naam kya hai?' : "What's your shop called?"}
+                  {hi ? 'Aapke business ki details' : 'Your business details'}
                 </h2>
                 <p className="text-stone-500 mt-2 text-[15px]">
-                  {hi ? 'Ye naam reminders aur payment links me dikhega.' : 'This name appears on reminders and payment links.'}
+                  {hi ? 'Ye details reminders, payment links aur profile me dikhengi.' : 'These details appear on reminders, payment links and your profile.'}
                 </p>
 
-                <div className="mt-6">
-                  <label className="field-label" htmlFor="business-name-input">
-                    {hi ? 'Business ka naam *' : 'Business name *'}
-                  </label>
-                  <input
-                    id="business-name-input"
-                    type="text"
-                    value={form.businessName}
-                    onChange={(e) => set('businessName', e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && nextFromBusiness()}
-                    placeholder={hi ? 'e.g. Gupta General Store' : 'e.g. Gupta General Store'}
-                    className={`field text-lg py-3.5 ${triedNext && !nameOk ? '!border-red-400 !bg-red-50/50' : ''}`}
-                    autoFocus
-                    maxLength={60}
-                  />
-                  {triedNext && !nameOk && (
-                    <p className="text-red-600 text-sm font-medium mt-1.5">
-                      {hi ? 'Kam se kam 3 akshar likhein' : 'Please enter at least 3 characters'}
-                    </p>
-                  )}
+                <div className="mt-6 grid sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2">
+                    <label className="field-label" htmlFor="business-name-input">
+                      {hi ? 'Business ka naam *' : 'Business name *'}
+                    </label>
+                    <input
+                      id="business-name-input"
+                      type="text"
+                      value={form.businessName}
+                      onChange={(e) => set('businessName', e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && nextFromBusiness()}
+                      placeholder={hi ? 'e.g. Gupta General Store' : 'e.g. Gupta General Store'}
+                      className={`field text-lg py-3.5 ${triedNext && !nameOk ? '!border-red-400 !bg-red-50/50' : ''}`}
+                      autoFocus
+                      maxLength={60}
+                    />
+                    {triedNext && !nameOk && (
+                      <p className="text-red-600 text-sm font-medium mt-1.5">
+                        {hi ? 'Kam se kam 3 akshar likhein' : 'Please enter at least 3 characters'}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="field-label" htmlFor="owner-name-input">
+                      {hi ? 'Owner ka naam *' : 'Owner name *'}
+                    </label>
+                    <div className="relative">
+                      <User className="w-4 h-4 text-stone-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                      <input
+                        id="owner-name-input"
+                        type="text"
+                        value={form.ownerName}
+                        onChange={(e) => set('ownerName', e.target.value)}
+                        placeholder={hi ? 'e.g. Ramesh Gupta' : 'e.g. Ramesh Gupta'}
+                        className={`field !pl-11 ${triedNext && !ownerOk ? '!border-red-400 !bg-red-50/50' : ''}`}
+                        maxLength={60}
+                      />
+                    </div>
+                    {triedNext && !ownerOk && (
+                      <p className="text-red-600 text-sm font-medium mt-1.5">
+                        {hi ? 'Owner ka naam likhein' : 'Please enter owner name'}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="field-label" htmlFor="city-input">
+                      {hi ? 'Sheher (City) *' : 'City *'}
+                    </label>
+                    <div className="relative">
+                      <MapPin className="w-4 h-4 text-stone-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                      <input
+                        id="city-input"
+                        type="text"
+                        value={form.city}
+                        onChange={(e) => set('city', e.target.value)}
+                        placeholder={hi ? 'e.g. Lucknow' : 'e.g. Lucknow'}
+                        className={`field !pl-11 ${triedNext && !cityOk ? '!border-red-400 !bg-red-50/50' : ''}`}
+                        maxLength={50}
+                      />
+                    </div>
+                    {triedNext && !cityOk && (
+                      <p className="text-red-600 text-sm font-medium mt-1.5">
+                        {hi ? 'Sheher likhein' : 'Please enter your city'}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="field-label" htmlFor="address-input">
+                      {hi ? 'Dukaan ka pata' : 'Shop address'} <span className="text-stone-400 font-medium">(optional)</span>
+                    </label>
+                    <input
+                      id="address-input"
+                      type="text"
+                      value={form.address}
+                      onChange={(e) => set('address', e.target.value)}
+                      placeholder={hi ? 'e.g. Shop 12, MG Road' : 'e.g. Shop 12, MG Road'}
+                      className="field"
+                      maxLength={200}
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="field-label" htmlFor="gst-input">
+                      GST Number <span className="text-stone-400 font-medium">(optional)</span>
+                    </label>
+                    <div className="relative">
+                      <FileText className="w-4 h-4 text-stone-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                      <input
+                        id="gst-input"
+                        type="text"
+                        value={form.gstNumber}
+                        onChange={(e) => set('gstNumber', e.target.value.toUpperCase())}
+                        placeholder="09ABCDE1234F1Z5"
+                        className={`field !pl-11 uppercase ${triedNext && !gstOk ? '!border-red-400 !bg-red-50/50' : ''}`}
+                        maxLength={15}
+                      />
+                    </div>
+                    {triedNext && !gstOk && (
+                      <p className="text-red-600 text-sm font-medium mt-1.5">
+                        {hi ? 'Sahi GST number likhein (15 characters)' : 'Enter a valid GST number (15 characters)'}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mt-6">
@@ -568,7 +681,8 @@ export default function OnboardingPage() {
 
                 <div className="mt-6 bg-white rounded-2xl border border-stone-200 divide-y divide-stone-100 overflow-hidden">
                   {[
-                    { label: hi ? 'Business' : 'Business', value: bizName, sub: hi ? CATEGORIES.find(c => c.value === form.category)?.hi : CATEGORIES.find(c => c.value === form.category)?.label, go: 1 },
+                    { label: hi ? 'Business' : 'Business', value: bizName, sub: `${form.ownerName} • ${form.city}`, go: 1 },
+                    { label: hi ? 'Category' : 'Category', value: hi ? CATEGORIES.find(c => c.value === form.category)?.hi : CATEGORIES.find(c => c.value === form.category)?.label, sub: form.gstNumber ? `GST: ${form.gstNumber}` : undefined, go: 1 },
                     { label: 'UPI ID', value: form.upiVpa.trim() || (hi ? 'Baad me jodenge' : 'Will add later'), sub: form.upiVpa.trim() ? (hi ? 'Payment links isi par jayenge' : 'Payment links will use this') : undefined, go: 2 },
                     { label: hi ? 'Quiet hours' : 'Quiet hours', value: `${fmtTime(form.quietStart)} – ${fmtTime(form.quietEnd)}`, sub: hi ? 'Is dauraan koi reminder nahi' : 'No reminders during this window', go: 3 },
                   ].map((row) => (
