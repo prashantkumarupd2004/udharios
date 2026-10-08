@@ -11,6 +11,7 @@ import {
   Settings,
   IndianRupee,
   Plug,
+  ShieldCheck,
 } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
 
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { href: '/dashboard/outstandings', Icon: ReceiptText, hiLabel: 'Udhaari', enLabel: 'Ledger' },
   { href: '/dashboard/promises', Icon: Handshake, hiLabel: 'Promises', enLabel: 'Promises' },
   { href: '/dashboard/activity', Icon: ScrollText, hiLabel: 'Activity', enLabel: 'Activity' },
+  { href: '/dashboard/background-check', Icon: ShieldCheck, hiLabel: 'BG Check', enLabel: 'BG Check' },
   { href: '/dashboard/integrations', Icon: Plug, hiLabel: 'Tally Sync', enLabel: 'Tally Sync' },
 ]
 

@@ -148,6 +148,7 @@ model Merchant {
   paymentLinks   PaymentLink[]
   payments       Payment[]
   calls          Call[]
+  verifications  Verification[]
   auditLogs      AuditLog[]
   subscription   Subscription?
   merchantNotifs MerchantNotification[]
@@ -210,6 +211,7 @@ model Customer {
   calls        Call[]
   promises     Promise[]
   disputes     Dispute[]
+  verifications Verification[]
 
   @@unique([merchantId, phone])
   @@index([merchantId])
@@ -615,4 +617,28 @@ model AccessRequest {
   @@index([status])
   @@index([phone])
   @@map("access_requests")
+}
+
+// ---------------------------------------------------------------------------
+// VERIFICATIONS — Business Background Check (KYC/lookup APIs via provider)
+// ---------------------------------------------------------------------------
+
+model Verification {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  merchantId String   @map("merchant_id") @db.Uuid
+  customerId String?  @map("customer_id") @db.Uuid
+  checkType  String   @map("check_type") // pan_check | company_check | mobile_to_pan | mobile_to_address | profile_360 | pan_to_contact | credit_report
+  input      String   // the PAN / mobile / CIN that was checked
+  provider   String   @default("mock") // karza | signzy | mock
+  status     String   @default("success") // success | failed
+  result     Json?    // provider response (sanitized)
+  costPaise  Int      @default(0) @map("cost_paise")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  merchant Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([merchantId, checkType])
+  @@index([customerId])
+  @@map("verifications")
 }

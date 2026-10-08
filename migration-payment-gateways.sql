@@ -52,3 +52,22 @@ ALTER TABLE merchants
   ADD COLUMN IF NOT EXISTS account_number TEXT,
   ADD COLUMN IF NOT EXISTS bank_name TEXT,
   ADD COLUMN IF NOT EXISTS ifsc_code TEXT;
+
+-- Verifications table — Business Background Check
+CREATE TABLE IF NOT EXISTS verifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  merchant_id UUID NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,
+  customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+  check_type TEXT NOT NULL,
+  input TEXT NOT NULL,
+  provider TEXT DEFAULT 'mock',
+  status TEXT DEFAULT 'success',
+  result JSONB,
+  cost_paise INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_verifications_merchant
+  ON verifications (merchant_id, check_type);
+CREATE INDEX IF NOT EXISTS idx_verifications_customer
+  ON verifications (customer_id);
