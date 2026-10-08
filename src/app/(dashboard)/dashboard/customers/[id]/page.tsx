@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   ArrowLeft, Phone, Loader2, IndianRupee, FileText, CalendarCheck,
   MessageCircle, Bell, Clock, CheckCircle2, AlertTriangle, Wallet,
-  TrendingUp, Receipt, Pencil, X,
+  TrendingUp, Receipt, Pencil, X, History,
 } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
 
@@ -186,6 +186,10 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
 
   const pending = customer.outstandings.filter(o => !['paid', 'written_off'].includes(o.status))
   const overdue = pending.filter(o => o.status === 'overdue')
+  const paidHistory = customer.outstandings
+    .filter(o => o.status === 'paid')
+    .sort((a, b) => new Date(b.paidAt ?? b.dueDate).getTime() - new Date(a.paidAt ?? a.dueDate).getTime())
+  const totalPaid = paidHistory.reduce((s, o) => s + Number(o.amount), 0)
   const totalBilled = customer.bills.reduce((s, b) => s + Number(b.amount), 0)
   const collected = totalBilled - totalPending
   const phone = fmtPhone(customer.phone)
@@ -197,89 +201,70 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
         <ArrowLeft className="w-4 h-4" /> {lang === 'hi' ? 'Customers' : 'Customers'}
       </Link>
 
-      {/* ── Professional Hero ── */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-stone-900 via-stone-800 to-orange-950 p-7 shadow-xl">
+      {/* ── Compact Professional Hero ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-stone-900 via-stone-800 to-orange-950 shadow-lg">
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute -top-20 -right-20 w-80 h-80 bg-orange-500 rounded-full blur-3xl" />
+          <div className="absolute -top-16 -right-16 w-64 h-64 bg-orange-500 rounded-full blur-3xl" />
         </div>
-        <div className="relative">
-          <div className="flex items-start gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-2xl font-extrabold text-white shadow-lg shadow-orange-500/40 shrink-0">
+        <div className="relative px-5 py-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-xl font-extrabold text-white shadow-md shadow-orange-500/40 shrink-0">
               {customer.name.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl font-extrabold tracking-tight text-white truncate">{customer.name}</h1>
-              <div className="flex items-center gap-1.5 mt-1.5">
-                <p className="text-orange-200/80 text-sm flex items-center gap-1.5 font-medium">
-                  <Phone className="w-3.5 h-3.5" /> {phone}
-                </p>
-                <button
-                  onClick={() => { setPhoneInput(customer.phone.startsWith('tally-') ? '' : customer.phone.replace('+91', '')); setPhoneError(''); setEditingPhone(true) }}
-                  className="p-1.5 rounded-lg text-orange-300 hover:bg-white/10 transition-colors"
-                  title={hasPhone ? 'Number badlo' : 'Number add karo'}
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              {!hasPhone && (
-                <button
-                  onClick={() => { setPhoneInput(''); setPhoneError(''); setEditingPhone(true) }}
-                  className="mt-1.5 text-xs font-bold text-orange-300 hover:text-orange-200 hover:underline"
-                >
-                  + Mobile number add karo (WhatsApp/call ke liye)
-                </button>
-              )}
-              <div className="flex gap-2 mt-3 flex-wrap">
-                {!customer.consent && (
-                  <span className="text-[11px] font-bold bg-red-500/20 text-red-300 border border-red-400/30 px-2.5 py-1 rounded-full">No Consent</span>
-                )}
-                {customer.optedOut && (
-                  <span className="text-[11px] font-bold bg-white/10 text-stone-300 border border-white/15 px-2.5 py-1 rounded-full">Opted Out</span>
-                )}
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-lg font-extrabold tracking-tight text-white truncate">{customer.name}</h1>
                 {overdue.length > 0 && (
-                  <span className="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-400/30 px-2.5 py-1 rounded-full flex items-center gap-1">
-                    <AlertTriangle className="w-3 h-3" /> {overdue.length} overdue
+                  <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-400/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <AlertTriangle className="w-2.5 h-2.5" /> {overdue.length} overdue
                   </span>
                 )}
                 {overdue.length === 0 && pending.length > 0 && (
-                  <span className="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2.5 py-1 rounded-full flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" /> On track
-                  </span>
+                  <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2 py-0.5 rounded-full">On track</span>
+                )}
+                {!customer.consent && (
+                  <span className="text-[10px] font-bold bg-red-500/20 text-red-300 border border-red-400/30 px-2 py-0.5 rounded-full">No Consent</span>
                 )}
               </div>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <p className="text-orange-200/70 text-xs flex items-center gap-1 font-medium">
+                  <Phone className="w-3 h-3" /> {phone}
+                </p>
+                <button
+                  onClick={() => { setPhoneInput(customer.phone.startsWith('tally-') ? '' : customer.phone.replace('+91', '')); setPhoneError(''); setEditingPhone(true) }}
+                  className="p-1 rounded-md text-orange-300/70 hover:text-orange-200 hover:bg-white/10 transition-colors"
+                  title={hasPhone ? 'Number badlo' : 'Number add karo'}
+                >
+                  <Pencil className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <p className="text-orange-200/50 text-[10px] font-bold uppercase tracking-widest">Outstanding</p>
+              <p className={`text-2xl font-extrabold tracking-tight ${totalPending > 0 ? 'text-white' : 'text-emerald-400'}`}>
+                ₹{totalPending.toLocaleString('en-IN')}
+              </p>
             </div>
           </div>
 
-          {/* Pending amount */}
-          <div className="mt-6 flex items-end justify-between bg-white/[0.07] backdrop-blur border border-white/10 rounded-2xl px-6 py-5">
-            <div>
-              <p className="text-orange-200/60 text-xs font-bold uppercase tracking-widest">Total Outstanding</p>
-              <p className="text-4xl font-extrabold text-white tracking-tight mt-1">₹{totalPending.toLocaleString('en-IN')}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-white/90 text-sm font-bold">{pending.length} pending</p>
-              <p className="text-orange-200/60 text-xs font-medium">{customer.bills.length} bills total</p>
-            </div>
-          </div>
-
-          {/* Quick actions */}
-          <div className="flex gap-2.5 mt-4">
+          {/* Quick actions — compact */}
+          <div className="flex gap-2 mt-3.5">
             {hasPhone && (
               <>
                 <a href={`tel:${customer.phone}`}
-                  className="flex-1 inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 border border-white/15 text-white font-bold text-sm px-4 py-3 rounded-2xl transition-all">
-                  <Phone className="w-4 h-4" /> Call
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/15 border border-white/15 text-white font-bold text-xs px-3 py-2.5 rounded-xl transition-all">
+                  <Phone className="w-3.5 h-3.5" /> Call
                 </a>
                 <a href={`https://wa.me/${customer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Namaste ${customer.name}, aapka ₹${totalPending.toLocaleString('en-IN')} ka payment baaki hai. Kripya jald bhugtan karein.`)}`}
                   target="_blank" rel="noreferrer"
-                  className="flex-1 inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm px-4 py-3 rounded-2xl transition-all shadow-lg shadow-emerald-900/30">
-                  <MessageCircle className="w-4 h-4" /> WhatsApp
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3 py-2.5 rounded-xl transition-all">
+                  <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
                 </a>
               </>
             )}
             <button
-              className="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-bold text-sm px-4 py-3 rounded-2xl transition-all shadow-lg shadow-orange-900/40">
-              <Bell className="w-4 h-4" /> Remind
+              className="flex-1 inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-bold text-xs px-3 py-2.5 rounded-xl transition-all shadow-md shadow-orange-900/40">
+              <Bell className="w-3.5 h-3.5" /> Remind
             </button>
           </div>
         </div>
@@ -291,27 +276,18 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
           {callMsg}
         </div>
       )}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white rounded-2xl border border-stone-200/70 p-5 text-center shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-9 h-9 rounded-xl bg-stone-100 flex items-center justify-center mx-auto mb-2">
-            <Receipt className="w-4 h-4 text-stone-500" />
-          </div>
-          <p className="text-xl font-extrabold text-stone-900 tracking-tight">₹{totalBilled.toLocaleString('en-IN')}</p>
-          <p className="text-stone-400 text-[11px] font-bold uppercase tracking-widest mt-1">Total Billed</p>
+      <div className="grid grid-cols-3 gap-2.5">
+        <div className="bg-white rounded-2xl border border-stone-200/70 px-4 py-3.5 text-center shadow-sm">
+          <p className="text-base font-extrabold text-stone-900 tracking-tight">₹{totalBilled.toLocaleString('en-IN')}</p>
+          <p className="text-stone-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">Total Billed</p>
         </div>
-        <div className="bg-white rounded-2xl border border-emerald-200/60 p-5 text-center shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center mx-auto mb-2">
-            <Wallet className="w-4 h-4 text-emerald-600" />
-          </div>
-          <p className="text-xl font-extrabold text-emerald-600 tracking-tight">₹{Math.max(0, collected).toLocaleString('en-IN')}</p>
-          <p className="text-stone-400 text-[11px] font-bold uppercase tracking-widest mt-1">Collected</p>
+        <div className="bg-white rounded-2xl border border-emerald-200/60 px-4 py-3.5 text-center shadow-sm">
+          <p className="text-base font-extrabold text-emerald-600 tracking-tight">₹{Math.max(0, collected).toLocaleString('en-IN')}</p>
+          <p className="text-stone-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">Collected</p>
         </div>
-        <div className="bg-white rounded-2xl border border-red-200/60 p-5 text-center shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center mx-auto mb-2">
-            <TrendingUp className="w-4 h-4 text-red-500" />
-          </div>
-          <p className="text-xl font-extrabold text-red-600 tracking-tight">₹{totalPending.toLocaleString('en-IN')}</p>
-          <p className="text-stone-400 text-[11px] font-bold uppercase tracking-widest mt-1">Pending</p>
+        <div className="bg-white rounded-2xl border border-red-200/60 px-4 py-3.5 text-center shadow-sm">
+          <p className="text-base font-extrabold text-red-600 tracking-tight">₹{totalPending.toLocaleString('en-IN')}</p>
+          <p className="text-stone-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">Pending</p>
         </div>
       </div>
 
@@ -470,6 +446,101 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
               </div>
             ))}
           </div>
+        </section>
+      )}
+
+      {/* ── Transaction History (paid + pending timeline) ── */}
+      {customer.outstandings.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-extrabold text-stone-900 tracking-tight flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center">
+                <History className="w-4 h-4 text-stone-500" />
+              </div>
+              Transaction History
+            </h2>
+            <span className="text-xs font-bold bg-stone-900 text-white px-3 py-1 rounded-full">
+              {customer.outstandings.length} records
+            </span>
+          </div>
+
+          {/* Summary */}
+          <div className="grid grid-cols-2 gap-2.5 mb-4">
+            <div className="bg-emerald-50/70 border border-emerald-200/60 rounded-2xl px-4 py-3 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/25">
+                <CheckCircle2 className="w-4.5 h-4.5 text-white" />
+              </div>
+              <div>
+                <p className="text-base font-extrabold text-emerald-700">₹{totalPaid.toLocaleString('en-IN')}</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600/70">Total Paid ({paidHistory.length})</p>
+              </div>
+            </div>
+            <div className="bg-red-50/70 border border-red-200/60 rounded-2xl px-4 py-3 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-red-500 flex items-center justify-center shrink-0 shadow-md shadow-red-500/25">
+                <Clock className="w-4.5 h-4.5 text-white" />
+              </div>
+              <div>
+                <p className="text-base font-extrabold text-red-600">₹{totalPending.toLocaleString('en-IN')}</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-red-500/70">Outstanding ({pending.length})</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Timeline */}
+          <div className="bg-white rounded-2xl border border-stone-200/70 shadow-sm overflow-hidden">
+            <div className="divide-y divide-stone-100">
+              {[...customer.outstandings]
+                .sort((a, b) => {
+                  const da = new Date(a.status === 'paid' ? (a.paidAt ?? a.dueDate) : a.dueDate).getTime()
+                  const db = new Date(b.status === 'paid' ? (b.paidAt ?? b.dueDate) : b.dueDate).getTime()
+                  return db - da
+                })
+                .map(o => {
+                  const isPaid = o.status === 'paid'
+                  const isOd = !isPaid && (o.status === 'overdue' || daysOverdue(o.dueDate) > 0)
+                  const dateLabel = isPaid
+                    ? (o.paidAt ? new Date(o.paidAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—')
+                    : new Date(o.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                  return (
+                    <div key={o.id} className="flex items-center gap-3.5 px-5 py-3.5 hover:bg-stone-50/60 transition-colors">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                        isPaid ? 'bg-emerald-100' : isOd ? 'bg-red-100' : 'bg-amber-100'
+                      }`}>
+                        {isPaid
+                          ? <CheckCircle2 className="w-4.5 h-4.5 text-emerald-600" />
+                          : <FileText className={`w-4.5 h-4.5 ${isOd ? 'text-red-600' : 'text-amber-600'}`} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-stone-900 truncate">
+                          {o.invoiceNo ? `Invoice ${o.invoiceNo}` : 'Outstanding'}
+                        </p>
+                        <p className="text-xs text-stone-400 mt-0.5">
+                          {isPaid ? `Paid on ${dateLabel}` : `Due ${dateLabel}`}
+                          {isOd && !isPaid && daysOverdue(o.dueDate) > 0 && (
+                            <span className="text-red-500 font-bold"> • {daysOverdue(o.dueDate)}d overdue</span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className={`text-sm font-extrabold ${isPaid ? 'text-emerald-600' : isOd ? 'text-red-600' : 'text-stone-900'}`}>
+                          {isPaid ? '+' : ''}₹{Number(o.amount).toLocaleString('en-IN')}
+                        </p>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          isPaid ? 'bg-emerald-100 text-emerald-700'
+                          : isOd ? 'bg-red-100 text-red-700'
+                          : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {isPaid ? 'paid' : isOd ? 'overdue' : o.status}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+            </div>
+          </div>
+          <p className="text-[11px] text-stone-400 mt-2.5 text-center">
+            Poora hisaab — pehle kitna liya, kab pay kiya, ab kitna baaki hai
+          </p>
         </section>
       )}
       {/* ── Phone edit modal ── */}
