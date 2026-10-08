@@ -196,7 +196,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const hasPhone = phone !== '—'
 
   return (
-    <div className="space-y-5 max-w-4xl pb-8">
+    <div className="space-y-5 pb-8">
       <Link href="/dashboard/customers" className="inline-flex items-center gap-2 text-stone-500 hover:text-orange-600 font-semibold text-sm transition-colors">
         <ArrowLeft className="w-4 h-4" /> {lang === 'hi' ? 'Customers' : 'Customers'}
       </Link>

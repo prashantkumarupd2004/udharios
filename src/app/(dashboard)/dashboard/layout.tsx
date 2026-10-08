@@ -49,7 +49,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="tricolor-bar sticky top-0 z-50" />
       {/* Desktop header */}
       <header className="bg-white/90 backdrop-blur-md border-b border-orange-100 sticky top-[3px] z-40 shadow-[0_2px_12px_-6px_rgba(120,70,10,0.12)]">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/dashboard" aria-label="Ugaahi dashboard">
             <BrandMark />
           </Link>
@@ -93,8 +93,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6 pb-24 md:pb-6">
+      {/* Main content — full width */}
+      <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-6">
         {children}
       </main>
 

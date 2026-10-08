@@ -142,7 +142,7 @@ export default function IntegrationsPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       {/* header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-stone-900">

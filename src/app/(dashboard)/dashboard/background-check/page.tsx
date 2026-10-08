@@ -74,7 +74,7 @@ export default function BackgroundCheckPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto pb-8">
+    <div className="pb-8">
       {/* ── Professional Hero Header ── */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-stone-900 via-stone-800 to-orange-950 p-8 mb-8 shadow-xl">
         <div className="absolute inset-0 opacity-10">

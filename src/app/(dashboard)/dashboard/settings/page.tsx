@@ -84,7 +84,7 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="max-w-3xl mx-auto">
+      <div>
         <div className="skeleton h-12 rounded-2xl mb-6" />
         <div className="skeleton h-64 rounded-2xl" />
       </div>
@@ -92,7 +92,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div>
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-extrabold text-stone-900 flex items-center gap-2">
