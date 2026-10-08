@@ -103,6 +103,8 @@ export const sendStagedReminder = inngest.createFunction(
     let externalMsgId: string | undefined
     let sendStatus: 'sent' | 'failed' = 'sent'
     let failedReason: string | undefined
+    // WhatsApp me bheja gaya actual template naam (fallback me T2_upi_bank ho sakta hai)
+    let resolvedTemplateName = stage.templateName ?? 'T1_polite'
 
     if (stage.channel === 'whatsapp') {
       const wa = getWhatsAppProvider()
@@ -199,6 +201,8 @@ export const sendStagedReminder = inngest.createFunction(
         }
       }
 
+      // Bina gateway wale merchant ke liye alag Meta template hai (4 body
+      // params, koi button nahi) — wahi naam bhejna zaroori hai.
       switch (stage.templateName) {
         case 'T1_polite':
           components = buildT1Polite(
@@ -218,6 +222,7 @@ export const sendStagedReminder = inngest.createFunction(
             )
           } else if (fallbackPaymentInfo) {
             // Bina gateway wale merchant — UPI/bank details bhejo
+            resolvedTemplateName = 'T2_upi_bank'
             components = buildT2WithUpiOrBank(
               outstanding.customer.name,
               amountINR,
@@ -262,7 +267,7 @@ export const sendStagedReminder = inngest.createFunction(
       const result = await step.run('send-whatsapp', async () => {
         return wa.sendTemplate({
           to: phone,
-          templateName: stage.templateName ?? 'T1_polite',
+          templateName: resolvedTemplateName,
           components,
         })
       })
@@ -303,7 +308,7 @@ export const sendStagedReminder = inngest.createFunction(
           customerId,
           stage: stageIndex,
           channel: stage.channel as 'whatsapp' | 'sms' | 'voice' | 'escalate',
-          templateName: stage.templateName,
+          templateName: stage.channel === 'whatsapp' ? resolvedTemplateName : stage.templateName,
           status: sendStatus,
           externalMsgId,
           failedReason,
