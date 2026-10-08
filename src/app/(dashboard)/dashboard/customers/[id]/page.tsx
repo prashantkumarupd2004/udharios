@@ -4,7 +4,7 @@ import { useEffect, useState, use } from 'react'
 import Link from 'next/link'
 import {
   ArrowLeft, Phone, Loader2, IndianRupee, FileText, CalendarCheck,
-  MessageCircle, Bell, Clock, CheckCircle2, AlertTriangle, Wallet,
+  Clock, CheckCircle2, AlertTriangle, Wallet,
   TrendingUp, Receipt, Pencil, X, History,
 } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
@@ -244,28 +244,10 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
               <p className={`text-2xl font-extrabold tracking-tight ${totalPending > 0 ? 'text-white' : 'text-emerald-400'}`}>
                 ₹{totalPending.toLocaleString('en-IN')}
               </p>
+              <p className="text-orange-200/50 text-[10px] font-medium mt-0.5">
+                {pending.length} pending • {customer.bills.length} bills
+              </p>
             </div>
-          </div>
-
-          {/* Quick actions — compact */}
-          <div className="flex gap-2 mt-3.5">
-            {hasPhone && (
-              <>
-                <a href={`tel:${customer.phone}`}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/15 border border-white/15 text-white font-bold text-xs px-3 py-2.5 rounded-xl transition-all">
-                  <Phone className="w-3.5 h-3.5" /> Call
-                </a>
-                <a href={`https://wa.me/${customer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Namaste ${customer.name}, aapka ₹${totalPending.toLocaleString('en-IN')} ka payment baaki hai. Kripya jald bhugtan karein.`)}`}
-                  target="_blank" rel="noreferrer"
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3 py-2.5 rounded-xl transition-all">
-                  <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
-                </a>
-              </>
-            )}
-            <button
-              className="flex-1 inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-bold text-xs px-3 py-2.5 rounded-xl transition-all shadow-md shadow-orange-900/40">
-              <Bell className="w-3.5 h-3.5" /> Remind
-            </button>
           </div>
         </div>
       </div>
