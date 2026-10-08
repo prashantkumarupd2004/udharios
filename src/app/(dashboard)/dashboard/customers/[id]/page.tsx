@@ -148,7 +148,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
     setMarkingPaid(null)
   }
 
-  const triggerCall = async (outstandingId: string) => {    if (!hasPhone) {
+  const triggerCall = async (outstandingId: string, testMode = false) => {    if (!hasPhone) {
       setCallMsg('Pehle customer ka mobile number add karo')
       return
     }
@@ -158,7 +158,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
       const res = await fetch('/api/calls/trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ outstandingId }),
+        body: JSON.stringify({ outstandingId, skipQuietHours: testMode }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -339,6 +339,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                       {isOd ? 'overdue' : o.status}
                     </span>
                     {hasPhone && (
+                      <>
                       <button
                         onClick={() => triggerCall(o.id)}
                         disabled={calling === o.id}
@@ -347,6 +348,14 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                         {calling === o.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Phone className="w-3 h-3" />}
                         {calling === o.id ? 'Calling...' : 'Call karo'}
                       </button>
+                      <button
+                        onClick={() => triggerCall(o.id, true)}
+                        disabled={calling === o.id}
+                        className="mt-1 w-full inline-flex items-center justify-center gap-1 bg-stone-200 hover:bg-stone-300 disabled:opacity-50 text-stone-600 text-[11px] font-bold px-3 py-1 rounded-xl transition-colors"
+                      >
+                        🧪 Test Call (quiet hours bypass)
+                      </button>
+                      </>
                     )}
                     <button
                       onClick={() => markPaid(o.id)}

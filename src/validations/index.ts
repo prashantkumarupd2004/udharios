@@ -204,6 +204,7 @@ export const resolveDisputeSchema = z.object({
 
 export const triggerCallSchema = z.object({
   outstandingId: z.string().uuid(),
+  skipQuietHours: z.boolean().optional(), // testing ke liye
 })
 
 // ---------------------------------------------------------------------------

@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     if (!merchantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await request.json()
-    const { outstandingId } = triggerCallSchema.parse(body)
+    const { outstandingId, skipQuietHours } = triggerCallSchema.parse(body)
 
     const outstanding = await prisma.outstanding.findFirst({
       where: { id: outstandingId, merchantId },
@@ -45,8 +45,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Already paid' }, { status: 400 })
     }
 
-    // Check sending window
-    if (!isWithinSendingWindow(outstanding.merchant.quietStart, outstanding.merchant.quietEnd)) {
+    // Check sending window (skipQuietHours = testing ke liye)
+    if (!skipQuietHours && !isWithinSendingWindow(outstanding.merchant.quietStart, outstanding.merchant.quietEnd)) {
       return NextResponse.json(
         { error: 'Quiet hours mein call nahi ho sakta (9 PM – 9 AM)' },
         { status: 400 }
