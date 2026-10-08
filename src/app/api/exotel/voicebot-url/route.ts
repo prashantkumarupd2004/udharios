@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma'
 // hum DB se merchant/customer/amount nikaal ke dynamic WSS URL return karenge.
 //
 // Response format: { "url": "wss://..." }
-// WSS URL me custom params (max 800 chars, max 25 params) bot ko milenge.
+// WSS URL me custom params (max 256 chars total, max 3 params) bot ko milenge.
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
 
@@ -17,10 +17,11 @@ export async function GET(req: NextRequest) {
     searchParams.get('callSid') ??
     searchParams.get('CallSid'.toLowerCase())
 
-  // Base voicebot WSS endpoint (Exotel dashboard se)
+  // Base voicebot WSS endpoint — Exotel ko wss:// chahiye, https:// nahi!
+  // (Exotel support ne confirm kiya: dynamic endpoint must return wss:// URL)
   const baseUrl =
     process.env.EXOTEL_VOICEBOT_URL ??
-    'https://voicebot.in.exotel.com/voicebot/api/v1/accounts/infotronicsmedia1/bots/9b2449e8-d0f5-4318-8c12-8c4c0a35a578/dp-endpoint'
+    'wss://voicebot.in.exotel.com/voicebot/api/v1/accounts/infotronicsmedia1/bots/9b2449e8-d0f5-4318-8c12-8c4c0a35a578/dp-endpoint'
 
   if (!callSid) {
     // CallSid nahi mila to bina params ke base URL de do
