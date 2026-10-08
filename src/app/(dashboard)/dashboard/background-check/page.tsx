@@ -1,7 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ShieldCheck, Search, History, Loader2, CheckCircle2, XCircle, FlaskConical } from 'lucide-react'
+import {
+  ShieldCheck, Search, History, Loader2, CheckCircle2, XCircle,
+  FlaskConical, ArrowRight, BadgeCheck, Building2, Fingerprint,
+} from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
 import { CHECK_META, CHECK_TYPES, type CheckType } from '@/lib/verification'
 
@@ -12,6 +15,17 @@ interface HistoryItem {
   status: string
   provider: string
   createdAt: string
+}
+
+// Professional icon mapping (Lucide instead of emoji)
+const CHECK_ICONS: Record<CheckType, typeof Fingerprint> = {
+  pan_check: Fingerprint,
+  company_check: Building2,
+  mobile_to_pan: BadgeCheck,
+  mobile_to_address: ShieldCheck,
+  profile_360: Search,
+  pan_to_contact: BadgeCheck,
+  credit_report: ShieldCheck,
 }
 
 export default function BackgroundCheckPage() {
@@ -60,78 +74,140 @@ export default function BackgroundCheckPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-extrabold text-stone-900 flex items-center gap-2">
-          <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md shadow-emerald-500/30">
-            <ShieldCheck className="w-5 h-5 text-white" />
-          </span>
-          {lang === 'hi' ? 'Business Background Check' : 'Business Background Check'}
-        </h1>
-        <p className="text-sm text-stone-500 mt-1 ml-11">
-          {lang === 'hi' ? 'Customer verify karo — PAN, company, address, credit' : 'Verify customers — PAN, company, address, credit'}
-        </p>
+    <div className="max-w-6xl mx-auto pb-8">
+      {/* ── Professional Hero Header ── */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-stone-900 via-stone-800 to-orange-950 p-8 mb-8 shadow-xl">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute -top-24 -right-24 w-96 h-96 bg-orange-500 rounded-full blur-3xl" />
+          <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-amber-500 rounded-full blur-3xl" />
+        </div>
+        <div className="relative">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/40">
+              <ShieldCheck className="w-7 h-7 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-extrabold text-white tracking-tight">
+                Business Background Check
+              </h1>
+              <p className="text-orange-200/80 text-sm mt-1 font-medium">
+                {lang === 'hi'
+                  ? 'Enterprise-grade verification — PAN, company, address, credit'
+                  : 'Enterprise-grade verification — PAN, company, address, credit'}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-6 mt-6 text-white/90">
+            <div>
+              <p className="text-2xl font-extrabold">7</p>
+              <p className="text-xs text-orange-200/70 font-medium uppercase tracking-wide">Check Types</p>
+            </div>
+            <div className="w-px bg-white/10" />
+            <div>
+              <p className="text-2xl font-extrabold">{history.length}</p>
+              <p className="text-xs text-orange-200/70 font-medium uppercase tracking-wide">Checks Done</p>
+            </div>
+            <div className="w-px bg-white/10" />
+            <div>
+              <p className="text-2xl font-extrabold text-emerald-400">Live</p>
+              <p className="text-xs text-orange-200/70 font-medium uppercase tracking-wide">Status</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {isMock && result && (
-        <div className="mb-4 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 text-sm text-amber-800">
-          <FlaskConical className="w-4 h-4 shrink-0" />
-          {lang === 'hi' ? 'Test mode — sample data dikh raha hai. Live ke liye Karza API key lagao.' : 'Test mode — showing sample data. Add Karza API key for live results.'}
+        <div className="mb-6 flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3.5 text-sm text-amber-800 shadow-sm">
+          <FlaskConical className="w-5 h-5 shrink-0 text-amber-600" />
+          <p className="font-medium">
+            {lang === 'hi'
+              ? 'Test mode — sample data dikh raha hai. Live results ke liye Karza API key lagao.'
+              : 'Test mode — showing sample data. Add Karza API key for live results.'}
+          </p>
         </div>
       )}
 
-      {/* Check cards grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+      {/* ── Verification Services Grid ── */}
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-lg font-extrabold text-stone-900 tracking-tight">
+          {lang === 'hi' ? 'Verification Services' : 'Verification Services'}
+        </h2>
+        <p className="text-xs text-stone-400 font-medium">Powered by Karza</p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
         {CHECK_TYPES.map(t => {
           const m = CHECK_META[t]
+          const Icon = CHECK_ICONS[t]
           const isActive = active === t
           return (
             <button
               key={t}
               onClick={() => openCard(t)}
-              className={`text-left bg-white rounded-2xl border p-5 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 ${
-                isActive ? '!border-emerald-400 ring-2 ring-emerald-100' : 'border-stone-200/80'
+              className={`group text-left bg-white rounded-2xl border p-5 transition-all duration-200 hover:shadow-lg hover:shadow-orange-100 hover:-translate-y-1 ${
+                isActive
+                  ? 'border-orange-400 ring-2 ring-orange-100 shadow-lg shadow-orange-100'
+                  : 'border-stone-200/70 shadow-sm hover:border-orange-200'
               }`}
             >
-              <div className="text-3xl mb-2">{m.icon}</div>
-              <h3 className="font-extrabold text-stone-900">{lang === 'hi' ? m.titleHi : m.title}</h3>
-              <p className="text-xs text-stone-500 mt-1 leading-relaxed">{lang === 'hi' ? m.descHi : m.desc}</p>
-              <span className={`inline-flex items-center gap-1 mt-3 text-xs font-bold ${isActive ? 'text-emerald-700' : 'text-stone-400'}`}>
-                <Search className="w-3.5 h-3.5" /> {lang === 'hi' ? 'Check karo' : 'Run check'} →
+              <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-3 transition-colors ${
+                isActive
+                  ? 'bg-gradient-to-br from-orange-500 to-amber-500 shadow-md shadow-orange-500/30'
+                  : 'bg-orange-50 group-hover:bg-orange-100'
+              }`}>
+                <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-orange-600'}`} />
+              </div>
+              <h3 className="font-bold text-stone-900 text-[15px]">{lang === 'hi' ? m.titleHi : m.title}</h3>
+              <p className="text-xs text-stone-500 mt-1 leading-relaxed line-clamp-2">{lang === 'hi' ? m.descHi : m.desc}</p>
+              <span className={`inline-flex items-center gap-1 mt-3 text-xs font-bold transition-colors ${
+                isActive ? 'text-orange-600' : 'text-stone-400 group-hover:text-orange-500'
+              }`}>
+                {lang === 'hi' ? 'Check karo' : 'Run check'}
+                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
               </span>
             </button>
           )
         })}
       </div>
 
-      {/* Active check panel */}
+      {/* ── Active Check Panel ── */}
       {active && (
-        <div className="bg-white rounded-2xl border border-emerald-200 shadow-md p-6 mb-8">
-          <h2 className="font-extrabold text-stone-900 text-lg mb-1">
-            {CHECK_META[active].icon} {lang === 'hi' ? CHECK_META[active].titleHi : CHECK_META[active].title}
-          </h2>
-          <p className="text-xs text-stone-500 mb-4">{lang === 'hi' ? CHECK_META[active].descHi : CHECK_META[active].desc}</p>
-
-          <div className={`grid gap-3 ${active === 'credit_report' ? 'sm:grid-cols-2' : 'grid-cols-1'}`}>
+        <div className="bg-white rounded-3xl border border-stone-200/70 shadow-xl shadow-stone-200/50 p-7 mb-8">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-md shadow-orange-500/25">
+              {(() => { const I = CHECK_ICONS[active]; return <I className="w-5 h-5 text-white" /> })()}
+            </div>
             <div>
-              <label className="field-label">{CHECK_META[active].inputLabel}</label>
+              <h2 className="font-extrabold text-stone-900 text-lg tracking-tight">
+                {lang === 'hi' ? CHECK_META[active].titleHi : CHECK_META[active].title}
+              </h2>
+              <p className="text-xs text-stone-500">{lang === 'hi' ? CHECK_META[active].descHi : CHECK_META[active].desc}</p>
+            </div>
+          </div>
+
+          <div className={`grid gap-4 mt-5 ${active === 'credit_report' ? 'sm:grid-cols-2' : 'grid-cols-1 max-w-md'}`}>
+            <div>
+              <label className="block text-xs font-bold text-stone-600 uppercase tracking-wide mb-1.5">
+                {CHECK_META[active].inputLabel}
+              </label>
               <input
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 placeholder={CHECK_META[active].inputPlaceholder}
-                className="field"
+                className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm font-semibold text-stone-900 placeholder:text-stone-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400 transition-all"
                 onKeyDown={e => e.key === 'Enter' && runCheck()}
               />
             </div>
             {active === 'credit_report' && (
               <div>
-                <label className="field-label">{lang === 'hi' ? 'Mobile Number' : 'Mobile Number'}</label>
+                <label className="block text-xs font-bold text-stone-600 uppercase tracking-wide mb-1.5">
+                  {lang === 'hi' ? 'Mobile Number' : 'Mobile Number'}
+                </label>
                 <input
                   value={input2}
                   onChange={e => setInput2(e.target.value)}
                   placeholder="9820021873"
-                  className="field"
+                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm font-semibold text-stone-900 placeholder:text-stone-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400 transition-all"
                   onKeyDown={e => e.key === 'Enter' && runCheck()}
                 />
               </div>
@@ -141,33 +217,38 @@ export default function BackgroundCheckPage() {
           <button
             onClick={runCheck}
             disabled={loading || !input.trim()}
-            className="btn-primary px-8 py-3 mt-4 disabled:opacity-50"
+            className="mt-5 inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm px-8 py-3.5 rounded-xl shadow-lg shadow-orange-500/25 transition-all"
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin inline mr-2" /> : null}
-            {loading ? (lang === 'hi' ? 'Check ho raha...' : 'Checking...') : (lang === 'hi' ? 'Verify Karo' : 'Verify')}
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+            {loading ? (lang === 'hi' ? 'Verify ho raha...' : 'Verifying...') : (lang === 'hi' ? 'Verify Karo' : 'Verify Now')}
           </button>
 
           {error && (
-            <div className="mt-4 flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
-              <XCircle className="w-4 h-4 shrink-0" /> {error}
+            <div className="mt-5 flex items-center gap-3 bg-red-50 border border-red-200 rounded-2xl px-5 py-4 text-sm text-red-700 font-medium">
+              <XCircle className="w-5 h-5 shrink-0 text-red-500" /> {error}
             </div>
           )}
 
           {result && (
-            <div className="mt-4 bg-emerald-50/60 border border-emerald-200 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                <span className="font-extrabold text-emerald-800">{lang === 'hi' ? 'Verified' : 'Verified'}</span>
+            <div className="mt-5 rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-white p-6">
+              <div className="flex items-center gap-2.5 mb-4 pb-4 border-b border-emerald-100">
+                <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center shadow-md shadow-emerald-500/30">
+                  <CheckCircle2 className="w-4.5 h-4.5 text-white" />
+                </div>
+                <div>
+                  <p className="font-extrabold text-emerald-800 text-sm">Verification Successful</p>
+                  <p className="text-xs text-emerald-600/70">Verified just now</p>
+                </div>
               </div>
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
+              <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
                 {Object.entries(result)
                   .filter(([k]) => !k.startsWith('_'))
                   .map(([k, v]) => (
-                    <div key={k} className="flex flex-col">
-                      <dt className="text-[11px] font-bold uppercase tracking-wide text-stone-400">
+                    <div key={k}>
+                      <dt className="text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-0.5">
                         {k.replace(/([A-Z])/g, ' $1').trim()}
                       </dt>
-                      <dd className="text-sm font-semibold text-stone-800">
+                      <dd className="text-sm font-bold text-stone-900">
                         {typeof v === 'object' ? JSON.stringify(v) : String(v ?? '—')}
                       </dd>
                     </div>
@@ -178,43 +259,67 @@ export default function BackgroundCheckPage() {
         </div>
       )}
 
-      {/* History */}
-      <div className="bg-white rounded-2xl border border-stone-200/80 shadow-sm p-6">
-        <h2 className="font-extrabold text-stone-900 flex items-center gap-2 mb-4">
-          <History className="w-5 h-5 text-stone-400" />
-          {lang === 'hi' ? 'Recent Checks' : 'Recent Checks'}
-        </h2>
+      {/* ── History ── */}
+      <div className="bg-white rounded-3xl border border-stone-200/70 shadow-sm p-7">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="font-extrabold text-stone-900 tracking-tight flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center">
+              <History className="w-4 h-4 text-stone-500" />
+            </div>
+            {lang === 'hi' ? 'Verification History' : 'Verification History'}
+          </h2>
+          <span className="text-xs font-bold bg-stone-100 text-stone-500 px-2.5 py-1 rounded-full">
+            {history.length} total
+          </span>
+        </div>
         {history.length === 0 ? (
-          <p className="text-sm text-stone-400">{lang === 'hi' ? 'Abhi koi check nahi kiya' : 'No checks yet'}</p>
+          <div className="text-center py-10">
+            <div className="w-14 h-14 rounded-2xl bg-stone-100 flex items-center justify-center mx-auto mb-3">
+              <Search className="w-6 h-6 text-stone-300" />
+            </div>
+            <p className="text-sm font-semibold text-stone-500">{lang === 'hi' ? 'Abhi koi verification nahi ki' : 'No verifications yet'}</p>
+            <p className="text-xs text-stone-400 mt-1">{lang === 'hi' ? 'Upar se koi service chuno' : 'Select a service above to get started'}</p>
+          </div>
         ) : (
-          <div className="space-y-2">
-            {history.map(h => (
-              <div key={h.id} className="flex items-center justify-between py-2 border-b border-stone-100 last:border-0">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">{CHECK_META[h.checkType as CheckType]?.icon ?? '🔍'}</span>
-                  <div>
-                    <p className="text-sm font-bold text-stone-800">{CHECK_META[h.checkType as CheckType]?.title ?? h.checkType}</p>
-                    <p className="text-xs text-stone-400 font-mono">{h.input}</p>
+          <div className="divide-y divide-stone-100">
+            {history.map(h => {
+              const Icon = CHECK_ICONS[h.checkType as CheckType] ?? Search
+              return (
+                <div key={h.id} className="flex items-center justify-between py-3.5">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
+                      <Icon className="w-4.5 h-4.5 text-orange-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-stone-900">{CHECK_META[h.checkType as CheckType]?.title ?? h.checkType}</p>
+                      <p className="text-xs text-stone-400 font-mono mt-0.5">{h.input}</p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${
+                      h.status === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
+                    }`}>
+                      {h.status === 'success' && <CheckCircle2 className="w-3 h-3" />}
+                      {h.status}
+                    </span>
+                    <p className="text-[11px] text-stone-400 mt-1">{new Date(h.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${h.status === 'success' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                    {h.status}
-                  </span>
-                  <p className="text-[11px] text-stone-400 mt-1">{new Date(h.createdAt).toLocaleDateString('en-IN')}</p>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
 
       {/* Compliance note */}
-      <p className="text-[11px] text-stone-400 mt-4 leading-relaxed">
-        {lang === 'hi'
-          ? '⚠️ Customer ki consent ke bina sensitive checks mat karo. Credit report ke liye RBI compliance zaroori hai.'
-          : '⚠️ Do not run sensitive checks without customer consent. Credit reports require RBI compliance.'}
-      </p>
+      <div className="mt-6 flex gap-3 bg-stone-50 border border-stone-200/60 rounded-2xl p-4">
+        <ShieldCheck className="w-5 h-5 text-stone-400 shrink-0 mt-0.5" />
+        <p className="text-xs text-stone-500 leading-relaxed">
+          {lang === 'hi'
+            ? 'Customer ki consent ke bina sensitive checks na karein. Credit report ke liye RBI compliance avashyak hai. Sabhi verifications audit trail me record hoti hain.'
+            : 'Do not run sensitive checks without customer consent. Credit reports require RBI compliance. All verifications are recorded in the audit trail.'}
+        </p>
+      </div>
     </div>
   )
 }
