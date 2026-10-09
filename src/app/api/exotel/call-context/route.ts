@@ -2,16 +2,24 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 // GET /api/exotel/call-context?callId=<uuid>
-// Exotel Voicebot Tool (Option 2) is endpoint ko call karega.
-// Bot ko CustomField se callId milta hai, usse hum merchant/customer/amount dete hain.
+// GET /api/exotel/call-context?callSid=<exotel-sid>
+// Exotel Voicebot Tool v3 is endpoint ko call karega.
+// - callId: hamara internal call UUID (CustomField se aata hai)
+// - callSid: Exotel ka CallSid (tool URL me {{CallSid}} variable se)
+// Dono support karte hain kyunki dashboard me kaunsa variable available
+// hoga ye pehle se pata nahi — Exotel support ne <uuid> placeholder diya hai.
 // Public hai — Exotel ke servers bina session ke call karenge.
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const callId = searchParams.get('callId')
+  const callSid = searchParams.get('callSid') ?? searchParams.get('CallSid')
 
-  if (!callId) {
+  if (!callId && !callSid) {
     return NextResponse.json(
-      { ok: false, error: 'callId required' },
+      { ok: false, error: 'callId or callSid required' },
       { status: 400 }
     )
   }
@@ -29,24 +37,50 @@ export async function GET(req: NextRequest) {
     })
   }
 
-  // UUID format validate karo — invalid format pe 404 (Exotel test ke liye)
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-  if (!uuidRegex.test(callId)) {
-    return NextResponse.json(
-      { ok: false, error: 'call not found' },
-      { status: 404 }
-    )
-  }
-
   try {
-    const call = await prisma.call.findUnique({
-      where: { id: callId },
-      include: {
-        merchant: { select: { businessName: true, upiVpa: true } },
-        customer: { select: { name: true, phone: true } },
-        outstanding: { select: { amount: true, invoiceNo: true, dueDate: true } },
-      },
-    })
+    let call = null
+
+    if (callId) {
+      // UUID format validate karo — invalid format pe 404
+      if (!UUID_REGEX.test(callId)) {
+        return NextResponse.json(
+          { ok: false, error: 'call not found' },
+          { status: 404 }
+        )
+      }
+      call = await prisma.call.findUnique({
+        where: { id: callId },
+        include: {
+          merchant: { select: { businessName: true, upiVpa: true } },
+          customer: { select: { name: true, phone: true } },
+          outstanding: { select: { amount: true, invoiceNo: true, dueDate: true } },
+        },
+      })
+    } else if (callSid) {
+      // Exotel CallSid se lookup — sabse pehle exotelSid match karo
+      call = await prisma.call.findFirst({
+        where: { exotelSid: callSid },
+        include: {
+          merchant: { select: { businessName: true, upiVpa: true } },
+          customer: { select: { name: true, phone: true } },
+          outstanding: { select: { amount: true, invoiceNo: true, dueDate: true } },
+        },
+      })
+      // Race condition guard: agar exotelSid abhi update nahi hua to
+      // latest initiated call lo (last 10 min) — fallback
+      if (!call) {
+        const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000)
+        call = await prisma.call.findFirst({
+          where: { createdAt: { gte: tenMinAgo } },
+          orderBy: { createdAt: 'desc' },
+          include: {
+            merchant: { select: { businessName: true, upiVpa: true } },
+            customer: { select: { name: true, phone: true } },
+            outstanding: { select: { amount: true, invoiceNo: true, dueDate: true } },
+          },
+        })
+      }
+    }
 
     if (!call) {
       return NextResponse.json(
@@ -55,6 +89,7 @@ export async function GET(req: NextRequest) {
       )
     }
 
+    // Tool v3 mapping ke liye flat top-level fields (Exotel support ke hisaab se)
     return NextResponse.json({
       ok: true,
       merchantName: call.merchant.businessName,
