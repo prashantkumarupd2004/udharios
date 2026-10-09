@@ -3,23 +3,78 @@ import { prisma } from '@/lib/prisma'
 
 // GET /api/exotel/call-context?callId=<uuid>
 // GET /api/exotel/call-context?callSid=<exotel-sid>
+// GET /api/exotel/call-context?phone=<digits>
 // Exotel Voicebot Tool v3 is endpoint ko call karega.
 // - callId: hamara internal call UUID (CustomField se aata hai)
 // - callSid: Exotel ka CallSid (tool URL me {{CallSid}} variable se)
+// - phone: customer ka phone (fallback — jab {{CallSid}} null resolve ho)
 // Dono support karte hain kyunki dashboard me kaunsa variable available
 // hoga ye pehle se pata nahi — Exotel support ne <uuid> placeholder diya hai.
 // Public hai — Exotel ke servers bina session ke call karenge.
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+async function findCall(callId: string | null, callSid: string | null, phone: string | null) {
+  const include = {
+    merchant: { select: { businessName: true, upiVpa: true } },
+    customer: { select: { name: true, phone: true } },
+    outstanding: { select: { amount: true, invoiceNo: true, dueDate: true } },
+  }
+
+  // 1. Hamara UUID
+  if (callId && UUID_REGEX.test(callId)) {
+    const c = await prisma.call.findUnique({ where: { id: callId }, include })
+    if (c) return c
+  }
+
+  // 2. Exotel CallSid (callId ya callSid param me)
+  const sid = callSid ?? (callId && !UUID_REGEX.test(callId) ? callId : null)
+  if (sid) {
+    const c = await prisma.call.findFirst({ where: { exotelSid: sid }, include })
+    if (c) return c
+  }
+
+  // 3. Phone fallback — sabse recent call is number pe (last 30 min)
+  if (phone) {
+    const digits = phone.replace(/\D/g, '')
+    if (digits.length >= 10) {
+      const suffix = digits.slice(-10)
+      const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000)
+      const c = await prisma.call.findFirst({
+        where: {
+          createdAt: { gte: thirtyMinAgo },
+          customer: { phone: { endsWith: suffix } },
+        },
+        orderBy: { createdAt: 'desc' },
+        include,
+      })
+      if (c) return c
+    }
+  }
+
+  // 4. Last resort — sabse recent initiated call (last 10 min)
+  //    (sirf tab jab koi identifier hi na mila ho)
+  if (!callId && !callSid && !phone) {
+    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000)
+    return prisma.call.findFirst({
+      where: { createdAt: { gte: tenMinAgo } },
+      orderBy: { createdAt: 'desc' },
+      include,
+    })
+  }
+
+  return null
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const callId = searchParams.get('callId')
   const callSid = searchParams.get('callSid') ?? searchParams.get('CallSid')
+  const phone = searchParams.get('phone')
 
-  if (!callId && !callSid) {
+  if (!callId && !callSid && !phone) {
     return NextResponse.json(
-      { ok: false, error: 'callId or callSid required' },
+      { ok: false, error: 'callId, callSid or phone required' },
       { status: 400 }
     )
   }
@@ -38,56 +93,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    let call = null
-
-    if (callId) {
-      if (UUID_REGEX.test(callId)) {
-        // Hamara internal UUID — direct lookup
-        call = await prisma.call.findUnique({
-          where: { id: callId },
-          include: {
-            merchant: { select: { businessName: true, upiVpa: true } },
-            customer: { select: { name: true, phone: true } },
-            outstanding: { select: { amount: true, invoiceNo: true, dueDate: true } },
-          },
-        })
-      } else {
-        // UUID nahi hai → Exotel ka CallSid hai (dashboard Dynamic Variable {{CallSid}}
-        // ko callId param me bhejta hai). exotelSid se lookup karo.
-        call = await prisma.call.findFirst({
-          where: { exotelSid: callId },
-          include: {
-            merchant: { select: { businessName: true, upiVpa: true } },
-            customer: { select: { name: true, phone: true } },
-            outstanding: { select: { amount: true, invoiceNo: true, dueDate: true } },
-          },
-        })
-      }
-    } else if (callSid) {
-      // Exotel CallSid se lookup — sabse pehle exotelSid match karo
-      call = await prisma.call.findFirst({
-        where: { exotelSid: callSid },
-        include: {
-          merchant: { select: { businessName: true, upiVpa: true } },
-          customer: { select: { name: true, phone: true } },
-          outstanding: { select: { amount: true, invoiceNo: true, dueDate: true } },
-        },
-      })
-      // Race condition guard: agar exotelSid abhi update nahi hua to
-      // latest initiated call lo (last 10 min) — fallback
-      if (!call) {
-        const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000)
-        call = await prisma.call.findFirst({
-          where: { createdAt: { gte: tenMinAgo } },
-          orderBy: { createdAt: 'desc' },
-          include: {
-            merchant: { select: { businessName: true, upiVpa: true } },
-            customer: { select: { name: true, phone: true } },
-            outstanding: { select: { amount: true, invoiceNo: true, dueDate: true } },
-          },
-        })
-      }
-    }
+    const call = await findCall(callId, callSid, phone)
 
     if (!call) {
       return NextResponse.json(
