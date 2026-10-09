@@ -1,6 +1,6 @@
 /**
  * Inngest: Nightly Reminder Engine (M4)
- * Runs at 06:00 IST daily
+ * Runs at 09:30 IST daily (quiet hours 21:00-09:00 ke baad, taaki WhatsApp turant bheja ja sake)
  * Scans all overdue/upcoming outstandings and schedules the next reminder stage
  */
 
@@ -13,7 +13,7 @@ export const nightlyReminderScan = inngest.createFunction(
   {
     id: 'nightly-reminder-scan',
     name: 'Nightly Reminder Scan',
-    triggers: [{ cron: '30 0 * * *' }], // 00:30 UTC = 06:00 IST
+    triggers: [{ cron: '0 4 * * *' }], // 04:00 UTC = 09:30 IST (quiet hours 21:00-09:00 ke baad)
     concurrency: { limit: 1 },
   },
   async ({ step }) => {

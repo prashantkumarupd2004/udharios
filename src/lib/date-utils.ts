@@ -80,8 +80,25 @@ export function isWithinSendingWindow(quietStart: string, quietEnd: string): boo
 }
 
 /**
- * Calculate overdue days (how many days past due date)
+ * Quiet hours khatam hone tak kitne ms wait karna hai.
+ * e.g. quietEnd "09:00" aur abhi 02:30 IST hai → ~6.5h ms.
+ * Agar already window me hai to 0 return karta hai.
  */
+export function msUntilSendingWindow(quietStart: string, quietEnd: string): number {
+  if (isWithinSendingWindow(quietStart, quietEnd)) return 0
+
+  const [endH, endM] = quietEnd.split(':').map(Number)
+  const now = new Date()
+  const istNow = new Date(now.getTime() + IST_OFFSET_MINUTES * 60 * 1000)
+  const currentMinutes = istNow.getUTCHours() * 60 + istNow.getUTCMinutes()
+  const endMinutes = endH * 60 + endM
+
+  // Aaj ke quietEnd tak ka diff; agar quietEnd aaj beet gaya to kal ka
+  let diffMinutes = endMinutes - currentMinutes
+  if (diffMinutes <= 0) diffMinutes += 24 * 60
+  // 1 minute buffer taaki boundary pe race na ho
+  return (diffMinutes + 1) * 60 * 1000
+}
 export function overdueDays(dueDate: Date | string): number {
   const due = typeof dueDate === 'string' ? parseISO(dueDate) : dueDate
   const today = startOfDay(nowIST())

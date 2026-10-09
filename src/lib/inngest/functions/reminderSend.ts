@@ -19,7 +19,7 @@ import { decryptCredentials } from '@/lib/payments/crypto'
 import type { GatewayId } from '@/lib/payments/types'
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
 import { logger } from '@/lib/logger'
-import { isWithinSendingWindow, overdueDays, formatINR, formatIndianDate } from '@/lib/date-utils'
+import { isWithinSendingWindow, overdueDays, formatINR, formatIndianDate, msUntilSendingWindow } from '@/lib/date-utils'
 
 export const sendStagedReminder = inngest.createFunction(
   {
@@ -61,20 +61,46 @@ export const sendStagedReminder = inngest.createFunction(
     }
 
     // Guard: Check sending window (quiet hours)
-    const withinWindow = isWithinSendingWindow(
+    // Agar quiet hours me hai to window khulne tak sleep karo, phir dobara check karo.
+    // Pehle ye 1h sleep karke "skipped" return karta tha — reminder kabhi nahi bheja jata tha!
+    let withinWindow = isWithinSendingWindow(
       outstanding.merchant.quietStart,
       outstanding.merchant.quietEnd
     )
 
     if (!withinWindow) {
-      // Sleep until 09:01 IST
-      await step.sleep('wait-for-sending-window', '1h')
-      return { skipped: true, reason: 'outside sending window — retried' }
+      const waitMs = msUntilSendingWindow(
+        outstanding.merchant.quietStart,
+        outstanding.merchant.quietEnd
+      )
+      logger.info('Outside sending window — sleeping until window opens', {
+        outstandingId,
+        waitMinutes: Math.round(waitMs / 60000),
+      })
+      await step.sleep('wait-for-sending-window', `${Math.ceil(waitMs / 60000)}m`)
+      withinWindow = isWithinSendingWindow(
+        outstanding.merchant.quietStart,
+        outstanding.merchant.quietEnd
+      )
+    }
+
+    if (!withinWindow) {
+      return { skipped: true, reason: 'still outside sending window after wait' }
     }
 
     // Guard: Kill switch
     if (outstanding.merchant.isKillSwitched) {
       return { skipped: true, reason: 'merchant kill-switched' }
+    }
+
+    // Guard: Valid phone (tally-xxx ya invalid format wale skip)
+    const digitsOnly = outstanding.customer.phone.replace(/\D/g, '')
+    if (!/^91[6-9]\d{9}$/.test(digitsOnly)) {
+      logger.warn('Invalid customer phone — skipping reminder', {
+        outstandingId,
+        phone: outstanding.customer.phone.slice(0, 6) + '****',
+      })
+      return { skipped: true, reason: 'invalid phone number' }
     }
 
     // Get the stage definition
@@ -265,8 +291,11 @@ export const sendStagedReminder = inngest.createFunction(
       }
 
       const result = await step.run('send-whatsapp', async () => {
+        // Providers (AiSensy/Meta/Gupshup) ko digits-only number chahiye: 919876543210
+        // DB me +919876543210 stored hai — plus/symbols hatao
+        const normalizedTo = phone.replace(/\D/g, '')
         return wa.sendTemplate({
-          to: phone,
+          to: normalizedTo,
           templateName: resolvedTemplateName,
           components,
         })
@@ -285,12 +314,14 @@ export const sendStagedReminder = inngest.createFunction(
       })
     } else if (stage.channel === 'escalate') {
       // Final escalation — notify merchant
+      // NOTE: event naam 'outstandings/escalate' hona chahiye (escalate.ts isi ko sunta hai)
       await step.sendEvent('trigger-escalation', {
-        name: 'escalations/trigger',
+        name: 'outstandings/escalate',
         data: {
           outstandingId,
           merchantId,
           customerId,
+          daysOverdue,
           reason: `All ${stageIndex} reminder stages completed with no payment`,
         },
       })

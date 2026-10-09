@@ -8,6 +8,7 @@ import { nightlyReminderScan } from '@/lib/inngest/functions/reminderEngine'
 import { sendStagedReminder } from '@/lib/inngest/functions/reminderSend'
 import { promiseFollowUp } from '@/lib/inngest/functions/promiseFollowUp'
 import { escalateToMerchant } from '@/lib/inngest/functions/escalate'
+import { triggerVoiceCall } from '@/lib/inngest/functions/voiceCall'
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -16,5 +17,6 @@ export const { GET, POST, PUT } = serve({
     sendStagedReminder,
     promiseFollowUp,
     escalateToMerchant,
+    triggerVoiceCall,
   ],
 })

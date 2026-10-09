@@ -63,12 +63,13 @@ export type UdhariEvents = {
     }
   }
 
-  // Escalate to merchant
-  'escalations/trigger': {
+  // Escalate to merchant (escalate.ts listens for 'outstandings/escalate')
+  'outstandings/escalate': {
     data: {
       outstandingId: string
       merchantId: string
       customerId: string
+      daysOverdue: number
       reason: string
     }
   }

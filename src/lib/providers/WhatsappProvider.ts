@@ -51,6 +51,8 @@ class AiSensyProvider implements IWhatsAppProvider {
 
   async sendTemplate(msg: WhatsAppMessage): Promise<WhatsAppSendResult> {
     // AiSensy uses a campaign-based API
+    // NOTE: URL button ka dynamic part (payment link) buttons[].parameters me bhejna zaroori hai,
+    // warna button bina link ke jayega!
     const body = {
       apiKey: this.apiKey,
       campaignName: msg.templateName,
@@ -66,6 +68,7 @@ class AiSensyProvider implements IWhatsAppProvider {
         .map(c => ({
           type: c.sub_type,
           index: c.index ?? 0,
+          parameters: (c.parameters ?? []).map(p => p.text ?? ''),
         })) ?? [],
     }
 

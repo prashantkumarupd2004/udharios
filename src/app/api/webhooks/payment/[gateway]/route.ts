@@ -113,6 +113,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
   }
 
+  // Production me bina signature ke webhook accept mat karo —
+  // warna koi bhi fake POST se outstanding "paid" mark kar sakta hai!
+  if (!sigHeader && process.env.NODE_ENV === 'production') {
+    logger.warn('Webhook without signature rejected (production)', { gateway: gatewayId })
+    return NextResponse.json({ error: 'Missing signature' }, { status: 401 })
+  }
+  if (!sigHeader) {
+    logger.warn('Webhook without signature (non-production, allowed)', { gateway: gatewayId })
+  }
+
   // Payment received → outstanding paid mark karo
   if (event.type === 'link.paid' || event.type === 'payment.captured') {
     await handlePaymentSuccess(merchantId, event, gatewayId)
