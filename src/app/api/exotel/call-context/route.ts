@@ -41,21 +41,28 @@ export async function GET(req: NextRequest) {
     let call = null
 
     if (callId) {
-      // UUID format validate karo — invalid format pe 404
-      if (!UUID_REGEX.test(callId)) {
-        return NextResponse.json(
-          { ok: false, error: 'call not found' },
-          { status: 404 }
-        )
+      if (UUID_REGEX.test(callId)) {
+        // Hamara internal UUID — direct lookup
+        call = await prisma.call.findUnique({
+          where: { id: callId },
+          include: {
+            merchant: { select: { businessName: true, upiVpa: true } },
+            customer: { select: { name: true, phone: true } },
+            outstanding: { select: { amount: true, invoiceNo: true, dueDate: true } },
+          },
+        })
+      } else {
+        // UUID nahi hai → Exotel ka CallSid hai (dashboard Dynamic Variable {{CallSid}}
+        // ko callId param me bhejta hai). exotelSid se lookup karo.
+        call = await prisma.call.findFirst({
+          where: { exotelSid: callId },
+          include: {
+            merchant: { select: { businessName: true, upiVpa: true } },
+            customer: { select: { name: true, phone: true } },
+            outstanding: { select: { amount: true, invoiceNo: true, dueDate: true } },
+          },
+        })
       }
-      call = await prisma.call.findUnique({
-        where: { id: callId },
-        include: {
-          merchant: { select: { businessName: true, upiVpa: true } },
-          customer: { select: { name: true, phone: true } },
-          outstanding: { select: { amount: true, invoiceNo: true, dueDate: true } },
-        },
-      })
     } else if (callSid) {
       // Exotel CallSid se lookup — sabse pehle exotelSid match karo
       call = await prisma.call.findFirst({
