@@ -10,6 +10,9 @@ const EXOTEL_API_KEY = process.env.EXOTEL_API_KEY!
 const EXOTEL_API_TOKEN = process.env.EXOTEL_API_TOKEN!
 const EXOTEL_VIRTUAL_NUMBER = process.env.EXOTEL_VIRTUAL_NUMBER!
 const EXOTEL_APP_ID = process.env.EXOTEL_APP_ID!
+// New TTS flow (Connect to Flow + dynamic TTS) — Exotel's recommended approach.
+// When set, placeCall uses this flow instead of the voicebot flow.
+const EXOTEL_TTS_APP_ID = process.env.EXOTEL_TTS_APP_ID || ''
 const EXOTEL_SUBDOMAIN = process.env.EXOTEL_SUBDOMAIN ?? 'api.exotel.com'
 const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://udharios.vercel.app').replace(/\/+$/, '')
 
@@ -28,6 +31,7 @@ export interface PlaceCallInput {
   record?: boolean          // Record the call
   customField?: string      // Extra metadata -> passed into the flow via Passthru applet
   voiceUrl?: string         // Dynamic voice URL — hamara /api/voice/connect (merchant-specific script)
+  useTtsFlow?: boolean      // Use the new TTS flow (EXOTEL_TTS_APP_ID) instead of voicebot flow
 }
 
 export interface ExotelCallResponse {
@@ -52,14 +56,20 @@ export async function placeCall(input: PlaceCallInput): Promise<ExotelCallRespon
   // Normalize phone number to 0XXXXXXXXXX format (Exotel format for India)
   const toNormalized = normalizePhoneForExotel(input.to)
 
+  // Flow URL: new TTS flow (recommended) or legacy voicebot flow.
+  // TTS flow uses dynamic TTS via /api/exotel/flow-script — no tool/variable issues.
+  const flowAppId = (input.useTtsFlow && EXOTEL_TTS_APP_ID)
+    ? EXOTEL_TTS_APP_ID
+    : EXOTEL_APP_ID
+
   const params = new URLSearchParams({
     From: toNormalized,
     To: EXOTEL_VIRTUAL_NUMBER,
     CallerId: EXOTEL_VIRTUAL_NUMBER,
     // Dynamic voice URL: hamara /api/voice/connect har merchant ke hisaab se
-    // personalized Hindi script bolta hai. Agar voiceUrl na diya ho to purana
-    // Exotel dashboard flow use hoga (static agent).
-    Url: input.voiceUrl ?? `https://my.exotel.com/${EXOTEL_SID}/exoml/start_voice/${EXOTEL_APP_ID}`,
+    // personalized Hindi script bolta hai. Agar voiceUrl na diya ho to Exotel
+    // dashboard flow use hoga (TTS flow ya voicebot flow).
+    Url: input.voiceUrl ?? `https://my.exotel.com/${EXOTEL_SID}/exoml/start_voice/${flowAppId}`,
     StatusCallback: input.callbackUrl,
     TimeLimit: String(input.timeLimit ?? 300),
     TimeOut: String(input.timeOut ?? 60),

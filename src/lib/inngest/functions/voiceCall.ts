@@ -116,6 +116,9 @@ export const triggerVoiceCall = inngest.createFunction(
         to: outstanding.customer.phone,
         callbackUrl: `${baseUrl}/api/webhooks/exotel?callId=${callRecord.id}`,
         record: true,
+        // New TTS flow: Exotel's recommended approach (dynamic TTS via flow-script).
+        // Personalized name+amount spoken reliably — no voicebot tool issues.
+        useTtsFlow: true,
         customField: JSON.stringify({
           callId: callRecord.id,
           outstandingId,
