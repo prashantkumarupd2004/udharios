@@ -76,6 +76,8 @@ export async function POST(request: NextRequest) {
         to: outstanding.customer.phone,
         callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/exotel?callId=${callRecord.id}`,
         record: true,
+        // TTS flow: personalized name+amount via dynamic TTS (reliable)
+        useTtsFlow: true,
         customField: JSON.stringify({
           callId: callRecord.id,
           outstandingId,
