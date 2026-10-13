@@ -17,6 +17,17 @@ async function getMerchantId(request: NextRequest): Promise<string | null> {
 return session.merchantId ?? null
 }
 
+/**
+ * Voice-bot machine auth: the AI caller has no merchant session cookie,
+ * so it sends a shared secret as the x-api-key header. The merchant is
+ * then taken from the request body and the outstandingId scoping check
+ * below guarantees the bot can only write that merchant's own data.
+ */
+function isVoiceBotRequest(request: NextRequest): boolean {
+  const botKey = request.headers.get('x-api-key')
+  return !!botKey && !!process.env.VOICE_BOT_API_KEY && botKey === process.env.VOICE_BOT_API_KEY
+}
+
 export async function GET(request: NextRequest) {
   try {
     const merchantId = await getMerchantId(request)
@@ -45,10 +56,16 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const merchantId = await getMerchantId(request)
+    const body = await request.json()
+
+    // Voice-bot calls authenticate with the shared API key and carry
+    // merchantId in the body; dashboard calls use the session cookie.
+    const botCall = isVoiceBotRequest(request)
+    const merchantId = botCall
+      ? (typeof body.merchantId === 'string' ? body.merchantId : null)
+      : await getMerchantId(request)
     if (!merchantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const body = await request.json()
     const data = createPromiseSchema.parse(body)
 
     const outstanding = await prisma.outstanding.findFirst({
@@ -89,7 +106,7 @@ export async function POST(request: NextRequest) {
 
     await appendAuditLog({
       merchantId,
-      actor: 'merchant',
+      actor: botCall ? 'voice-bot' : 'merchant',
       action: AUDIT_ACTIONS.PROMISE_CREATED,
       entity: 'outstanding',
       entityId: data.outstandingId,
