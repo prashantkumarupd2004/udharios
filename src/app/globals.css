@@ -114,21 +114,21 @@
    Utility classes — LegAn style
    ───────────────────────────────────────────────────────────── */
 @layer utilities {
-  /* White card with light border — LegAn flat card style */
+  /* Premium white card — soft border, subtle shadow */
   .glass-card {
     background: #FFFFFF;
-    border: 2px solid #E5E7EB;
-    border-radius: 1rem;
-    box-shadow: none;
+    border: 1px solid #E8EEF3;
+    border-radius: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0, 32, 61, 0.04), 0 4px 16px -4px rgba(0, 32, 61, 0.06);
   }
 
   .card-hover {
     transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
   }
   .card-hover:hover {
-    transform: translateY(-2px);
-    border-color: #86EFAC;
-    box-shadow: 0 10px 30px -14px rgba(0, 179, 63, 0.18);
+    transform: translateY(-3px);
+    border-color: #BBF7D0;
+    box-shadow: 0 4px 12px rgba(0, 32, 61, 0.06), 0 16px 40px -12px rgba(0, 179, 63, 0.18);
   }
 
   /* Green gradient text */
