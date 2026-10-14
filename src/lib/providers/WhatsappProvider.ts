@@ -53,10 +53,12 @@ class AiSensyProvider implements IWhatsAppProvider {
     // AiSensy uses a campaign-based API
     // NOTE: URL button ka dynamic part (payment link) buttons[].parameters me bhejna zaroori hai,
     // warna button bina link ke jayega!
+    // AiSensy expects destination without + (91XXXXXXXXXX format)
+    const destination = msg.to.replace(/^\+/, '')
     const body = {
       apiKey: this.apiKey,
       campaignName: msg.templateName,
-      destination: msg.to,
+      destination,
       userName: 'Udhari OS',
       templateParams: msg.components
         ?.find(c => c.type === 'body')
