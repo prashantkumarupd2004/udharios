@@ -444,76 +444,103 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-green-700 flex items-center gap-1.5">
-            <CalendarDays className="w-3.5 h-3.5" /> {today}
-          </p>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">
-            {greeting}{businessName ? `, ${businessName}` : ''}! 🙏
-          </h1>
-          <p className="text-slate-500 text-sm mt-0.5">
-            {lang === 'hi' ? 'Aaj ki vasool ki sthiti ek nazar me' : 'Your collections at a glance today'}
-          </p>
-        </div>
-        <Link href="/dashboard/outstandings" className="btn-primary px-4 py-2.5 text-sm flex-shrink-0" id="add-outstanding-btn">
-          <Plus className="w-4 h-4" strokeWidth={2.5} />
-          {lang === 'hi' ? 'Naya Udhaar' : 'Add Outstanding'}
-        </Link>
-      </div>
+      {/* Hero — dark forest green, LegAn style */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0B3B2C] via-[#0E4A37] to-[#0B3B2C] p-6 sm:p-8 text-white">
+        {/* Decorative pattern */}
+        <div className="absolute inset-0 texture-dots-light opacity-60 pointer-events-none" />
+        <div className="absolute -top-20 -right-20 w-64 h-64 bg-[#00B33F]/20 rounded-full blur-[80px] pointer-events-none" />
+        <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-[#1FB2A6]/15 rounded-full blur-[60px] pointer-events-none" />
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {loading ? (
-          Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-32" />)
-        ) : (
-          <>
-            <StatCard
-              Icon={Wallet} tone="orange"
-              label={t.dashboard.totalOutstanding}
-              value={summary ? formatINR(summary.totalOutstanding.amount) : '₹0'}
-              sub={summary ? `${summary.totalOutstanding.count} entries` : undefined}
-            />
-            <StatCard
-              Icon={AlertTriangle} tone="red"
-              label={t.dashboard.totalOverdue}
-              value={summary ? formatINR(summary.totalOverdue.amount) : '₹0'}
-              sub={summary ? `${summary.overdueCount} overdue` : undefined}
-            />
-            <StatCard
-              Icon={BadgeCheck} tone="green"
-              label={t.dashboard.collectedThisWeek}
-              value={summary ? formatINR(summary.collectedThisWeek) : '₹0'}
-              sub={summary ? `${formatINR(summary.collectedThisMonth)} ${lang === 'hi' ? 'is mahine' : 'this month'}` : undefined}
-            />
-            <StatCard
-              Icon={TrendingUp} tone="amber"
-              label={t.dashboard.collectionRate}
-              value={summary ? `${summary.collectionRate}%` : '0%'}
-              sub={lang === 'hi' ? 'vasooli dar' : 'recovery rate'}
-            />
-          </>
-        )}
-      </div>
+        <div className="relative">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#BBF7D0] flex items-center gap-1.5">
+                <CalendarDays className="w-3.5 h-3.5" /> {today}
+              </p>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-white mt-1">
+                {greeting}{businessName ? `, ${businessName}` : ''}! 🙏
+              </h1>
+              <p className="text-white/70 text-sm mt-0.5">
+                {lang === 'hi' ? 'Aaj ki vasool ki sthiti ek nazar me' : 'Your collections at a glance today'}
+              </p>
+            </div>
+            <Link href="/dashboard/outstandings" className="flex-shrink-0 inline-flex items-center gap-2 bg-[#00B33F] hover:brightness-110 text-white font-semibold rounded-lg px-4 py-2.5 text-sm shadow-lg shadow-green-900/30 transition-all" id="add-outstanding-btn">
+              <Plus className="w-4 h-4" strokeWidth={2.5} />
+              {lang === 'hi' ? 'Naya Udhaar' : 'Add Outstanding'}
+            </Link>
+          </div>
 
-      {/* Quick actions */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {quickActions.map((item) => (
-          <Link key={item.href} href={item.href} className="glass-card card-hover p-4 flex items-center gap-3 group">
-            <span className={`w-10 h-10 rounded-xl ${item.tint} flex items-center justify-center flex-shrink-0`}>
-              <item.Icon className="w-5 h-5" />
-            </span>
-            <span className="text-sm font-semibold text-slate-700 group-hover:text-slate-900 transition-colors flex-1">
-              {item.label}
-            </span>
-            {item.badge != null && item.badge > 0 && (
-              <span className="bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5 min-w-[22px] text-center">
-                {item.badge}
-              </span>
+          {/* Hero stats — glassmorphism */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
+            {loading ? (
+              Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 rounded-2xl bg-white/10 animate-pulse" />)
+            ) : (
+              <>
+                <div className="rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Wallet className="w-4 h-4 text-[#BBF7D0]" />
+                    <p className="text-[11px] font-semibold text-white/70 uppercase tracking-wide">{t.dashboard.totalOutstanding}</p>
+                  </div>
+                  <p className="text-xl sm:text-2xl font-bold amount-display text-white">{summary ? formatINR(summary.totalOutstanding.amount) : '₹0'}</p>
+                  <p className="text-[11px] text-white/50 mt-0.5">{summary ? `${summary.totalOutstanding.count} entries` : ''}</p>
+                </div>
+                <div className="rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <AlertTriangle className="w-4 h-4 text-red-300" />
+                    <p className="text-[11px] font-semibold text-white/70 uppercase tracking-wide">{t.dashboard.totalOverdue}</p>
+                  </div>
+                  <p className="text-xl sm:text-2xl font-bold amount-display text-white">{summary ? formatINR(summary.totalOverdue.amount) : '₹0'}</p>
+                  <p className="text-[11px] text-white/50 mt-0.5">{summary ? `${summary.overdueCount} overdue` : ''}</p>
+                </div>
+                <div className="rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <BadgeCheck className="w-4 h-4 text-[#BBF7D0]" />
+                    <p className="text-[11px] font-semibold text-white/70 uppercase tracking-wide">{t.dashboard.collectedThisWeek}</p>
+                  </div>
+                  <p className="text-xl sm:text-2xl font-bold amount-display text-white">{summary ? formatINR(summary.collectedThisWeek) : '₹0'}</p>
+                  <p className="text-[11px] text-white/50 mt-0.5">{summary ? `${formatINR(summary.collectedThisMonth)} ${lang === 'hi' ? 'is mahine' : 'this month'}` : ''}</p>
+                </div>
+                <div className="rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <TrendingUp className="w-4 h-4 text-[#BBF7D0]" />
+                    <p className="text-[11px] font-semibold text-white/70 uppercase tracking-wide">{t.dashboard.collectionRate}</p>
+                  </div>
+                  <p className="text-xl sm:text-2xl font-bold amount-display text-white">{summary ? `${summary.collectionRate}%` : '0%'}</p>
+                  <p className="text-[11px] text-white/50 mt-0.5">{lang === 'hi' ? 'vasooli dar' : 'recovery rate'}</p>
+                </div>
+              </>
             )}
-          </Link>
-        ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Quick actions — vibrant cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {quickActions.map((item, idx) => {
+          const gradients = [
+            'from-red-500 to-orange-500',
+            'from-amber-500 to-yellow-500',
+            'from-[#00B33F] to-[#1FB2A6]',
+            'from-blue-500 to-indigo-500',
+          ]
+          return (
+            <Link key={item.href} href={item.href} className="relative overflow-hidden rounded-2xl p-4 flex items-center gap-3 group text-white shadow-lg transition-transform hover:-translate-y-0.5">
+              <div className={`absolute inset-0 bg-gradient-to-br ${gradients[idx % gradients.length]} opacity-90`} />
+              <div className="absolute inset-0 texture-dots-light opacity-40" />
+              <span className="relative w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+                <item.Icon className="w-5 h-5 text-white" />
+              </span>
+              <span className="relative text-sm font-bold text-white flex-1 leading-snug">
+                {item.label}
+              </span>
+              {item.badge != null && item.badge > 0 && (
+                <span className="relative bg-white text-slate-900 text-xs font-bold rounded-full px-2 py-0.5 min-w-[22px] text-center">
+                  {item.badge}
+                </span>
+              )}
+            </Link>
+          )
+        })}
       </div>
 
       {/* Trend + AI Insights */}
