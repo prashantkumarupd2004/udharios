@@ -72,28 +72,28 @@ export default function TermsPage() {
       ]
 
   return (
-    <div className="min-h-screen bg-[#FDF9F1]">
+    <div className="min-h-screen bg-[#FFFFFF]">
       <SiteNav />
       <main className="pt-28 sm:pt-32 pb-16 px-4 sm:px-6">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-10">
-            <FileText className="w-12 h-12 text-orange-600 mx-auto mb-4" />
-            <h1 className="text-4xl font-extrabold text-stone-900 tracking-tight">
+            <FileText className="w-12 h-12 text-green-600 mx-auto mb-4" />
+            <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">
               {hi ? 'Terms of Service' : 'Terms of Service'}
             </h1>
-            <p className="text-stone-500 mt-3">
+            <p className="text-slate-500 mt-3">
               {hi ? 'Aakhri update: 6 October 2026' : 'Last updated: 6 October 2026'}
             </p>
           </div>
-          <div className="bg-white rounded-3xl border border-orange-100 p-8 sm:p-10 space-y-8 shadow-sm">
+          <div className="bg-white rounded-3xl border border-green-100 p-8 sm:p-10 space-y-8 shadow-sm">
             {sections.map((s) => (
               <section key={s.t}>
-                <h2 className="text-lg font-bold text-stone-900 mb-2">{s.t}</h2>
-                <p className="text-stone-600 leading-relaxed text-[15px]">{s.b}</p>
+                <h2 className="text-lg font-bold text-slate-900 mb-2">{s.t}</h2>
+                <p className="text-slate-600 leading-relaxed text-[15px]">{s.b}</p>
               </section>
             ))}
-            <section className="pt-4 border-t border-stone-100">
-              <p className="text-sm text-stone-500">
+            <section className="pt-4 border-t border-slate-100">
+              <p className="text-sm text-slate-500">
                 {hi ? 'Inhe sweekar karke tum Ugaahi use karne ke liye sahmat ho.' : 'By using Ugaahi you agree to these terms.'}
               </p>
             </section>

@@ -24,7 +24,7 @@ const SERVICES = [
   {
     id: 'voice-calls',
     icon: Phone,
-    tint: 'bg-orange-50 text-orange-600 border-orange-200',
+    tint: 'bg-green-50 text-green-600 border-green-200',
     titleHi: 'AI Voice Call Reminders',
     titleEn: 'AI Voice Call Reminders',
     descHi:
@@ -137,30 +137,30 @@ export default function ServicesPage() {
   const hi = lang === 'hi'
 
   return (
-    <div className="min-h-screen bg-[#FDF9F1]">
+    <div className="min-h-screen bg-[#FFFFFF]">
       <SiteNav />
 
       {/* Hero */}
       <section className="pt-28 sm:pt-32 pb-14 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto text-center">
-          <span className="inline-block text-xs font-bold tracking-[0.2em] text-orange-700 bg-orange-100 border border-orange-200 rounded-full px-4 py-1.5 mb-5">
+          <span className="inline-block text-xs font-bold tracking-[0.2em] text-green-700 bg-green-100 border border-green-200 rounded-full px-4 py-1.5 mb-5">
             {hi ? 'HAMARI SERVICES' : 'OUR SERVICES'}
           </span>
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-stone-900 leading-tight">
+          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight">
             {hi ? (
-              <>Smart Payment Recovery se <span className="text-orange-600">Cash Flow</span> badhao</>
+              <>Smart Payment Recovery se <span className="text-green-600">Cash Flow</span> badhao</>
             ) : (
-              <>Boost Cash Flow with <span className="text-orange-600">Smart Payment Recovery</span></>
+              <>Boost Cash Flow with <span className="text-green-600">Smart Payment Recovery</span></>
             )}
           </h1>
-          <p className="mt-5 text-lg text-stone-600 leading-relaxed max-w-2xl mx-auto">
+          <p className="mt-5 text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto">
             {hi
               ? 'Udhaari vasuli ka poora system hum sambhalte hain — tum apne business ki growth pe dhyaan do. AI calls, WhatsApp reminders aur UPI links, sab automatic.'
               : 'We handle your entire collection system — you focus on growing your business. AI calls, WhatsApp reminders and UPI links, all automatic.'}
           </p>
           <Link
             href="/request-access"
-            className="inline-flex items-center gap-2 mt-8 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-bold px-8 py-3.5 rounded-2xl shadow-lg shadow-orange-500/30 hover:shadow-xl hover:scale-[1.02] transition-all"
+            className="inline-flex items-center gap-2 mt-8 bg-gradient-to-r from-green-500 to-amber-600 text-white font-bold px-8 py-3.5 rounded-2xl shadow-lg shadow-green-500/30 hover:shadow-xl hover:scale-[1.02] transition-all"
           >
             {hi ? 'Start Now' : 'Start Now'}
             <ArrowRight className="w-5 h-5" />
@@ -176,20 +176,20 @@ export default function ServicesPage() {
               <article
                 key={s.id}
                 id={s.id}
-                className="bg-white rounded-3xl border border-orange-100 shadow-sm hover:shadow-xl hover:shadow-orange-900/5 hover:-translate-y-1 transition-all p-7 scroll-mt-28"
+                className="bg-white rounded-3xl border border-green-100 shadow-sm hover:shadow-xl hover:shadow-green-900/5 hover:-translate-y-1 transition-all p-7 scroll-mt-28"
               >
                 <div className={`p-3.5 rounded-2xl border ${s.tint} w-fit mb-5`}>
                   <s.icon className="w-7 h-7" />
                 </div>
-                <h2 className="text-xl font-extrabold text-stone-900 mb-2.5">
+                <h2 className="text-xl font-extrabold text-slate-900 mb-2.5">
                   {hi ? s.titleHi : s.titleEn}
                 </h2>
-                <p className="text-stone-600 text-[15px] leading-relaxed mb-5">
+                <p className="text-slate-600 text-[15px] leading-relaxed mb-5">
                   {hi ? s.descHi : s.descEn}
                 </p>
                 <ul className="space-y-2">
                   {(hi ? s.pointsHi : s.pointsEn).map((p) => (
-                    <li key={p} className="flex items-start gap-2 text-sm text-stone-700">
+                    <li key={p} className="flex items-start gap-2 text-sm text-slate-700">
                       <Check className="w-4 h-4 mt-0.5 text-green-600 flex-shrink-0" strokeWidth={3} />
                       {p}
                     </li>
@@ -202,22 +202,22 @@ export default function ServicesPage() {
       </section>
 
       {/* Challenges */}
-      <section className="py-16 px-4 sm:px-6 bg-white border-y border-orange-100">
+      <section className="py-16 px-4 sm:px-6 bg-white border-y border-green-100">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-stone-900 text-center tracking-tight">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 text-center tracking-tight">
             {hi ? 'Bina System ke Mushkilein' : 'Challenges Without a Collection System'}
           </h2>
-          <p className="text-center text-stone-500 mt-3 max-w-2xl mx-auto">
+          <p className="text-center text-slate-500 mt-3 max-w-2xl mx-auto">
             {hi
               ? 'Udhaari vasuli ka system na ho to ye problems aati hain —'
               : 'Without a collection system, businesses face these problems —'}
           </p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-10">
             {CHALLENGES.map((c) => (
-              <div key={c.titleEn} className="bg-[#FDF9F1] rounded-2xl border border-stone-200 p-6">
+              <div key={c.titleEn} className="bg-[#FFFFFF] rounded-2xl border border-slate-200 p-6">
                 <c.icon className="w-8 h-8 text-red-500 mb-4" />
-                <h3 className="font-bold text-stone-900 mb-2">{hi ? c.titleHi : c.titleEn}</h3>
-                <p className="text-sm text-stone-600 leading-relaxed">{hi ? c.descHi : c.descEn}</p>
+                <h3 className="font-bold text-slate-900 mb-2">{hi ? c.titleHi : c.titleEn}</h3>
+                <p className="text-sm text-slate-600 leading-relaxed">{hi ? c.descHi : c.descEn}</p>
               </div>
             ))}
           </div>
@@ -227,7 +227,7 @@ export default function ServicesPage() {
       {/* Why us */}
       <section className="py-16 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-stone-900 text-center tracking-tight">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 text-center tracking-tight">
             {hi ? 'Ugaahi hi kyun?' : 'Why Ugaahi?'}
           </h2>
           <div className="grid sm:grid-cols-3 gap-5 mt-10">
@@ -248,17 +248,17 @@ export default function ServicesPage() {
                 d: hi ? 'Hindi voice, UPI payments, Tally sync — Bharat ke hisaab se bana hai.' : 'Hindi voice, UPI payments, Tally sync — built for Bharat.',
               },
             ].map((f) => (
-              <div key={f.t} className="text-center bg-white rounded-2xl border border-orange-100 p-7">
-                <f.icon className="w-10 h-10 text-orange-600 mx-auto mb-4" />
-                <h3 className="font-bold text-stone-900 mb-2">{f.t}</h3>
-                <p className="text-sm text-stone-600 leading-relaxed">{f.d}</p>
+              <div key={f.t} className="text-center bg-white rounded-2xl border border-green-100 p-7">
+                <f.icon className="w-10 h-10 text-green-600 mx-auto mb-4" />
+                <h3 className="font-bold text-slate-900 mb-2">{f.t}</h3>
+                <p className="text-sm text-slate-600 leading-relaxed">{f.d}</p>
               </div>
             ))}
           </div>
           <div className="text-center mt-12">
             <Link
               href="/request-access"
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-bold px-8 py-3.5 rounded-2xl shadow-lg shadow-orange-500/30 hover:shadow-xl hover:scale-[1.02] transition-all"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-green-500 to-amber-600 text-white font-bold px-8 py-3.5 rounded-2xl shadow-lg shadow-green-500/30 hover:shadow-xl hover:scale-[1.02] transition-all"
             >
               {hi ? 'Free me Shuru Karo' : 'Start Free'}
               <ArrowRight className="w-5 h-5" />

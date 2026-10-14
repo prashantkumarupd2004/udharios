@@ -111,21 +111,21 @@ function RequestAccessForm() {
   }
 
   const inputCls =
-    'w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-[15px] text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/15 transition-all'
+    'w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-[15px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/15 transition-all'
 
   if (status === 'done') {
     return (
-      <div className="min-h-screen bg-[#FDF9F1]">
+      <div className="min-h-screen bg-[#FFFFFF]">
         <SiteNav />
         <main className="pt-32 sm:pt-40 pb-20 px-4 sm:px-6">
           <div className="max-w-lg mx-auto text-center">
             <div className="w-20 h-20 mx-auto rounded-full bg-green-100 border border-green-200 flex items-center justify-center mb-6">
               <Check className="w-10 h-10 text-green-600" strokeWidth={3} />
             </div>
-            <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-stone-900 tracking-tight mb-4">
+            <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-4">
               {hi ? 'Request mil gayi! 🎉' : 'Request received! 🎉'}
             </h1>
-            <p className="text-stone-600 text-lg leading-relaxed mb-8">
+            <p className="text-slate-600 text-lg leading-relaxed mb-8">
               {hi
                 ? 'Hamari team tumhari application review karegi. Approve hote hi tum login karke Ugaahi use kar paoge — 24-48 ghante me update milega.'
                 : 'Our team will review your application. Once approved, you can log in and start using Ugaahi — expect an update within 24-48 hours.'}
@@ -141,29 +141,29 @@ function RequestAccessForm() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FDF9F1]">
+    <div className="min-h-screen bg-[#FFFFFF]">
       <SiteNav />
       <main className="pt-28 sm:pt-36 pb-20 px-4 sm:px-6 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-orange-400/15 rounded-full blur-[110px]" />
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-green-400/15 rounded-full blur-[110px]" />
           <div className="absolute inset-0 pattern-jaali opacity-60" />
         </div>
         <div className="relative max-w-2xl mx-auto">
           <div className="text-center mb-10">
-            <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/25 mb-5">
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-green-500/25 mb-5">
               <ClipboardList className="w-7 h-7 text-white" />
             </div>
-            <h1 className="font-display text-3xl sm:text-5xl font-extrabold text-stone-900 tracking-tight mb-4">
+            <h1 className="font-display text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight mb-4">
               {hi ? 'Access ke liye apply karo' : 'Request access'}
             </h1>
-            <p className="text-stone-600 text-lg max-w-xl mx-auto">
+            <p className="text-slate-600 text-lg max-w-xl mx-auto">
               {hi
                 ? 'Neeche form bharo — hamari team review karke tumhe access degi. Sirf approved merchants login kar sakte hain.'
                 : 'Fill the form below — our team will review and grant you access. Only approved merchants can log in.'}
             </p>
           </div>
 
-          <form onSubmit={submit} className="bg-white rounded-3xl border border-orange-100 shadow-xl shadow-orange-900/5 p-6 sm:p-10 space-y-5">
+          <form onSubmit={submit} className="bg-white rounded-3xl border border-green-100 shadow-xl shadow-green-900/5 p-6 sm:p-10 space-y-5">
             <div className="grid sm:grid-cols-2 gap-5">
               <div>
                 <label className="field-label">{hi ? 'Tumhara naam *' : 'Your name *'}</label>
@@ -181,11 +181,11 @@ function RequestAccessForm() {
               <div>
                 <label className="field-label">{hi ? 'Mobile number *' : 'Mobile number *'}</label>
                 <div className="relative">
-                  <Phone className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" />
+                  <Phone className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input required value={form.phone} onChange={set('phone')} inputMode="numeric"
                     placeholder="98765 43210" className={`${inputCls} pl-11`} />
                 </div>
-                <p className="text-xs text-stone-400 mt-1.5">
+                <p className="text-xs text-slate-400 mt-1.5">
                   {hi ? 'Isi number se OTP login hoga (approval ke baad)' : 'OTP login will use this number (after approval)'}
                 </p>
               </div>
@@ -244,9 +244,9 @@ function RequestAccessForm() {
               )}
             </button>
 
-            <p className="text-center text-sm text-stone-500">
+            <p className="text-center text-sm text-slate-500">
               {hi ? 'Pehle se approved ho?' : 'Already approved?'}{' '}
-              <Link href="/login" className="text-orange-600 font-bold hover:underline">
+              <Link href="/login" className="text-green-600 font-bold hover:underline">
                 {hi ? 'Login karo' : 'Log in'}
               </Link>
             </p>
