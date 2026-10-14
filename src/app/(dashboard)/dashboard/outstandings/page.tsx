@@ -165,12 +165,12 @@ export default function OutstandingsPage() {
   const { lang } = useLanguage()
   const [outstandings, setOutstandings] = useState<Outstanding[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('all')
+  const [filter, setFilter] = useState('active')
   const [showAdd, setShowAdd] = useState(false)
   const [creatingLink, setCreatingLink] = useState<string | null>(null)
 
   const fetch_ = useCallback(async () => {
-    const params = filter !== 'all' ? `?status=${filter}` : ''
+    const params = filter !== 'active' ? `?status=${filter}` : '?status=active'
     const res = await fetch(`/api/outstandings${params}`)
     const data = await res.json()
     setOutstandings(data.outstandings ?? [])
@@ -198,11 +198,12 @@ export default function OutstandingsPage() {
   }
 
   const filters = [
-    { key: 'all', hi: 'Sab', en: 'All' },
+    { key: 'active', hi: 'Active', en: 'Active' },
     { key: 'overdue', hi: 'Overdue', en: 'Overdue' },
     { key: 'upcoming', hi: 'Aane Wala', en: 'Upcoming' },
     { key: 'promised', hi: 'Promise', en: 'Promised' },
     { key: 'paid', hi: 'Paid', en: 'Paid' },
+    { key: 'all', hi: 'Sab', en: 'All' },
   ]
 
   const totalFiltered = outstandings.reduce((s, o) => s + (parseFloat(o.amount) || 0), 0)

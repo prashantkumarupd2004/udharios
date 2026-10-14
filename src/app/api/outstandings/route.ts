@@ -29,7 +29,12 @@ export async function GET(request: NextRequest) {
     const customerId = searchParams.get('customerId')
 
     const where: Record<string, unknown> = { merchantId }
-    if (status) where.status = status
+    // 'active' = sab unpaid (paid aur written_off chhupao) — default ledger view
+    if (status === 'active') {
+      where.status = { notIn: ['paid', 'written_off'] }
+    } else if (status) {
+      where.status = status
+    }
     if (customerId) where.customerId = customerId
 
     const [outstandings, total] = await Promise.all([
