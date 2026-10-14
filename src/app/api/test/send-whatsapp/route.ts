@@ -1,7 +1,7 @@
 /**
  * POST /api/test/send-whatsapp — Test WhatsApp reminder send.
  *
- * Temporary testing endpoint. Sends a T1_polite template to the given number.
+ * Temporary testing endpoint. Sends a t1_polite template to the given number.
  * Protected by CRON_SECRET (same as cron endpoints).
  *
  * Body: { to: "+918200218733", customerName?: string, amount?: string }
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const provider = getWhatsAppProvider()
     const result = await provider.sendTemplate({
       to,
-      templateName: 'T1_polite',
+      templateName: 't1_polite',
       components: buildT1Polite(customerName.split(' ')[0], 'Test Business', amount, dueDate),
     })
 

@@ -221,7 +221,7 @@ export async function processVoiceAgentTurn(
           const wa = getWhatsAppProvider()
           await wa.sendTemplate({
             to: await getCustomerPhone(ctx.customerId),
-            templateName: process.env.WA_TEMPLATE_ID_T2 ?? 'T2_with_link',
+            templateName: process.env.WA_TEMPLATE_ID_T2 ?? 't2_with_link',
             components: buildT2WithLink(
               ctx.customerName,
               ctx.amountINR,

@@ -103,7 +103,7 @@ async function sendPreDueWhatsApp(o: OutstandingRow): Promise<boolean> {
 
     const result = await provider.sendTemplate({
       to: o.customer.phone,
-      templateName: 'T1_polite',
+      templateName: 't1_polite',
       components: buildT1Polite(
         o.customer.name.split(' ')[0],
         o.merchant.businessName,
@@ -119,7 +119,7 @@ async function sendPreDueWhatsApp(o: OutstandingRow): Promise<boolean> {
         customerId: o.customerId,
         stage: 0, // pre-due stage
         channel: 'whatsapp',
-        templateName: 'T1_polite',
+        templateName: 't1_polite',
         status: result.status === 'failed' ? 'failed' : 'sent',
         externalMsgId: result.messageId ?? null,
         failedReason: result.status === 'failed' ? result.error ?? 'unknown' : null,

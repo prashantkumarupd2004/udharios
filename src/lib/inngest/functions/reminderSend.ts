@@ -130,7 +130,7 @@ export const sendStagedReminder = inngest.createFunction(
     let sendStatus: 'sent' | 'failed' = 'sent'
     let failedReason: string | undefined
     // WhatsApp me bheja gaya actual template naam (fallback me T2_upi_bank ho sakta hai)
-    let resolvedTemplateName = stage.templateName ?? 'T1_polite'
+    let resolvedTemplateName = stage.templateName ?? 't1_polite'
 
     if (stage.channel === 'whatsapp') {
       const wa = getWhatsAppProvider()
@@ -144,7 +144,7 @@ export const sendStagedReminder = inngest.createFunction(
       let paymentUrl: string | null = outstanding.paymentLink?.url ?? null
       let fallbackPaymentInfo: string | null = null
 
-      const needsLink = stage.templateName === 'T2_with_link'
+      const needsLink = stage.templateName === 't2_with_link'
 
       if (needsLink && !paymentUrl) {
         // Pehle payment link banane ki koshish karo (merchant ke gateway se)
@@ -230,7 +230,7 @@ export const sendStagedReminder = inngest.createFunction(
       // Bina gateway wale merchant ke liye alag Meta template hai (4 body
       // params, koi button nahi) — wahi naam bhejna zaroori hai.
       switch (stage.templateName) {
-        case 'T1_polite':
+        case 't1_polite':
           components = buildT1Polite(
             outstanding.customer.name,
             outstanding.merchant.businessName,
@@ -238,7 +238,7 @@ export const sendStagedReminder = inngest.createFunction(
             formatIndianDate(outstanding.dueDate)
           )
           break
-        case 'T2_with_link':
+        case 't2_with_link':
           if (paymentUrl) {
             components = buildT2WithLink(
               outstanding.customer.name,
