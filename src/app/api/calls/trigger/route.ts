@@ -10,6 +10,7 @@ import { placeCall, normalizePhoneForExotel } from '@/lib/exotel'
 import { isWithinSendingWindow } from '@/lib/date-utils'
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
 import { logger } from '@/lib/logger'
+import { pregenerateGreetingAudio } from '@/lib/tts-greeting'
 
 async function getMerchantId(request: NextRequest): Promise<string | null> {
   const session = await getSession()
@@ -93,6 +94,15 @@ export async function POST(request: NextRequest) {
       await prisma.call.update({
         where: { id: callRecord.id },
         data: { exotelSid: exotelResponse.Call.Sid },
+      })
+
+      // Pre-generate premium TTS audio NOW (background) so it's ready
+      // when Exotel's flow hits /api/exotel/flow-script seconds later.
+      // Without this, flow-script takes 6-7s to generate → Exotel timeout → no audio.
+      pregenerateGreetingAudio({
+        customerName: outstanding.customer.name,
+        merchantName: outstanding.merchant.businessName,
+        amountINR: outstanding.amount.toString(),
       })
     } catch (callErr) {
       await prisma.call.update({

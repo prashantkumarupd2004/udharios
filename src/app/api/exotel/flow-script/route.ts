@@ -8,17 +8,24 @@
  * natural 'priya' voice, 8kHz telephony) and return the audio file URL.
  * Exotel fetches the audio and plays it — MUCH better than built-in TTS.
  *
+ * SPEED: Audio is pre-generated at call placement time (/api/calls/trigger),
+ * so this endpoint usually returns the cached URL instantly (<500ms).
+ *
  * Fallback: if TTS fails, returns plain text for Exotel's built-in TTS.
  *
  * Docs: https://support.exotel.com/support/solutions/articles/48285-greeting-using-dynamic-text-or-audio-from-url
  */
 
 import { NextRequest } from 'next/server'
-import { createHash } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
-import { synthesizeSpeech } from '@/lib/sarvam'
-import { uploadVoiceAudio } from '@/lib/voice-audio'
+import {
+  buildGreetingScript,
+  greetingFilename,
+  greetingAudioUrl,
+  greetingAudioExists,
+  ensureGreetingAudio,
+} from '@/lib/tts-greeting'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -33,39 +40,6 @@ interface CustomFieldData {
   amountINR?: string
   retryCount?: number
   autoCall?: boolean
-}
-
-/**
- * Format amount for TTS — "4500" -> "4,500 rupees"
- */
-function formatAmountForTTS(amountStr: string): string {
-  const num = parseFloat(amountStr.replace(/[^0-9.]/g, ''))
-  if (isNaN(num)) return `${amountStr} rupees`
-  const formatted = num.toLocaleString('en-IN', { maximumFractionDigits: 2 })
-  return `${formatted} rupees`
-}
-
-/**
- * Build the TTS script from call data
- */
-function buildScript(data: CustomFieldData): string {
-  const customerName = data.customerName || 'ji'
-  const merchantName = data.merchantName || 'Ugaahi'
-  const amount = data.amountINR ? formatAmountForTTS(data.amountINR) : null
-
-  const firstName = customerName.split(' ')[0]
-
-  let script = `Namaste ${firstName} ji! Main ${merchantName} ki taraf se bol rahi hun. `
-
-  if (amount) {
-    script += `Aapka ${amount} ka bhugtan baaki hai. `
-  } else {
-    script += `Aapka kuch bhugtan baaki hai. `
-  }
-
-  script += `Kripya jald se jald settle karein. Dhanyavaad!`
-
-  return script
 }
 
 /**
@@ -107,32 +81,10 @@ async function lookupByCallId(callId: string): Promise<CustomFieldData | null> {
 }
 
 /**
- * Generate premium TTS audio via Sarvam, upload, return public URL.
- * Uses deterministic filename (hash of script) for caching.
- */
-async function generatePremiumAudio(script: string): Promise<string | null> {
-  try {
-    const hash = createHash('md5').update(script).digest('hex').slice(0, 12)
-    const filename = `tts-greeting-${hash}.wav`
-
-    logger.info('Generating premium TTS audio', { hash, scriptLen: script.length })
-
-    // Sarvam Bulbul v3, Hindi female voice 'priya', 8kHz for telephony
-    const { audioBase64 } = await synthesizeSpeech(script, 'priya', 'hi-IN', 1.0)
-    const audioBuffer = Buffer.from(audioBase64, 'base64')
-
-    const publicUrl = await uploadVoiceAudio(audioBuffer, filename, 'audio/wav')
-
-    logger.info('Premium TTS audio ready', { publicUrl })
-    return publicUrl
-  } catch (err) {
-    logger.error('Premium TTS generation failed, falling back to text', { error: String(err) })
-    return null
-  }
-}
-
-/**
  * GET handler — returns audio URL (premium) or plain text (fallback)
+ *
+ * Fast path: if audio was pre-generated at call placement, the cache check
+ * hits and we return the URL in <500ms (no Exotel timeout).
  */
 export async function GET(req: NextRequest) {
   const params = req.nextUrl.searchParams
@@ -149,11 +101,36 @@ export async function GET(req: NextRequest) {
     if (dbData) data = { ...data, ...dbData }
   }
 
-  const script = buildScript(data)
+  const script = buildGreetingScript({
+    customerName: data.customerName,
+    merchantName: data.merchantName,
+    amountINR: data.amountINR,
+  })
 
-  // Premium: generate high-quality audio
+  // Premium: return cached/pre-generated audio URL (fast!)
   if (!forceText) {
-    const audioUrl = await generatePremiumAudio(script)
+    const filename = greetingFilename(script)
+    const url = greetingAudioUrl(filename)
+
+    // Fast cache check first — pre-generated audio returns in <500ms
+    if (await greetingAudioExists(filename)) {
+      logger.info('flow-script cache HIT, returning audio URL instantly', { url })
+      return new Response(url, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Cache-Control': 'public, max-age=3600',
+        },
+      })
+    }
+
+    // Cache miss — generate now (slower, but only happens once per script)
+    logger.info('flow-script cache MISS, generating audio now')
+    const audioUrl = await ensureGreetingAudio({
+      customerName: data.customerName,
+      merchantName: data.merchantName,
+      amountINR: data.amountINR,
+    })
     if (audioUrl) {
       logger.info('flow-script returning audio URL', { audioUrl })
       return new Response(audioUrl, {
