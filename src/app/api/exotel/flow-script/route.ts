@@ -1,18 +1,27 @@
 /**
- * Exotel Dynamic TTS Script Endpoint
+ * Exotel Dynamic TTS Script Endpoint — PREMIUM VOICE
  *
  * Exotel's Greeting applet calls this URL (configured as "Read text like a robot" URL)
  * Exotel sends: CallSid, From, To, DialWhomNumber, CustomField (our JSON)
- * We return: plain text for TTS (Content-Type: text/plain)
+ *
+ * PREMIUM MODE: We synthesize the script with Sarvam AI (Bulbul v3, Hindi,
+ * natural 'priya' voice, 8kHz telephony) and return the audio file URL.
+ * Exotel fetches the audio and plays it — MUCH better than built-in TTS.
+ *
+ * Fallback: if TTS fails, returns plain text for Exotel's built-in TTS.
  *
  * Docs: https://support.exotel.com/support/solutions/articles/48285-greeting-using-dynamic-text-or-audio-from-url
  */
 
 import { NextRequest } from 'next/server'
+import { createHash } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
+import { synthesizeSpeech } from '@/lib/sarvam'
+import { uploadVoiceAudio } from '@/lib/voice-audio'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 30
 
 interface CustomFieldData {
   callId?: string
@@ -32,7 +41,6 @@ interface CustomFieldData {
 function formatAmountForTTS(amountStr: string): string {
   const num = parseFloat(amountStr.replace(/[^0-9.]/g, ''))
   if (isNaN(num)) return `${amountStr} rupees`
-  // Indian numbering: 4,500 / 1,00,000
   const formatted = num.toLocaleString('en-IN', { maximumFractionDigits: 2 })
   return `${formatted} rupees`
 }
@@ -45,10 +53,9 @@ function buildScript(data: CustomFieldData): string {
   const merchantName = data.merchantName || 'Ugaahi'
   const amount = data.amountINR ? formatAmountForTTS(data.amountINR) : null
 
-  // First name only for natural speech
   const firstName = customerName.split(' ')[0]
 
-  let script = `Namaste ${firstName} ji! Main ${merchantName} ki taraf se bol raha hun. `
+  let script = `Namaste ${firstName} ji! Main ${merchantName} ki taraf se bol rahi hun. `
 
   if (amount) {
     script += `Aapka ${amount} ka bhugtan baaki hai. `
@@ -100,19 +107,43 @@ async function lookupByCallId(callId: string): Promise<CustomFieldData | null> {
 }
 
 /**
- * GET handler — returns plain text for Exotel TTS
+ * Generate premium TTS audio via Sarvam, upload, return public URL.
+ * Uses deterministic filename (hash of script) for caching.
+ */
+async function generatePremiumAudio(script: string): Promise<string | null> {
+  try {
+    const hash = createHash('md5').update(script).digest('hex').slice(0, 12)
+    const filename = `tts-greeting-${hash}.wav`
+
+    logger.info('Generating premium TTS audio', { hash, scriptLen: script.length })
+
+    // Sarvam Bulbul v3, Hindi female voice 'priya', 8kHz for telephony
+    const { audioBase64 } = await synthesizeSpeech(script, 'priya', 'hi-IN', 1.0)
+    const audioBuffer = Buffer.from(audioBase64, 'base64')
+
+    const publicUrl = await uploadVoiceAudio(audioBuffer, filename, 'audio/wav')
+
+    logger.info('Premium TTS audio ready', { publicUrl })
+    return publicUrl
+  } catch (err) {
+    logger.error('Premium TTS generation failed, falling back to text', { error: String(err) })
+    return null
+  }
+}
+
+/**
+ * GET handler — returns audio URL (premium) or plain text (fallback)
  */
 export async function GET(req: NextRequest) {
   const params = req.nextUrl.searchParams
   const customFieldRaw = params.get('CustomField')
   const callSid = params.get('CallSid')
+  const forceText = params.get('mode') === 'text' // ?mode=text to skip premium
 
-  logger.info('flow-script hit', { callSid, hasCustomField: !!customFieldRaw })
+  logger.info('flow-script hit', { callSid, hasCustomField: !!customFieldRaw, forceText })
 
-  // Parse data from CustomField (sent by us in placeCall)
   let data = parseCustomField(customFieldRaw)
 
-  // Fallback: if CustomField missing but we have a callId-like value, try DB
   if (!data.customerName && data.callId) {
     const dbData = await lookupByCallId(data.callId)
     if (dbData) data = { ...data, ...dbData }
@@ -120,8 +151,23 @@ export async function GET(req: NextRequest) {
 
   const script = buildScript(data)
 
-  logger.info('flow-script response', { script: script.slice(0, 80) })
+  // Premium: generate high-quality audio
+  if (!forceText) {
+    const audioUrl = await generatePremiumAudio(script)
+    if (audioUrl) {
+      logger.info('flow-script returning audio URL', { audioUrl })
+      return new Response(audioUrl, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Cache-Control': 'public, max-age=3600',
+        },
+      })
+    }
+  }
 
+  // Fallback: plain text for Exotel built-in TTS
+  logger.info('flow-script returning plain text fallback', { script: script.slice(0, 80) })
   return new Response(script, {
     status: 200,
     headers: {
@@ -132,7 +178,7 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * HEAD handler — Exotel requires HEAD support with same headers as GET
+ * HEAD handler — Exotel requires HEAD support
  */
 export async function HEAD() {
   return new Response(null, {
