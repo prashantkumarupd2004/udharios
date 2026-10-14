@@ -42,6 +42,7 @@ const PUBLIC_PATH_PREFIXES = [
   '/api/auth',
   '/api/access-requests',
   '/api/webhooks',
+  '/api/cron', // Vercel Cron jobs (CRON_SECRET bearer auth inside each route)
   '/api/exotel/voicebot-url', // Exotel Voicebot dynamic URL (per-call, no session; called by Exotel servers)
   '/api/exotel/call-context', // Exotel Voicebot Tool (Option 2) — bot fetches merchant/customer/amount per call
   '/api/exotel/flow-script', // Exotel TTS flow dynamic greeting (called by Exotel servers, no session)
