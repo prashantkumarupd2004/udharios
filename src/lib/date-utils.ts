@@ -114,13 +114,13 @@ export function parseHindiDateExpression(expr: string, referenceDate?: Date): Da
   const ref = referenceDate ?? nowIST()
   const normalized = expr.trim().toLowerCase()
 
-  // "kal" = tomorrow
-  if (normalized === 'kal' || normalized === 'tomorrow') {
+  // "kal" = tomorrow (word boundary — "kal payment kar dunga" bhi pakdega)
+  if (/\bkal\b/.test(normalized) || normalized === 'tomorrow') {
     return addDays(ref, 1)
   }
 
-  // "parso" = day after tomorrow
-  if (normalized === 'parso') {
+  // "parso" = day after tomorrow (word boundary)
+  if (/\bparso\b/.test(normalized)) {
     return addDays(ref, 2)
   }
 
