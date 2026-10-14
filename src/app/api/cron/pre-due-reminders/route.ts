@@ -233,9 +233,24 @@ export async function GET(request: NextRequest) {
   const today = new Date()
   const tomorrow = addDays(today, 1)
 
-  const stats = { whatsappSent: 0, callsPlaced: 0, skipped: 0, details: [] as string[] }
+  const stats = { whatsappSent: 0, callsPlaced: 0, skipped: 0, statusFixed: 0, details: [] as string[] }
 
   try {
+    // ── STEP 0: Status sync — due date nikal gaya to upcoming→overdue ──
+    // Ye har run pe chalta hai taaki ledger hamesha sahi dikhe.
+    const todayStart = startOfDay(today)
+    const syncResult = await prisma.outstanding.updateMany({
+      where: {
+        dueDate: { lt: todayStart },
+        status: 'upcoming',
+      },
+      data: { status: 'overdue' },
+    })
+    stats.statusFixed = syncResult.count
+    if (syncResult.count > 0) {
+      logger.info('Status sync: upcoming→overdue', { count: syncResult.count })
+    }
+
     if (phase === 'morning') {
       // 1. WhatsApp to due-TOMORROW (T-1)
       const dueTomorrow = await getEligibleOutstandings(tomorrow)

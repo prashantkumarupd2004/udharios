@@ -20,6 +20,21 @@ export async function GET(request: NextRequest) {
     const merchantId = await getMerchantId(request)
     if (!merchantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    // Self-healing: due date nikal gaya to upcoming→overdue (background, non-blocking)
+    // Taaki ledger hamesha sahi status dikhe, cron ka wait na karna pade.
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
+    prisma.outstanding.updateMany({
+      where: {
+        merchantId,
+        dueDate: { lt: todayStart },
+        status: 'upcoming',
+      },
+      data: { status: 'overdue' },
+    }).then((r) => {
+      if (r.count > 0) logger.info('Ledger self-heal: upcoming→overdue', { merchantId, count: r.count })
+    }).catch(() => {})
+
     const { searchParams } = request.nextUrl
     const { page, limit } = paginationSchema.parse({
       page: searchParams.get('page'),
