@@ -111,7 +111,7 @@ export default function SiteFooter() {
           </div>
         </div>
 
-        <div className="h-1 rounded-full mt-10 opacity-60 bg-gradient-to-r from-orange-500 via-white to-green-600" />
+        <div className="h-1 rounded-full mt-10 opacity-60 bg-gradient-to-r from-green-500 via-white to-green-600" />
         <p className="text-center text-xs text-stone-500 mt-6">
           © 2026 Ugaahi.{' '}
           {lang === 'hi' ? 'Sabhi adhikaar surakshit. 🇮🇳' : 'All rights reserved. 🇮🇳'}

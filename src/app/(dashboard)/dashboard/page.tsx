@@ -80,7 +80,7 @@ function StatCard({
   label: string; value: string; sub?: string; tone?: 'orange' | 'red' | 'green' | 'amber'; Icon: ComponentType<{ className?: string }>
 }) {
   const toneMap: Record<string, { iconBg: string; iconText: string }> = {
-    orange: { iconBg: 'bg-orange-100', iconText: 'text-orange-600' },
+    orange: { iconBg: 'bg-green-100', iconText: 'text-green-600' },
     red: { iconBg: 'bg-red-100', iconText: 'text-red-600' },
     green: { iconBg: 'bg-green-100', iconText: 'text-green-700' },
     amber: { iconBg: 'bg-amber-100', iconText: 'text-amber-700' },
@@ -94,13 +94,13 @@ function StatCard({
           <Icon className={`w-5 h-5 ${t.iconText}`} />
         </span>
         {sub && (
-          <span className="text-[11px] font-semibold text-stone-500 bg-stone-100 px-2 py-0.5 rounded-full">
+          <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
             {sub}
           </span>
         )}
       </div>
-      <p className="text-2xl font-bold amount-display text-stone-900 count-animate">{value}</p>
-      <p className="text-sm text-stone-500 mt-1 font-medium">{label}</p>
+      <p className="text-2xl font-bold amount-display text-slate-900 count-animate">{value}</p>
+      <p className="text-sm text-slate-500 mt-1 font-medium">{label}</p>
     </div>
   )
 }
@@ -124,20 +124,20 @@ function CollectionRing({ rate, lang }: { rate: number; lang: string }) {
           />
           <defs>
             <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#EA580C" />
+              <stop offset="0%" stopColor="#00B33F" />
               <stop offset="100%" stopColor="#F59E0B" />
             </linearGradient>
           </defs>
         </svg>
-        <span className="absolute inset-0 flex items-center justify-center text-xl font-extrabold text-stone-900">
+        <span className="absolute inset-0 flex items-center justify-center text-xl font-extrabold text-slate-900">
           {filled}%
         </span>
       </div>
       <div>
-        <h3 className="font-bold text-stone-900">
+        <h3 className="font-bold text-slate-900">
           {lang === 'hi' ? 'Collection Rate' : 'Collection Rate'}
         </h3>
-        <p className="text-sm text-stone-500 mt-1 leading-relaxed">
+        <p className="text-sm text-slate-500 mt-1 leading-relaxed">
           {lang === 'hi'
             ? filled >= 80
               ? 'Shabaash! Vasooli top form me hai. 🎯'
@@ -163,39 +163,39 @@ function TrendChart({ series, days, onDays, onExport, lang }: {
   return (
     <div className="glass-card p-5">
       <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
-        <h2 className="font-bold text-stone-900 flex items-center gap-2">
-          <BarChart3 className="w-4 h-4 text-orange-600" />
+        <h2 className="font-bold text-slate-900 flex items-center gap-2">
+          <BarChart3 className="w-4 h-4 text-green-600" />
           {lang === 'hi' ? 'Vasuli Trend' : 'Collection Trend'}
         </h2>
         <div className="flex items-center gap-2">
-          <div className="flex bg-stone-100 rounded-lg p-0.5">
+          <div className="flex bg-slate-100 rounded-lg p-0.5">
             {[7, 30].map((d) => (
               <button
                 key={d}
                 onClick={() => onDays(d)}
-                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${days === d ? 'bg-white text-orange-700 shadow-sm' : 'text-stone-500'}`}
+                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${days === d ? 'bg-white text-green-700 shadow-sm' : 'text-slate-500'}`}
               >
                 {d}D
               </button>
             ))}
           </div>
-          <button onClick={onExport} title={lang === 'hi' ? 'CSV download' : 'Download CSV'} className="p-1.5 rounded-lg text-stone-400 hover:text-orange-600 hover:bg-orange-50 transition-all">
+          <button onClick={onExport} title={lang === 'hi' ? 'CSV download' : 'Download CSV'} className="p-1.5 rounded-lg text-slate-400 hover:text-green-600 hover:bg-green-50 transition-all">
             <Download className="w-4 h-4" />
           </button>
         </div>
       </div>
-      <p className="text-xs text-stone-500 mb-4">
+      <p className="text-xs text-slate-500 mb-4">
         {lang === 'hi' ? 'Roz kitna vasool hua vs naya udhaar' : 'Daily collections vs new dues'}
       </p>
       {series.length === 0 ? (
         <div className="skeleton h-40" />
       ) : series.every((s) => s.collected === 0 && s.newDues === 0) ? (
         <div className="h-40 flex flex-col items-center justify-center text-center">
-          <BarChart3 className="w-10 h-10 text-stone-300 mb-2" />
-          <p className="text-sm font-semibold text-stone-500">
+          <BarChart3 className="w-10 h-10 text-slate-300 mb-2" />
+          <p className="text-sm font-semibold text-slate-500">
             {lang === 'hi' ? 'Abhi data nahi hai' : 'No data yet'}
           </p>
-          <p className="text-xs text-stone-400 mt-1">
+          <p className="text-xs text-slate-400 mt-1">
             {lang === 'hi' ? 'Payment aate hi trend yahan dikhega' : 'Trend will appear as payments come in'}
           </p>
         </div>
@@ -206,17 +206,17 @@ function TrendChart({ series, days, onDays, onExport, lang }: {
               <div key={s.date} className="flex-1 flex flex-col items-center justify-end gap-[2px] h-full group relative">
                 <div className="w-full flex flex-col justify-end gap-[2px] h-full">
                   <div className="w-full bg-emerald-400/90 rounded-t-[3px] transition-all group-hover:bg-emerald-500" style={{ height: `${Math.max(2, (s.collected / max) * 100)}%` }} title={`${s.label}: ${formatINR(s.collected)} collected`} />
-                  <div className="w-full bg-orange-300/80 rounded-[2px]" style={{ height: `${Math.max(1, (s.newDues / max) * 100 * 0.5)}%` }} title={`${s.label}: ${formatINR(s.newDues)} new dues`} />
+                  <div className="w-full bg-green-300/80 rounded-[2px]" style={{ height: `${Math.max(1, (s.newDues / max) * 100 * 0.5)}%` }} title={`${s.label}: ${formatINR(s.newDues)} new dues`} />
                 </div>
                 {(days === 7 || series.indexOf(s) % Math.ceil(series.length / 8) === 0) && (
-                  <span className="text-[9px] text-stone-400 font-medium mt-1 whitespace-nowrap">{s.label}</span>
+                  <span className="text-[9px] text-slate-400 font-medium mt-1 whitespace-nowrap">{s.label}</span>
                 )}
               </div>
             ))}
           </div>
-          <div className="flex items-center gap-4 mt-3 text-xs font-semibold text-stone-500">
+          <div className="flex items-center gap-4 mt-3 text-xs font-semibold text-slate-500">
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-emerald-400 inline-block" />{lang === 'hi' ? 'Vasool hua' : 'Collected'}</span>
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-orange-300 inline-block" />{lang === 'hi' ? 'Naya udhaar' : 'New dues'}</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-green-300 inline-block" />{lang === 'hi' ? 'Naya udhaar' : 'New dues'}</span>
           </div>
         </>
       )}
@@ -241,7 +241,7 @@ function InsightsPanel({ summary, aging, topCustomers, lang }: {
   }
   if (topCustomers[0]) {
     insights.push({
-      Icon: Phone, tone: 'bg-orange-100 text-orange-600',
+      Icon: Phone, tone: 'bg-green-100 text-green-600',
       title: hi ? `Aaj ${topCustomers[0].name} ko call karo` : `Call ${topCustomers[0].name} today`,
       desc: hi ? `${formatINR(topCustomers[0].total)} — sabse bada overdue, pehli priority` : `${formatINR(topCustomers[0].total)} — biggest overdue, top priority`,
       href: '/dashboard/outstandings?filter=overdue',
@@ -274,20 +274,20 @@ function InsightsPanel({ summary, aging, topCustomers, lang }: {
 
   return (
     <div className="glass-card p-5 !border-violet-200 bg-gradient-to-br from-violet-50/60 to-white">
-      <h2 className="font-bold text-stone-900 mb-1 flex items-center gap-2">
+      <h2 className="font-bold text-slate-900 mb-1 flex items-center gap-2">
         <Sparkles className="w-4 h-4 text-violet-600" />
         {hi ? 'AI Insights' : 'AI Insights'}
       </h2>
-      <p className="text-xs text-stone-500 mb-4">{hi ? 'Aaj kya karna chahiye — data se' : 'What to do today — from your data'}</p>
+      <p className="text-xs text-slate-500 mb-4">{hi ? 'Aaj kya karna chahiye — data se' : 'What to do today — from your data'}</p>
       <div className="space-y-2.5">
         {insights.slice(0, 4).map((ins, i) => (
-          <Link key={i} href={ins.href} className="flex items-start gap-3 p-3 rounded-xl bg-white border border-stone-100 hover:border-violet-300 hover:shadow-sm transition-all group">
+          <Link key={i} href={ins.href} className="flex items-start gap-3 p-3 rounded-xl bg-white border border-slate-100 hover:border-violet-300 hover:shadow-sm transition-all group">
             <span className={`w-9 h-9 rounded-xl ${ins.tone} flex items-center justify-center flex-shrink-0`}>
               <ins.Icon className="w-[18px] h-[18px]" />
             </span>
             <span className="min-w-0">
-              <span className="block text-sm font-bold text-stone-900 leading-snug">{ins.title}</span>
-              <span className="block text-xs text-stone-500 mt-0.5 leading-relaxed">{ins.desc}</span>
+              <span className="block text-sm font-bold text-slate-900 leading-snug">{ins.title}</span>
+              <span className="block text-xs text-slate-500 mt-0.5 leading-relaxed">{ins.desc}</span>
             </span>
           </Link>
         ))}
@@ -303,11 +303,11 @@ function ActivityFeed({ logs, lang }: { logs: ActivityLog[]; lang: string }) {
     const a = action.toLowerCase()
     if (a.includes('payment') || a.includes('paid')) return { Icon: BadgeCheck, tint: 'bg-green-100 text-green-700' }
     if (a.includes('reminder') || a.includes('whatsapp')) return { Icon: Zap, tint: 'bg-blue-100 text-blue-600' }
-    if (a.includes('call')) return { Icon: Phone, tint: 'bg-orange-100 text-orange-600' }
+    if (a.includes('call')) return { Icon: Phone, tint: 'bg-green-100 text-green-600' }
     if (a.includes('promise')) return { Icon: Handshake, tint: 'bg-amber-100 text-amber-700' }
     if (a.includes('dispute')) return { Icon: AlertTriangle, tint: 'bg-red-100 text-red-600' }
     if (a.includes('customer')) return { Icon: Users, tint: 'bg-violet-100 text-violet-600' }
-    return { Icon: FileText, tint: 'bg-stone-100 text-stone-500' }
+    return { Icon: FileText, tint: 'bg-slate-100 text-slate-500' }
   }
   const labelFor = (action: string) =>
     action.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
@@ -315,28 +315,28 @@ function ActivityFeed({ logs, lang }: { logs: ActivityLog[]; lang: string }) {
   return (
     <div className="glass-card p-5">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-bold text-stone-900 flex items-center gap-2">
-          <History className="w-4 h-4 text-orange-600" />
+        <h2 className="font-bold text-slate-900 flex items-center gap-2">
+          <History className="w-4 h-4 text-green-600" />
           {hi ? 'Recent Activity' : 'Recent Activity'}
         </h2>
-        <Link href="/dashboard/activity" className="text-xs font-bold text-orange-600 hover:text-orange-700">
+        <Link href="/dashboard/activity" className="text-xs font-bold text-green-600 hover:text-green-700">
           {hi ? 'Sab dekho →' : 'View all →'}
         </Link>
       </div>
       {logs.length === 0 ? (
-        <p className="text-sm text-stone-400 text-center py-6">{hi ? 'Abhi koi activity nahi' : 'No activity yet'}</p>
+        <p className="text-sm text-slate-400 text-center py-6">{hi ? 'Abhi koi activity nahi' : 'No activity yet'}</p>
       ) : (
         <div className="space-y-1">
           {logs.slice(0, 7).map((log) => {
             const { Icon, tint } = iconFor(log.action)
             return (
-              <div key={log.id} className="flex items-center gap-3 py-2.5 border-b border-stone-50 last:border-0">
+              <div key={log.id} className="flex items-center gap-3 py-2.5 border-b border-slate-50 last:border-0">
                 <span className={`w-8 h-8 rounded-lg ${tint} flex items-center justify-center flex-shrink-0`}>
                   <Icon className="w-4 h-4" />
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-stone-800 truncate">{labelFor(log.action)}</p>
-                  <p className="text-[11px] text-stone-400">
+                  <p className="text-sm font-semibold text-slate-800 truncate">{labelFor(log.action)}</p>
+                  <p className="text-[11px] text-slate-400">
                     {new Date(log.createdAt).toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
@@ -438,7 +438,7 @@ export default function DashboardPage() {
   const quickActions = [
     { href: '/dashboard/outstandings?filter=overdue', Icon: AlertTriangle, label: lang === 'hi' ? 'Overdue dekho' : 'View Overdue', tint: 'bg-red-100 text-red-600' },
     { href: '/dashboard/promises', Icon: Handshake, label: lang === 'hi' ? 'Promises' : 'Promises', badge: summary?.openPromises, tint: 'bg-amber-100 text-amber-700' },
-    { href: '/dashboard/disputes', Icon: Zap, label: lang === 'hi' ? 'Disputes' : 'Disputes', badge: summary?.openDisputes, tint: 'bg-orange-100 text-orange-600' },
+    { href: '/dashboard/disputes', Icon: Zap, label: lang === 'hi' ? 'Disputes' : 'Disputes', badge: summary?.openDisputes, tint: 'bg-green-100 text-green-600' },
     { href: '/dashboard/customers', Icon: Users, label: lang === 'hi' ? 'Customer add karo' : 'Add Customer', tint: 'bg-green-100 text-green-700' },
   ]
 
@@ -447,13 +447,13 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-orange-700 flex items-center gap-1.5">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-green-700 flex items-center gap-1.5">
             <CalendarDays className="w-3.5 h-3.5" /> {today}
           </p>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-stone-900 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">
             {greeting}{businessName ? `, ${businessName}` : ''}! 🙏
           </h1>
-          <p className="text-stone-500 text-sm mt-0.5">
+          <p className="text-slate-500 text-sm mt-0.5">
             {lang === 'hi' ? 'Aaj ki vasool ki sthiti ek nazar me' : 'Your collections at a glance today'}
           </p>
         </div>
@@ -504,7 +504,7 @@ export default function DashboardPage() {
             <span className={`w-10 h-10 rounded-xl ${item.tint} flex items-center justify-center flex-shrink-0`}>
               <item.Icon className="w-5 h-5" />
             </span>
-            <span className="text-sm font-semibold text-stone-700 group-hover:text-stone-900 transition-colors flex-1">
+            <span className="text-sm font-semibold text-slate-700 group-hover:text-slate-900 transition-colors flex-1">
               {item.label}
             </span>
             {item.badge != null && item.badge > 0 && (
@@ -539,10 +539,10 @@ export default function DashboardPage() {
         )}
 
         <div className="glass-card p-5">
-          <h2 className="font-bold text-stone-900 mb-1">
+          <h2 className="font-bold text-slate-900 mb-1">
             {lang === 'hi' ? '📅 Aging Analysis' : '📅 Aging Analysis'}
           </h2>
-          <p className="text-xs text-stone-500 mb-4">
+          <p className="text-xs text-slate-500 mb-4">
             {lang === 'hi' ? 'Kitne din se paisa atka hai' : 'How long money has been stuck'}
           </p>
           {loading ? (
@@ -552,7 +552,7 @@ export default function DashboardPage() {
               {[
                 { key: 'current', ...aging.buckets.current, color: 'bg-blue-500' },
                 { key: 'd30', ...aging.buckets.d30, color: 'bg-amber-400' },
-                { key: 'd60', ...aging.buckets.d60, color: 'bg-orange-500' },
+                { key: 'd60', ...aging.buckets.d60, color: 'bg-green-500' },
                 { key: 'd90', ...aging.buckets.d90, color: 'bg-red-500' },
               ].map((bucket) => {
                 const maxAmount = Math.max(
@@ -563,10 +563,10 @@ export default function DashboardPage() {
                 return (
                   <div key={bucket.key}>
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="font-semibold text-stone-600">{bucket.label}</span>
-                      <span className="font-mono font-bold text-stone-800">{formatINR(bucket.amount)} ({bucket.count})</span>
+                      <span className="font-semibold text-slate-600">{bucket.label}</span>
+                      <span className="font-mono font-bold text-slate-800">{formatINR(bucket.amount)} ({bucket.count})</span>
                     </div>
-                    <div className="h-2.5 bg-stone-100 rounded-full overflow-hidden">
+                    <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
                       <div className={`h-full ${bucket.color} rounded-full transition-all duration-700`} style={{ width: `${pct}%` }} />
                     </div>
                   </div>
@@ -574,7 +574,7 @@ export default function DashboardPage() {
               })}
             </div>
           ) : (
-            <p className="text-stone-400 text-sm">{lang === 'hi' ? 'Data load ho raha hai...' : 'Loading...'}</p>
+            <p className="text-slate-400 text-sm">{lang === 'hi' ? 'Data load ho raha hai...' : 'Loading...'}</p>
           )}
         </div>
       </div>
@@ -582,7 +582,7 @@ export default function DashboardPage() {
       {/* Defaulters + Top customers */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <div className="glass-card p-5">
-          <h2 className="font-bold text-stone-900 mb-4">
+          <h2 className="font-bold text-slate-900 mb-4">
             🚨 {lang === 'hi' ? 'Defaulter List (90+ din)' : 'Defaulter List (90+ days)'}
           </h2>
           {loading ? (
@@ -599,7 +599,7 @@ export default function DashboardPage() {
                     {d.customerName.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-stone-900 truncate">{d.customerName}</p>
+                    <p className="text-sm font-bold text-slate-900 truncate">{d.customerName}</p>
                     <p className="text-xs text-red-600 font-medium">{d.daysOverdue} {lang === 'hi' ? 'din overdue' : 'days overdue'}</p>
                   </div>
                   <span className="text-sm font-bold text-red-700 amount-display flex-shrink-0">{formatINR(d.amount)}</span>
@@ -609,7 +609,7 @@ export default function DashboardPage() {
           ) : (
             <div className="text-center py-8">
               <div className="text-3xl mb-2">🎉</div>
-              <p className="text-stone-500 text-sm font-medium">
+              <p className="text-slate-500 text-sm font-medium">
                 {lang === 'hi' ? 'Koi defaulter nahi! Badhiya hai.' : 'No defaulters! Great job.'}
               </p>
             </div>
@@ -617,11 +617,11 @@ export default function DashboardPage() {
         </div>
 
         <div className="glass-card p-5">
-          <h2 className="font-bold text-stone-900 mb-1 flex items-center gap-2">
+          <h2 className="font-bold text-slate-900 mb-1 flex items-center gap-2">
             <Crown className="w-4 h-4 text-amber-600" />
             {lang === 'hi' ? 'Top Udhaar Wale Customers' : 'Top Debtors'}
           </h2>
-          <p className="text-xs text-stone-500 mb-4">
+          <p className="text-xs text-slate-500 mb-4">
             {lang === 'hi' ? 'Sabse zyada overdue — pehle inhe yaad dilao' : 'Highest overdue — chase these first'}
           </p>
           {loading ? (
@@ -639,7 +639,7 @@ export default function DashboardPage() {
                   }`}>
                     {i + 1}
                   </span>
-                  <p className="flex-1 text-sm font-bold text-stone-900 truncate">{c.name}</p>
+                  <p className="flex-1 text-sm font-bold text-slate-900 truncate">{c.name}</p>
                   <span className="text-sm font-bold text-amber-800 amount-display flex-shrink-0">{formatINR(c.total)}</span>
                 </Link>
               ))}
@@ -647,7 +647,7 @@ export default function DashboardPage() {
           ) : (
             <div className="text-center py-8">
               <div className="text-3xl mb-2">✨</div>
-              <p className="text-stone-500 text-sm font-medium">
+              <p className="text-slate-500 text-sm font-medium">
                 {lang === 'hi' ? 'Koi overdue nahi — sab clear!' : 'No overdue — all clear!'}
               </p>
             </div>
@@ -665,11 +665,11 @@ export default function DashboardPage() {
 
         {/* Tally status mini-card */}
         <div className="glass-card p-5 !border-blue-200 bg-gradient-to-br from-blue-50/60 to-white">
-          <h2 className="font-bold text-stone-900 mb-1 flex items-center gap-2">
+          <h2 className="font-bold text-slate-900 mb-1 flex items-center gap-2">
             <RefreshCw className="w-4 h-4 text-blue-600" />
             {lang === 'hi' ? 'Tally Sync' : 'Tally Sync'}
           </h2>
-          <p className="text-xs text-stone-500 mb-4">
+          <p className="text-xs text-slate-500 mb-4">
             {lang === 'hi' ? 'Tally ke bills se automatic udhaari' : 'Auto-create dues from Tally bills'}
           </p>
           <div className="space-y-2.5 text-sm">
@@ -680,7 +680,7 @@ export default function DashboardPage() {
             ].map((t, i) => (
               <div key={i} className="flex items-center gap-2.5">
                 <span className="w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-extrabold flex items-center justify-center flex-shrink-0">{i + 1}</span>
-                <span className="text-stone-700 font-medium">{t}</span>
+                <span className="text-slate-700 font-medium">{t}</span>
               </div>
             ))}
           </div>
@@ -703,7 +703,7 @@ export default function DashboardPage() {
               </Link>
             )}
             {summary.openDisputes > 0 && (
-              <Link href="/dashboard/disputes" className="bg-white border border-orange-300 text-orange-700 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-orange-50 transition-all shadow-sm">
+              <Link href="/dashboard/disputes" className="bg-white border border-green-300 text-green-700 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-green-50 transition-all shadow-sm">
                 ⚡ {summary.openDisputes} {lang === 'hi' ? 'khule disputes' : 'open disputes'}
               </Link>
             )}

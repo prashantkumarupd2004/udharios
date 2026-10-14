@@ -69,7 +69,7 @@ export default function PaymentGatewaySettings() {
 
   if (loading) {
     return (
-      <div className="glass-card p-5 flex items-center gap-2 text-stone-500">
+      <div className="glass-card p-5 flex items-center gap-2 text-slate-500">
         <Loader2 className="w-4 h-4 animate-spin" /> Loading...
       </div>
     )
@@ -77,14 +77,14 @@ export default function PaymentGatewaySettings() {
 
   return (
     <div className="glass-card p-5 space-y-4">
-      <h2 className="font-bold text-stone-900 flex items-center gap-2">
+      <h2 className="font-bold text-slate-900 flex items-center gap-2">
         <CreditCard className="w-4 h-4 text-emerald-600" />
         {lang === 'hi' ? 'Payment Gateway' : 'Payment Gateway'}
         <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
           {lang === 'hi' ? 'apna gateway lagao' : 'use your own gateway'}
         </span>
       </h2>
-      <p className="text-xs text-stone-500">
+      <p className="text-xs text-slate-500">
         {lang === 'hi'
           ? 'Jiske paas jo payment gateway hai, wo lagao — payment links usi se banenge!'
           : 'Connect your own payment gateway — payment links will be generated through it!'}
@@ -103,14 +103,14 @@ export default function PaymentGatewaySettings() {
             className={`p-3 rounded-xl border-2 text-left transition-all ${
               selected === g.id
                 ? 'border-emerald-500 bg-emerald-50'
-                : 'border-stone-200 hover:border-stone-300'
+                : 'border-slate-200 hover:border-slate-300'
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className="font-bold text-sm text-stone-900">{g.name}</span>
+              <span className="font-bold text-sm text-slate-900">{g.name}</span>
               {selected === g.id && <Check className="w-4 h-4 text-emerald-600" />}
             </div>
-            <p className="text-[11px] text-stone-500 mt-1">{g.description}</p>
+            <p className="text-[11px] text-slate-500 mt-1">{g.description}</p>
           </button>
         ))}
       </div>
@@ -133,19 +133,19 @@ export default function PaymentGatewaySettings() {
                   <button
                     type="button"
                     onClick={() => setShowSecrets((p) => ({ ...p, [f.key]: !p[f.key] }))}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
                   >
                     {showSecrets[f.key] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 )}
               </div>
-              {f.helpText && <p className="text-xs text-stone-400 mt-1">{f.helpText}</p>}
+              {f.helpText && <p className="text-xs text-slate-400 mt-1">{f.helpText}</p>}
             </div>
           ))}
 
           {/* Test mode toggle */}
           {selected !== 'upi_vpa' && (
-            <label className="flex items-center gap-2 text-sm text-stone-700 cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
               <input
                 type="checkbox"
                 checked={testMode}

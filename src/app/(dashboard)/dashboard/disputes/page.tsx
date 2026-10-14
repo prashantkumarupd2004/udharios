@@ -48,11 +48,11 @@ export default function DisputesPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-extrabold text-stone-900 flex items-center gap-2">
-          <Zap className="w-6 h-6 text-orange-600" />
+        <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
+          <Zap className="w-6 h-6 text-green-600" />
           {lang === 'hi' ? 'Disputes' : 'Disputes'}
         </h1>
-        <p className="text-sm text-stone-500 mt-0.5">
+        <p className="text-sm text-slate-500 mt-0.5">
           {lang === 'hi' ? 'Customers ki shikaayatein — jaldi suljhao' : 'Customer complaints — resolve them fast'}
         </p>
       </div>
@@ -68,8 +68,8 @@ export default function DisputesPage() {
             onClick={() => { setFilter(f.key); setLoading(true) }}
             className={`px-4 py-2 rounded-xl text-sm font-bold transition-all border ${
               filter === f.key
-                ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/30'
-                : 'bg-white text-stone-600 border-stone-200 hover:border-orange-300 hover:text-orange-700'
+                ? 'bg-green-500 text-white border-green-500 shadow-md shadow-green-500/30'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-green-300 hover:text-green-700'
             }`}
           >
             {lang === 'hi' ? f.hi : f.en}
@@ -84,7 +84,7 @@ export default function DisputesPage() {
       ) : disputes.length === 0 ? (
         <div className="text-center py-16 glass-card">
           <div className="text-4xl mb-3">✅</div>
-          <p className="text-stone-500 font-medium">
+          <p className="text-slate-500 font-medium">
             {lang === 'hi' ? 'Koi dispute nahi hai! Great.' : 'No disputes! Great.'}
           </p>
         </div>
@@ -94,20 +94,20 @@ export default function DisputesPage() {
             <div
               key={d.id}
               className={`glass-card card-hover p-4 ${
-                d.status === 'open' ? '!border-orange-300' :
+                d.status === 'open' ? '!border-green-300' :
                 d.status === 'resolved' ? '!border-green-200' : ''
               }`}
             >
               <div className="flex items-start gap-3">
                 <div className={`w-11 h-11 rounded-full flex items-center justify-center text-xl flex-shrink-0 text-white shadow-md ${
-                  d.status === 'resolved' ? 'bg-green-500 shadow-green-500/25' : 'bg-orange-500 shadow-orange-500/25'
+                  d.status === 'resolved' ? 'bg-green-500 shadow-green-500/25' : 'bg-green-500 shadow-green-500/25'
                 }`}>
                   {d.status === 'resolved' ? <CheckCircle2 className="w-5 h-5" /> : <Zap className="w-5 h-5" />}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-bold text-stone-900 text-sm">{d.customer.name}</p>
+                    <p className="font-bold text-slate-900 text-sm">{d.customer.name}</p>
                     <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
                       d.status === 'open' ? 'badge-disputed' :
                       d.status === 'resolved' ? 'badge-paid' : 'badge-written_off'
@@ -118,7 +118,7 @@ export default function DisputesPage() {
                     </span>
                   </div>
 
-                  <p className="text-sm text-stone-600 mt-1.5 bg-stone-50 border border-stone-200 rounded-lg px-3 py-2">
+                  <p className="text-sm text-slate-600 mt-1.5 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
                     “{d.reason}”
                   </p>
 
@@ -128,7 +128,7 @@ export default function DisputesPage() {
                     </p>
                   )}
 
-                  <p className="text-xs text-stone-400 mt-1.5">{formatIndianDate(d.createdAt)}</p>
+                  <p className="text-xs text-slate-400 mt-1.5">{formatIndianDate(d.createdAt)}</p>
 
                   {d.status === 'open' && (
                     <>
@@ -170,11 +170,11 @@ export default function DisputesPage() {
                 </div>
 
                 <div className="text-right flex-shrink-0">
-                  <p className="text-sm font-bold text-stone-900 amount-display">
+                  <p className="text-sm font-bold text-slate-900 amount-display">
                     {formatINR(parseFloat(d.outstanding.amount))}
                   </p>
                   {d.outstanding.invoiceNo && (
-                    <p className="text-xs text-stone-400">#{d.outstanding.invoiceNo}</p>
+                    <p className="text-xs text-slate-400">#{d.outstanding.invoiceNo}</p>
                   )}
                 </div>
               </div>

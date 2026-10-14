@@ -133,9 +133,9 @@ export default function IntegrationsPage() {
   if (loading) {
     return (
       <div className="p-6">
-        <div className="h-8 w-48 bg-stone-200 rounded animate-pulse mb-6" />
+        <div className="h-8 w-48 bg-slate-200 rounded animate-pulse mb-6" />
         <div className="grid md:grid-cols-2 gap-4">
-          {[1, 2].map((i) => <div key={i} className="h-64 bg-white rounded-3xl border border-stone-200 animate-pulse" />)}
+          {[1, 2].map((i) => <div key={i} className="h-64 bg-white rounded-3xl border border-slate-200 animate-pulse" />)}
         </div>
       </div>
     )
@@ -145,10 +145,10 @@ export default function IntegrationsPage() {
     <div className="p-4 sm:p-6 space-y-6">
       {/* header */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-stone-900">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
           {hi ? 'Tally Sync 🔗' : 'Tally Sync 🔗'}
         </h1>
-        <p className="text-stone-500 mt-1 text-[15px]">
+        <p className="text-slate-500 mt-1 text-[15px]">
           {hi
             ? 'Tally ke bills Ugaahi me — bill number samajh ke automatic reminders'
             : 'Tally bills into Ugaahi — automatic reminders that understand bill numbers'}
@@ -157,21 +157,21 @@ export default function IntegrationsPage() {
 
       <div className="grid lg:grid-cols-2 gap-5">
         {/* -------- connect / status card -------- */}
-        <div className="bg-white rounded-3xl border border-orange-100 shadow-sm p-6">
+        <div className="bg-white rounded-3xl border border-green-100 shadow-sm p-6">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-md shadow-orange-500/25">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-green-500 to-amber-600 flex items-center justify-center shadow-md shadow-green-500/25">
               <Building2 className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="font-extrabold text-stone-900 text-lg">Tally Prime</h2>
-              <p className="text-xs text-stone-500 font-medium">
+              <h2 className="font-extrabold text-slate-900 text-lg">Tally Prime</h2>
+              <p className="text-xs text-slate-500 font-medium">
                 {status?.connected ? (
                   <span className="inline-flex items-center gap-1 text-green-700 font-bold">
                     <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                     {hi ? 'Connected' : 'Connected'} — {status.companyName}
                   </span>
                 ) : (
-                  <span className="text-stone-400">{hi ? 'Abhi connected nahi' : 'Not connected yet'}</span>
+                  <span className="text-slate-400">{hi ? 'Abhi connected nahi' : 'Not connected yet'}</span>
                 )}
               </p>
             </div>
@@ -180,21 +180,21 @@ export default function IntegrationsPage() {
           {status?.connected ? (
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-[#FDF9F1] rounded-2xl p-3.5 border border-stone-100">
-                  <p className="text-[11px] font-bold text-stone-400 uppercase">{hi ? 'Bills' : 'Bills'}</p>
-                  <p className="text-xl font-extrabold text-stone-900">{status.totalBills ?? 0}</p>
+                <div className="bg-[#FDF9F1] rounded-2xl p-3.5 border border-slate-100">
+                  <p className="text-[11px] font-bold text-slate-400 uppercase">{hi ? 'Bills' : 'Bills'}</p>
+                  <p className="text-xl font-extrabold text-slate-900">{status.totalBills ?? 0}</p>
                 </div>
-                <div className="bg-[#FDF9F1] rounded-2xl p-3.5 border border-stone-100">
-                  <p className="text-[11px] font-bold text-stone-400 uppercase">{hi ? 'Pending' : 'Pending'}</p>
-                  <p className="text-xl font-extrabold text-orange-600">{status.pendingBills ?? 0}</p>
+                <div className="bg-[#FDF9F1] rounded-2xl p-3.5 border border-slate-100">
+                  <p className="text-[11px] font-bold text-slate-400 uppercase">{hi ? 'Pending' : 'Pending'}</p>
+                  <p className="text-xl font-extrabold text-green-600">{status.pendingBills ?? 0}</p>
                 </div>
-                <div className="bg-[#FDF9F1] rounded-2xl p-3.5 border border-stone-100">
-                  <p className="text-[11px] font-bold text-stone-400 uppercase">{hi ? 'Rashi' : 'Amount'}</p>
-                  <p className="text-xl font-extrabold text-stone-900">{inr(status.pendingAmount ?? 0)}</p>
+                <div className="bg-[#FDF9F1] rounded-2xl p-3.5 border border-slate-100">
+                  <p className="text-[11px] font-bold text-slate-400 uppercase">{hi ? 'Rashi' : 'Amount'}</p>
+                  <p className="text-xl font-extrabold text-slate-900">{inr(status.pendingAmount ?? 0)}</p>
                 </div>
               </div>
               {status.lastSyncAt && (
-                <p className="flex items-center gap-1.5 text-xs text-stone-500 font-medium">
+                <p className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
                   <Clock className="w-3.5 h-3.5" />
                   {hi ? 'Aakhri sync: ' : 'Last sync: '}
                   {new Date(status.lastSyncAt).toLocaleString('en-IN')}
@@ -210,7 +210,7 @@ export default function IntegrationsPage() {
                     {hi ? 'Sync agent ke liye API key (ek baar dikhegi!)' : 'API key for sync agent (shown once!)'}
                   </p>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 bg-white border border-amber-200 rounded-xl px-3 py-2.5 text-xs font-mono text-stone-800 break-all">
+                    <code className="flex-1 bg-white border border-amber-200 rounded-xl px-3 py-2.5 text-xs font-mono text-slate-800 break-all">
                       {newKey}
                     </code>
                     <button
@@ -244,7 +244,7 @@ export default function IntegrationsPage() {
                       {connecting ? <RefreshCw className="w-4 h-4 animate-spin" /> : (hi ? 'Nayi key' : 'New key')}
                     </button>
                   </div>
-                  <p className="text-xs text-stone-400 mt-1.5">
+                  <p className="text-xs text-slate-400 mt-1.5">
                     {hi ? 'Nayi key banane se purani agent key kaam karna band kar degi' : 'Generating a new key disables the old agent key'}
                   </p>
                 </div>
@@ -260,7 +260,7 @@ export default function IntegrationsPage() {
                   placeholder={hi ? 'e.g. Gupta Traders' : 'e.g. Gupta Traders'}
                   className="field"
                 />
-                <p className="text-xs text-stone-400 mt-1.5">
+                <p className="text-xs text-slate-400 mt-1.5">
                   {hi ? 'Tally Prime me Gateway of Tally par jo naam dikhta hai, wahi likhein' : 'Enter the exact name shown on Tally’s Gateway screen'}
                 </p>
               </div>
@@ -274,19 +274,19 @@ export default function IntegrationsPage() {
         </div>
 
         {/* -------- upload card -------- */}
-        <div className="bg-white rounded-3xl border border-orange-100 shadow-sm p-6">
+        <div className="bg-white rounded-3xl border border-green-100 shadow-sm p-6">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-12 h-12 rounded-2xl bg-green-100 flex items-center justify-center">
               <FileUp className="w-6 h-6 text-green-700" />
             </div>
             <div>
-              <h2 className="font-extrabold text-stone-900 text-lg">{hi ? 'Bills upload karein' : 'Upload bills'}</h2>
-              <p className="text-xs text-stone-500 font-medium">{hi ? 'Tally XML ya CSV — bina agent ke' : 'Tally XML or CSV — no agent needed'}</p>
+              <h2 className="font-extrabold text-slate-900 text-lg">{hi ? 'Bills upload karein' : 'Upload bills'}</h2>
+              <p className="text-xs text-slate-500 font-medium">{hi ? 'Tally XML ya CSV — bina agent ke' : 'Tally XML or CSV — no agent needed'}</p>
             </div>
           </div>
 
-          <div className="bg-[#FDF9F1] border-2 border-dashed border-stone-300 rounded-2xl p-6 text-center">
-            <Upload className="w-8 h-8 text-stone-400 mx-auto mb-2" />
+          <div className="bg-[#FDF9F1] border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center">
+            <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
             <label className="cursor-pointer">
               <span className="btn-ghost px-5 py-2.5 !text-sm">
                 {file ? file.name : (hi ? 'File chunein' : 'Choose file')}
@@ -298,7 +298,7 @@ export default function IntegrationsPage() {
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               />
             </label>
-            <p className="text-xs text-stone-400 mt-2">XML / CSV • max 10MB</p>
+            <p className="text-xs text-slate-400 mt-2">XML / CSV • max 10MB</p>
           </div>
 
           <div className="mt-4 bg-blue-50 border border-blue-100 rounded-2xl p-4 text-sm text-blue-900">
@@ -333,15 +333,15 @@ export default function IntegrationsPage() {
       </div>
 
       {/* -------- bills table -------- */}
-      <div className="bg-white rounded-3xl border border-orange-100 shadow-sm p-6">
+      <div className="bg-white rounded-3xl border border-green-100 shadow-sm p-6">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
           <div className="flex items-center gap-2.5">
-            <ReceiptText className="w-5 h-5 text-orange-600" />
-            <h2 className="font-extrabold text-stone-900 text-lg">{hi ? 'Synced bills' : 'Synced bills'}</h2>
+            <ReceiptText className="w-5 h-5 text-green-600" />
+            <h2 className="font-extrabold text-slate-900 text-lg">{hi ? 'Synced bills' : 'Synced bills'}</h2>
           </div>
           <div className="flex gap-2 sm:ml-auto">
             <div className="relative flex-1 sm:w-56">
-              <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -353,7 +353,7 @@ export default function IntegrationsPage() {
             <button
               onClick={() => setPendingOnly(!pendingOnly)}
               className={`px-4 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${
-                pendingOnly ? 'bg-orange-50 border-orange-500 text-orange-700' : 'bg-white border-stone-200 text-stone-500'
+                pendingOnly ? 'bg-green-50 border-green-500 text-green-700' : 'bg-white border-slate-200 text-slate-500'
               }`}
             >
               {hi ? 'Sirf pending' : 'Pending only'}
@@ -363,15 +363,15 @@ export default function IntegrationsPage() {
 
         {bills.length === 0 ? (
           <div className="text-center py-12">
-            <ReceiptText className="w-12 h-12 text-stone-300 mx-auto mb-3" />
-            <p className="font-bold text-stone-700">{hi ? 'Abhi koi bill sync nahi hua' : 'No bills synced yet'}</p>
-            <p className="text-sm text-stone-400 mt-1">{hi ? 'Upar se Tally connect karein ya file upload karein' : 'Connect Tally or upload a file above'}</p>
+            <ReceiptText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <p className="font-bold text-slate-700">{hi ? 'Abhi koi bill sync nahi hua' : 'No bills synced yet'}</p>
+            <p className="text-sm text-slate-400 mt-1">{hi ? 'Upar se Tally connect karein ya file upload karein' : 'Connect Tally or upload a file above'}</p>
           </div>
         ) : (
           <div className="overflow-x-auto -mx-6 px-6">
             <table className="w-full text-sm min-w-[640px]">
               <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wide text-stone-400 border-b border-stone-100">
+                <tr className="text-left text-[11px] uppercase tracking-wide text-slate-400 border-b border-slate-100">
                   <th className="pb-2.5 font-bold">{hi ? 'Bill' : 'Bill'}</th>
                   <th className="pb-2.5 font-bold">{hi ? 'Party' : 'Party'}</th>
                   <th className="pb-2.5 font-bold text-right">{hi ? 'Pending' : 'Pending'}</th>
@@ -381,27 +381,27 @@ export default function IntegrationsPage() {
               </thead>
               <tbody className="divide-y divide-stone-100">
                 {bills.map((b) => (
-                  <tr key={b.id} className="hover:bg-orange-50/40">
+                  <tr key={b.id} className="hover:bg-green-50/40">
                     <td className="py-3 pr-3">
-                      <p className="font-bold text-stone-900">{b.billRef}</p>
-                      <p className="text-xs text-stone-400">{b.voucherType ?? ''}</p>
+                      <p className="font-bold text-slate-900">{b.billRef}</p>
+                      <p className="text-xs text-slate-400">{b.voucherType ?? ''}</p>
                     </td>
                     <td className="py-3 pr-3">
-                      <p className="font-semibold text-stone-800">{b.partyName}</p>
-                      {b.partyPhone && <p className="text-xs text-stone-400">{b.partyPhone}</p>}
+                      <p className="font-semibold text-slate-800">{b.partyName}</p>
+                      {b.partyPhone && <p className="text-xs text-slate-400">{b.partyPhone}</p>}
                     </td>
                     <td className="py-3 pr-3 text-right">
-                      <p className={`font-extrabold ${b.pendingAmount > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                      <p className={`font-extrabold ${b.pendingAmount > 0 ? 'text-green-600' : 'text-green-600'}`}>
                         {b.pendingAmount > 0 ? inr(b.pendingAmount) : (hi ? 'Paid ✓' : 'Paid ✓')}
                       </p>
-                      <p className="text-xs text-stone-400">{hi ? 'kul' : 'of'} {inr(b.amount)}</p>
+                      <p className="text-xs text-slate-400">{hi ? 'kul' : 'of'} {inr(b.amount)}</p>
                     </td>
-                    <td className="py-3 pr-3 text-stone-600 text-[13px]">
+                    <td className="py-3 pr-3 text-slate-600 text-[13px]">
                       {b.dueDate ? new Date(b.dueDate).toLocaleDateString('en-IN') : '—'}
                     </td>
                     <td className="py-3">
                       <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
-                        b.source === 'tally_agent' ? 'bg-blue-50 text-blue-700' : b.source === 'tally_xml' ? 'bg-purple-50 text-purple-700' : 'bg-stone-100 text-stone-600'
+                        b.source === 'tally_agent' ? 'bg-blue-50 text-blue-700' : b.source === 'tally_xml' ? 'bg-purple-50 text-purple-700' : 'bg-slate-100 text-slate-600'
                       }`}>
                         {b.source === 'tally_agent' ? (hi ? 'Auto-sync' : 'Auto-sync') : b.source === 'tally_xml' ? 'XML' : (hi ? 'Manual' : 'Manual')}
                       </span>
@@ -417,7 +417,7 @@ export default function IntegrationsPage() {
       {/* -------- agent info -------- */}
       <div className="bg-gradient-to-br from-stone-900 to-stone-800 rounded-3xl p-6 text-white">
         <h3 className="font-extrabold text-lg mb-2">{hi ? '🤖 Tally Sync Agent (automatic)' : '🤖 Tally Sync Agent (automatic)'}</h3>
-        <p className="text-stone-300 text-sm leading-relaxed max-w-3xl">
+        <p className="text-slate-300 text-sm leading-relaxed max-w-3xl">
           {hi
             ? 'Roz-roz file upload nahi karna? Apne Windows computer par chhota sa Sync Agent install karein — wo har 30 minute me Tally se naye bills nikal kar Ugaahi ko bhej dega. Tally chalta rehna chahiye, bas.'
             : 'Don’t want to upload files daily? Install the tiny Sync Agent on your Windows computer — it pulls new bills from Tally every 30 minutes and pushes them to Ugaahi. Tally just needs to be running.'}

@@ -175,27 +175,27 @@ function OtpPageInner() {
     <div className="min-h-screen bg-[#FDF9F1] pattern-jaali flex items-center justify-center px-4 relative overflow-hidden">
       <div className="absolute top-0 left-0 right-0 tricolor-bar" />
       {/* Background orbs */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-orange-400/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-green-400/15 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-amber-400/15 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative w-full max-w-sm">
-        <div className="bg-white rounded-3xl border border-orange-100 shadow-2xl shadow-orange-900/10 p-8">
+        <div className="bg-white rounded-3xl border border-green-100 shadow-2xl shadow-green-900/10 p-8">
           {/* Lang toggle */}
           <div className="flex justify-end mb-4">
             <button
               onClick={() => setLang(lang === 'hi' ? 'en' : 'hi')}
-              className="text-xs font-bold text-stone-500 hover:text-orange-600 px-2 py-1 rounded-lg border border-stone-200"
+              className="text-xs font-bold text-slate-500 hover:text-green-600 px-2 py-1 rounded-lg border border-slate-200"
             >
               {lang === 'hi' ? 'EN' : 'HI'}
             </button>
           </div>
 
           <div className="text-center mb-2">
-            <span className="inline-flex w-14 h-14 rounded-2xl bg-orange-100 border border-orange-200 items-center justify-center text-3xl mb-2">🔐</span>
+            <span className="inline-flex w-14 h-14 rounded-2xl bg-green-100 border border-green-200 items-center justify-center text-3xl mb-2">🔐</span>
           </div>
-          <h1 className="text-2xl font-extrabold text-center text-stone-900 mb-1">{t.title}</h1>
-          <p className="text-stone-500 text-sm text-center mb-6">
-            {t.subtitle} <span className="text-stone-900 font-bold amount-display">+91 {phone}</span>
+          <h1 className="text-2xl font-extrabold text-center text-slate-900 mb-1">{t.title}</h1>
+          <p className="text-slate-500 text-sm text-center mb-6">
+            {t.subtitle} <span className="text-slate-900 font-bold amount-display">+91 {phone}</span>
           </p>
 
           {/* OTP boxes */}
@@ -213,7 +213,7 @@ function OtpPageInner() {
                 onChange={(e) => handleChange(i, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(i, e)}
                 aria-label={`Digit ${i + 1}`}
-                className="w-12 h-14 text-center text-2xl font-bold bg-orange-50/50 border-2 border-stone-200 rounded-xl text-stone-900 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition-all amount-display"
+                className="w-12 h-14 text-center text-2xl font-bold bg-green-50/50 border-2 border-slate-200 rounded-xl text-slate-900 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-all amount-display"
               />
             ))}
           </div>
@@ -234,12 +234,12 @@ function OtpPageInner() {
 
           <div className="text-center space-y-2 text-sm">
             {cooldown > 0 ? (
-              <p className="text-stone-400 font-medium">{t.resendIn(cooldown)}</p>
+              <p className="text-slate-400 font-medium">{t.resendIn(cooldown)}</p>
             ) : (
               <button
                 onClick={() => handleResend(false)}
                 disabled={resending}
-                className="text-orange-600 hover:text-orange-700 font-bold disabled:opacity-50"
+                className="text-green-600 hover:text-green-700 font-bold disabled:opacity-50"
               >
                 {resending ? t.verifyingBtn : t.resend}
               </button>
@@ -248,7 +248,7 @@ function OtpPageInner() {
               <button
                 onClick={() => handleResend(true)}
                 disabled={resending || cooldown > 0}
-                className="text-stone-500 hover:text-stone-700 font-medium disabled:opacity-50"
+                className="text-slate-500 hover:text-slate-700 font-medium disabled:opacity-50"
               >
                 {t.voice}
               </button>
@@ -256,7 +256,7 @@ function OtpPageInner() {
             <div>
               <button
                 onClick={() => router.push('/login')}
-                className="text-stone-400 hover:text-stone-600 font-medium"
+                className="text-slate-400 hover:text-slate-600 font-medium"
               >
                 {t.changeNumber}
               </button>

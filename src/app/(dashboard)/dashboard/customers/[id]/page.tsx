@@ -173,13 +173,13 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   }
 
   if (loading) {
-    return <div className="flex items-center justify-center py-24"><Loader2 className="w-8 h-8 text-orange-500 animate-spin" /></div>
+    return <div className="flex items-center justify-center py-24"><Loader2 className="w-8 h-8 text-green-500 animate-spin" /></div>
   }
   if (notFound || !customer) {
     return (
       <div className="text-center py-24">
-        <p className="text-stone-500 font-medium mb-4">Customer nahi mila.</p>
-        <Link href="/dashboard/customers" className="text-orange-600 font-semibold hover:underline">← Customers</Link>
+        <p className="text-slate-500 font-medium mb-4">Customer nahi mila.</p>
+        <Link href="/dashboard/customers" className="text-green-600 font-semibold hover:underline">← Customers</Link>
       </div>
     )
   }
@@ -197,18 +197,18 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
 
   return (
     <div className="space-y-5 pb-8">
-      <Link href="/dashboard/customers" className="inline-flex items-center gap-2 text-stone-500 hover:text-orange-600 font-semibold text-sm transition-colors">
+      <Link href="/dashboard/customers" className="inline-flex items-center gap-2 text-slate-500 hover:text-green-600 font-semibold text-sm transition-colors">
         <ArrowLeft className="w-4 h-4" /> {lang === 'hi' ? 'Customers' : 'Customers'}
       </Link>
 
       {/* ── Compact Professional Hero ── */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-stone-900 via-stone-800 to-orange-950 shadow-lg">
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute -top-16 -right-16 w-64 h-64 bg-orange-500 rounded-full blur-3xl" />
+          <div className="absolute -top-16 -right-16 w-64 h-64 bg-green-500 rounded-full blur-3xl" />
         </div>
         <div className="relative px-5 py-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-xl font-extrabold text-white shadow-md shadow-orange-500/40 shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-amber-500 flex items-center justify-center text-xl font-extrabold text-white shadow-md shadow-green-500/40 shrink-0">
               {customer.name.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
@@ -227,12 +227,12 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                 )}
               </div>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <p className="text-orange-200/70 text-xs flex items-center gap-1 font-medium">
+                <p className="text-green-200/70 text-xs flex items-center gap-1 font-medium">
                   <Phone className="w-3 h-3" /> {phone}
                 </p>
                 <button
                   onClick={() => { setPhoneInput(customer.phone.startsWith('tally-') ? '' : customer.phone.replace('+91', '')); setPhoneError(''); setEditingPhone(true) }}
-                  className="p-1 rounded-md text-orange-300/70 hover:text-orange-200 hover:bg-white/10 transition-colors"
+                  className="p-1 rounded-md text-green-300/70 hover:text-green-200 hover:bg-white/10 transition-colors"
                   title={hasPhone ? 'Number badlo' : 'Number add karo'}
                 >
                   <Pencil className="w-3 h-3" />
@@ -240,11 +240,11 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
               </div>
             </div>
             <div className="text-right shrink-0">
-              <p className="text-orange-200/50 text-[10px] font-bold uppercase tracking-widest">Outstanding</p>
+              <p className="text-green-200/50 text-[10px] font-bold uppercase tracking-widest">Outstanding</p>
               <p className={`text-2xl font-extrabold tracking-tight ${totalPending > 0 ? 'text-white' : 'text-emerald-400'}`}>
                 ₹{totalPending.toLocaleString('en-IN')}
               </p>
-              <p className="text-orange-200/50 text-[10px] font-medium mt-0.5">
+              <p className="text-green-200/50 text-[10px] font-medium mt-0.5">
                 {pending.length} pending • {customer.bills.length} bills
               </p>
             </div>
@@ -259,38 +259,38 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
         </div>
       )}
       <div className="grid grid-cols-3 gap-2.5">
-        <div className="bg-white rounded-2xl border border-stone-200/70 px-4 py-3.5 text-center shadow-sm">
-          <p className="text-base font-extrabold text-stone-900 tracking-tight">₹{totalBilled.toLocaleString('en-IN')}</p>
-          <p className="text-stone-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">Total Billed</p>
+        <div className="bg-white rounded-2xl border border-slate-200/70 px-4 py-3.5 text-center shadow-sm">
+          <p className="text-base font-extrabold text-slate-900 tracking-tight">₹{totalBilled.toLocaleString('en-IN')}</p>
+          <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">Total Billed</p>
         </div>
         <div className="bg-white rounded-2xl border border-emerald-200/60 px-4 py-3.5 text-center shadow-sm">
           <p className="text-base font-extrabold text-emerald-600 tracking-tight">₹{Math.max(0, collected).toLocaleString('en-IN')}</p>
-          <p className="text-stone-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">Collected</p>
+          <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">Collected</p>
         </div>
         <div className="bg-white rounded-2xl border border-red-200/60 px-4 py-3.5 text-center shadow-sm">
           <p className="text-base font-extrabold text-red-600 tracking-tight">₹{totalPending.toLocaleString('en-IN')}</p>
-          <p className="text-stone-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">Pending</p>
+          <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">Pending</p>
         </div>
       </div>
 
       {/* ── Outstandings ── */}
       <section>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-extrabold text-stone-900 tracking-tight flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
-              <Clock className="w-4 h-4 text-orange-600" />
+          <h2 className="font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+              <Clock className="w-4 h-4 text-green-600" />
             </div>
             Outstanding Payments
           </h2>
-          <span className="text-xs font-bold bg-stone-900 text-white px-3 py-1 rounded-full">{pending.length}</span>
+          <span className="text-xs font-bold bg-slate-900 text-white px-3 py-1 rounded-full">{pending.length}</span>
         </div>
         {pending.length === 0 ? (
-          <div className="bg-white rounded-3xl border border-stone-200/70 p-8 text-center shadow-sm">
+          <div className="bg-white rounded-3xl border border-slate-200/70 p-8 text-center shadow-sm">
             <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center mx-auto mb-3">
               <CheckCircle2 className="w-7 h-7 text-emerald-500" />
             </div>
-            <p className="text-stone-900 font-extrabold">All clear! 🎉</p>
-            <p className="text-stone-500 text-sm mt-1">Is customer ka koi outstanding nahi hai.</p>
+            <p className="text-slate-900 font-extrabold">All clear! 🎉</p>
+            <p className="text-slate-500 text-sm mt-1">Is customer ka koi outstanding nahi hai.</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -299,36 +299,36 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
               const isOd = o.status === 'overdue' || od > 0
               return (
                 <div key={o.id}
-                  className={`bg-white rounded-2xl border p-5 shadow-sm hover:shadow-md transition-shadow ${isOd ? 'border-red-200/70' : 'border-stone-200/70'}`}>
+                  className={`bg-white rounded-2xl border p-5 shadow-sm hover:shadow-md transition-shadow ${isOd ? 'border-red-200/70' : 'border-slate-200/70'}`}>
                   <div className="flex items-center gap-4">
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${isOd ? 'bg-red-50' : 'bg-amber-50'}`}>
                       <FileText className={`w-5 h-5 ${isOd ? 'text-red-600' : 'text-amber-600'}`} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-bold text-stone-900">{o.invoiceNo ? `Invoice ${o.invoiceNo}` : 'Outstanding'}</p>
+                        <p className="font-bold text-slate-900">{o.invoiceNo ? `Invoice ${o.invoiceNo}` : 'Outstanding'}</p>
                         <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${isOd ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
                           {isOd ? 'overdue' : o.status}
                         </span>
                       </div>
-                      <p className={`text-xs font-medium flex items-center gap-1.5 mt-1 ${isOd ? 'text-red-600' : 'text-stone-500'}`}>
+                      <p className={`text-xs font-medium flex items-center gap-1.5 mt-1 ${isOd ? 'text-red-600' : 'text-slate-500'}`}>
                         <CalendarCheck className="w-3.5 h-3.5" />
                         Due {new Date(o.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                         {od > 0 && <span className="font-bold">• {od} days overdue</span>}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className={`text-2xl font-extrabold tracking-tight ${isOd ? 'text-red-600' : 'text-stone-900'}`}>
+                      <p className={`text-2xl font-extrabold tracking-tight ${isOd ? 'text-red-600' : 'text-slate-900'}`}>
                         ₹{Number(o.amount).toLocaleString('en-IN')}
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-2 mt-4 pt-4 border-t border-stone-100">
+                  <div className="flex gap-2 mt-4 pt-4 border-t border-slate-100">
                     {hasPhone && (
                       <button
                         onClick={() => triggerCall(o.id)}
                         disabled={calling === o.id}
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 disabled:opacity-50 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-md shadow-orange-500/20"
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-green-500 to-amber-500 hover:from-green-600 hover:to-amber-600 disabled:opacity-50 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-md shadow-green-500/20"
                       >
                         {calling === o.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Phone className="w-3.5 h-3.5" />}
                         {calling === o.id ? 'Calling...' : 'AI Call'}
@@ -347,7 +347,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                     <button
                       onClick={() => triggerCall(o.id, true)}
                       disabled={calling === o.id}
-                      className="mt-2 w-full text-center text-[11px] font-semibold text-stone-400 hover:text-stone-600 transition-colors"
+                      className="mt-2 w-full text-center text-[11px] font-semibold text-slate-400 hover:text-slate-600 transition-colors"
                     >
                       🧪 Test call (bypass quiet hours)
                     </button>
@@ -363,28 +363,28 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
       {customer.bills.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-extrabold text-stone-900 tracking-tight flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center">
-                <FileText className="w-4 h-4 text-stone-500" />
+            <h2 className="font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+                <FileText className="w-4 h-4 text-slate-500" />
               </div>
               Bills
             </h2>
-            <span className="text-xs font-bold bg-stone-900 text-white px-3 py-1 rounded-full">{customer.bills.length}</span>
+            <span className="text-xs font-bold bg-slate-900 text-white px-3 py-1 rounded-full">{customer.bills.length}</span>
           </div>
-          <div className="bg-white rounded-2xl border border-stone-200/70 divide-y divide-stone-100 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-slate-200/70 divide-y divide-stone-100 shadow-sm overflow-hidden">
             {customer.bills.map(b => (
-              <div key={b.id} className="flex items-center justify-between px-5 py-4 hover:bg-stone-50/50 transition-colors">
+              <div key={b.id} className="flex items-center justify-between px-5 py-4 hover:bg-slate-50/50 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-stone-100 flex items-center justify-center">
-                    <Receipt className="w-4 h-4 text-stone-500" />
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                    <Receipt className="w-4 h-4 text-slate-500" />
                   </div>
                   <div>
-                    <p className="font-bold text-stone-900 text-sm">Bill {b.billRef}</p>
-                    <p className="text-stone-400 text-xs mt-0.5">{new Date(b.billDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                    <p className="font-bold text-slate-900 text-sm">Bill {b.billRef}</p>
+                    <p className="text-slate-400 text-xs mt-0.5">{new Date(b.billDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-extrabold text-stone-900 text-sm">₹{Number(b.amount).toLocaleString('en-IN')}</p>
+                  <p className="font-extrabold text-slate-900 text-sm">₹{Number(b.amount).toLocaleString('en-IN')}</p>
                   {Number(b.pendingAmount) > 0 ? (
                     <p className="text-red-600 text-xs font-bold mt-0.5">₹{Number(b.pendingAmount).toLocaleString('en-IN')} pending</p>
                   ) : (
@@ -403,22 +403,22 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
       {customer.promises.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-extrabold text-stone-900 tracking-tight flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center">
-                <CalendarCheck className="w-4 h-4 text-stone-500" />
+            <h2 className="font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+                <CalendarCheck className="w-4 h-4 text-slate-500" />
               </div>
               Payment Promises
             </h2>
-            <span className="text-xs font-bold bg-stone-900 text-white px-3 py-1 rounded-full">{customer.promises.length}</span>
+            <span className="text-xs font-bold bg-slate-900 text-white px-3 py-1 rounded-full">{customer.promises.length}</span>
           </div>
           <div className="space-y-2.5">
             {customer.promises.map(p => (
-              <div key={p.id} className="bg-white rounded-2xl border border-stone-200/70 px-5 py-4 flex items-center justify-between shadow-sm">
+              <div key={p.id} className="bg-white rounded-2xl border border-slate-200/70 px-5 py-4 flex items-center justify-between shadow-sm">
                 <div>
-                  <p className="font-bold text-stone-900 text-sm">
+                  <p className="font-bold text-slate-900 text-sm">
                     {new Date(p.promisedDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} tak payment ka wada
                   </p>
-                  {p.notes && <p className="text-stone-500 text-xs mt-1">{p.notes}</p>}
+                  {p.notes && <p className="text-slate-500 text-xs mt-1">{p.notes}</p>}
                 </div>
                 <span className={`text-[11px] font-bold px-3 py-1.5 rounded-full border ${
                   p.status === 'kept' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
@@ -435,13 +435,13 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
       {customer.outstandings.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-extrabold text-stone-900 tracking-tight flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center">
-                <History className="w-4 h-4 text-stone-500" />
+            <h2 className="font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+                <History className="w-4 h-4 text-slate-500" />
               </div>
               Transaction History
             </h2>
-            <span className="text-xs font-bold bg-stone-900 text-white px-3 py-1 rounded-full">
+            <span className="text-xs font-bold bg-slate-900 text-white px-3 py-1 rounded-full">
               {customer.outstandings.length} records
             </span>
           </div>
@@ -469,7 +469,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
           </div>
 
           {/* Timeline */}
-          <div className="bg-white rounded-2xl border border-stone-200/70 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-slate-200/70 shadow-sm overflow-hidden">
             <div className="divide-y divide-stone-100">
               {[...customer.outstandings]
                 .sort((a, b) => {
@@ -484,7 +484,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                     ? (o.paidAt ? new Date(o.paidAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—')
                     : new Date(o.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
                   return (
-                    <div key={o.id} className="flex items-center gap-3.5 px-5 py-3.5 hover:bg-stone-50/60 transition-colors">
+                    <div key={o.id} className="flex items-center gap-3.5 px-5 py-3.5 hover:bg-slate-50/60 transition-colors">
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                         isPaid ? 'bg-emerald-100' : isOd ? 'bg-red-100' : 'bg-amber-100'
                       }`}>
@@ -493,10 +493,10 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                           : <FileText className={`w-4.5 h-4.5 ${isOd ? 'text-red-600' : 'text-amber-600'}`} />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-stone-900 truncate">
+                        <p className="text-sm font-bold text-slate-900 truncate">
                           {o.invoiceNo ? `Invoice ${o.invoiceNo}` : 'Outstanding'}
                         </p>
-                        <p className="text-xs text-stone-400 mt-0.5">
+                        <p className="text-xs text-slate-400 mt-0.5">
                           {isPaid ? `Paid on ${dateLabel}` : `Due ${dateLabel}`}
                           {isOd && !isPaid && daysOverdue(o.dueDate) > 0 && (
                             <span className="text-red-500 font-bold"> • {daysOverdue(o.dueDate)}d overdue</span>
@@ -504,7 +504,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                         </p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className={`text-sm font-extrabold ${isPaid ? 'text-emerald-600' : isOd ? 'text-red-600' : 'text-stone-900'}`}>
+                        <p className={`text-sm font-extrabold ${isPaid ? 'text-emerald-600' : isOd ? 'text-red-600' : 'text-slate-900'}`}>
                           {isPaid ? '+' : ''}₹{Number(o.amount).toLocaleString('en-IN')}
                         </p>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
@@ -520,28 +520,28 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                 })}
             </div>
           </div>
-          <p className="text-[11px] text-stone-400 mt-2.5 text-center">
+          <p className="text-[11px] text-slate-400 mt-2.5 text-center">
             Poora hisaab — pehle kitna liya, kab pay kiya, ab kitna baaki hai
           </p>
         </section>
       )}
       {/* ── Phone edit modal ── */}
       {editingPhone && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm" onClick={() => setEditingPhone(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => setEditingPhone(false)}>
           <div className="bg-white rounded-3xl p-7 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-extrabold text-stone-900 tracking-tight">
+              <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">
                 {hasPhone ? 'Update Number' : 'Add Mobile Number'}
               </h3>
-              <button onClick={() => setEditingPhone(false)} className="p-2 rounded-xl text-stone-400 hover:bg-stone-100 transition-colors">
+              <button onClick={() => setEditingPhone(false)} className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <p className="text-sm text-stone-500 mb-4 leading-relaxed">
-              <span className="font-bold text-stone-800">{customer.name}</span> ka 10-digit mobile number — WhatsApp reminders aur AI calls isi pe jayenge.
+            <p className="text-sm text-slate-500 mb-4 leading-relaxed">
+              <span className="font-bold text-slate-800">{customer.name}</span> ka 10-digit mobile number — WhatsApp reminders aur AI calls isi pe jayenge.
             </p>
             <div className="flex items-center gap-2 mb-4">
-              <span className="bg-stone-100 border border-stone-200 rounded-xl px-4 py-3.5 text-sm font-bold text-stone-600">+91</span>
+              <span className="bg-slate-100 border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-600">+91</span>
               <input
                 type="tel"
                 value={phoneInput}
@@ -549,14 +549,14 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                 placeholder="98765 43210"
                 maxLength={10}
                 autoFocus
-                className="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-4 py-3.5 text-lg font-bold tracking-widest text-stone-900 placeholder:text-stone-300 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400 transition-all"
+                className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-lg font-bold tracking-widest text-slate-900 placeholder:text-slate-300 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-400 transition-all"
               />
             </div>
             {phoneError && <p className="text-red-600 text-sm font-medium mb-4">{phoneError}</p>}
             <button
               onClick={savePhone}
               disabled={saving || phoneInput.length !== 10}
-              className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 disabled:opacity-50 text-white font-bold text-sm py-3.5 rounded-2xl shadow-lg shadow-orange-500/25 transition-all"
+              className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-amber-500 hover:from-green-600 hover:to-amber-600 disabled:opacity-50 text-white font-bold text-sm py-3.5 rounded-2xl shadow-lg shadow-green-500/25 transition-all"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
               {saving ? 'Saving...' : 'Save Number'}

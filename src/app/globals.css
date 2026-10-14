@@ -1,44 +1,47 @@
 @import "tailwindcss";
 
 /* ─────────────────────────────────────────────────────────────
-   UDHARI OS — "Bharat Light" theme
-   Warm paper-white background, saffron (kesariya) primary,
-   India-green accents. Built for Indian merchants.
+   UDHARI OS — "LegAn Green" theme
+   Inspired by leganapp.com: vivid green (#00B33F) primary,
+   deep navy (#00203D) headings, forest green (#0B3B2C) dark
+   sections, clean white backgrounds. Premium fintech feel.
    ───────────────────────────────────────────────────────────── */
 @theme {
   /* Base */
-  --color-background:        #FDF9F1;
-  --color-foreground:        #1C1917;
+  --color-background:        #FFFFFF;
+  --color-foreground:        #00203D;
   --color-card:              #FFFFFF;
-  --color-card-foreground:   #1C1917;
+  --color-card-foreground:   #00203D;
   --color-popover:           #FFFFFF;
-  --color-popover-foreground:#1C1917;
+  --color-popover-foreground:#00203D;
 
-  /* Brand — saffron / kesariya */
-  --color-primary:           #EA580C;
+  /* Brand — LegAn vivid green */
+  --color-primary:           #00B33F;
   --color-primary-foreground:#FFFFFF;
-  --color-secondary:         #FFF7ED;
-  --color-secondary-foreground:#9A3412;
-  --color-muted:             #F5EFE3;
-  --color-muted-foreground:  #78716C;
-  --color-accent:            #EA580C;
+  --color-secondary:         #F0FDF4;
+  --color-secondary-foreground:#0B3B2C;
+  --color-muted:             #F8FAFC;
+  --color-muted-foreground:  #494F62;
+  --color-accent:            #1FB2A6;
   --color-accent-foreground: #FFFFFF;
 
   --color-destructive:       #DC2626;
   --color-destructive-foreground: #FFFFFF;
-  --color-border:            #EDE4D3;
-  --color-input:             #EDE4D3;
-  --color-ring:              #FDBA74;
+  --color-border:            #E5E7EB;
+  --color-input:             #E5E7EB;
+  --color-ring:              #86EFAC;
 
-  /* Custom Udhari colors */
-  --color-success:           #15803D;
+  /* Custom colors */
+  --color-success:           #00B33F;
   --color-warning:           #B45309;
-  --color-rupee-green:       #15803D;
+  --color-rupee-green:       #00B33F;
   --color-overdue-red:       #DC2626;
-  --color-brand-deep:        #9A3412;
-  --color-brand-soft:        #FFF7ED;
+  --color-brand-deep:        #0B3B2C;
+  --color-brand-navy:        #00203D;
+  --color-brand-soft:        #F0FDF4;
+  --color-brand-mint:        #BBF7D0;
 
-  /* Border radius */
+  /* Border radius — LegAn uses 8px buttons, 16px cards */
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
   --radius-lg: 1rem;
@@ -49,29 +52,29 @@
    CSS custom properties (shadcn/ui compat)
    ───────────────────────────────────────────────────────────── */
 :root {
-  --background: 36 60% 97%;
-  --foreground: 20 14% 10%;
+  --background: 0 0% 100%;
+  --foreground: 210 100% 12%;
   --card: 0 0% 100%;
-  --card-foreground: 20 14% 10%;
+  --card-foreground: 210 100% 12%;
   --popover: 0 0% 100%;
-  --popover-foreground: 20 14% 10%;
-  --primary: 22 90% 48%;
+  --popover-foreground: 210 100% 12%;
+  --primary: 142 100% 35%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 30 100% 96%;
-  --secondary-foreground: 20 80% 30%;
-  --muted: 38 40% 93%;
-  --muted-foreground: 25 8% 47%;
-  --accent: 22 90% 48%;
+  --secondary: 142 70% 96%;
+  --secondary-foreground: 160 60% 14%;
+  --muted: 210 20% 98%;
+  --muted-foreground: 220 12% 34%;
+  --accent: 174 70% 41%;
   --accent-foreground: 0 0% 100%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
-  --border: 36 35% 90%;
-  --input: 36 35% 90%;
-  --ring: 24 95% 72%;
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --ring: 142 80% 75%;
   --radius: 0.75rem;
-  --success: 142 70% 29%;
+  --success: 142 100% 35%;
   --warning: 32 95% 38%;
-  --rupee-green: 142 70% 29%;
+  --rupee-green: 142 100% 35%;
   --overdue-red: 0 72% 51%;
 }
 
@@ -85,8 +88,8 @@
   }
 
   body {
-    background-color: #FDF9F1;
-    color: #1C1917;
+    background-color: #FFFFFF;
+    color: #00203D;
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
   }
@@ -100,18 +103,23 @@
   html {
     scroll-behavior: smooth;
   }
+
+  h1, h2, h3 {
+    color: #00203D;
+    letter-spacing: -0.02em;
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Utility classes
+   Utility classes — LegAn style
    ───────────────────────────────────────────────────────────── */
 @layer utilities {
-  /* White card with warm soft shadow */
+  /* White card with light border — LegAn flat card style */
   .glass-card {
     background: #FFFFFF;
-    border: 1px solid #F0E6D2;
+    border: 2px solid #E5E7EB;
     border-radius: 1rem;
-    box-shadow: 0 1px 2px rgba(120, 70, 10, 0.05), 0 10px 30px -14px rgba(120, 70, 10, 0.14);
+    box-shadow: none;
   }
 
   .card-hover {
@@ -119,13 +127,13 @@
   }
   .card-hover:hover {
     transform: translateY(-2px);
-    border-color: #FDBA74;
-    box-shadow: 0 2px 4px rgba(120, 70, 10, 0.06), 0 16px 36px -14px rgba(234, 88, 12, 0.22);
+    border-color: #86EFAC;
+    box-shadow: 0 10px 30px -14px rgba(0, 179, 63, 0.18);
   }
 
-  /* Saffron gradient text */
+  /* Green gradient text */
   .gradient-text {
-    background: linear-gradient(120deg, #EA580C 10%, #F59E0B 55%, #DC2626 110%);
+    background: linear-gradient(120deg, #00B33F 10%, #1FB2A6 55%, #0B3B2C 110%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -133,30 +141,30 @@
 
   /* Rupee green */
   .text-rupee {
-    color: #15803D;
+    color: #00B33F;
   }
 
-  /* Stat card */
+  /* Stat card — LegAn style: white, 16px radius, light border */
   .stat-card {
     position: relative;
     overflow: hidden;
     border-radius: 1rem;
     padding: 1.25rem;
     background: #FFFFFF;
-    border: 1px solid #F0E6D2;
-    box-shadow: 0 1px 2px rgba(120, 70, 10, 0.05), 0 10px 30px -14px rgba(120, 70, 10, 0.14);
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    border: 2px solid #E5E7EB;
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
   }
   .stat-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 2px 4px rgba(120, 70, 10, 0.06), 0 16px 36px -14px rgba(234, 88, 12, 0.2);
+    border-color: #86EFAC;
+    box-shadow: 0 10px 30px -14px rgba(0, 179, 63, 0.18);
   }
   .stat-card::after {
     content: '';
     position: absolute;
     top: 0; left: 0; right: 0;
     height: 3px;
-    background: linear-gradient(90deg, #EA580C, #F59E0B);
+    background: linear-gradient(90deg, #00B33F, #1FB2A6);
     opacity: 0;
     transition: opacity 0.25s ease;
   }
@@ -164,51 +172,62 @@
     opacity: 1;
   }
 
+  /* Dark hero card — deep forest green like LegAn */
+  .hero-dark {
+    background: linear-gradient(135deg, #0B3B2C 0%, #0E4A37 50%, #0B3B2C 100%);
+    color: #FFFFFF;
+    border-radius: 1.25rem;
+  }
+  .hero-dark h1, .hero-dark h2, .hero-dark h3 {
+    color: #FFFFFF;
+  }
+
   /* Shared form field */
   .field {
     width: 100%;
     background: #FFFFFF;
-    border: 1px solid #E7DCC3;
+    border: 1px solid #D1D5DB;
     border-radius: 0.75rem;
     padding: 0.8rem 1rem;
-    color: #1C1917;
+    color: #00203D;
     font-size: 0.95rem;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
   .field::placeholder {
-    color: #A8A29E;
+    color: #9CA3AF;
   }
   .field:focus {
     outline: none;
-    border-color: #EA580C;
-    box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.12);
+    border-color: #00B33F;
+    box-shadow: 0 0 0 3px rgba(0, 179, 63, 0.12);
   }
 
   .field-label {
     display: block;
     font-size: 0.82rem;
     font-weight: 600;
-    color: #57534E;
+    color: #494F62;
     margin-bottom: 0.4rem;
   }
 
-  /* Primary button */
+  /* Primary button — LegAn vivid green, 8px radius */
   .btn-primary {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    background: linear-gradient(135deg, #EA580C, #C2410C);
+    background: #00B33F;
     color: #FFFFFF;
-    font-weight: 700;
-    border-radius: 0.85rem;
-    box-shadow: 0 8px 20px -8px rgba(234, 88, 12, 0.55);
+    font-weight: 600;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1.75rem;
+    box-shadow: 0 4px 14px -4px rgba(0, 179, 63, 0.4);
     transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
   }
   .btn-primary:hover {
-    filter: brightness(1.06);
+    filter: brightness(1.05);
     transform: translateY(-1px);
-    box-shadow: 0 12px 26px -8px rgba(234, 88, 12, 0.6);
+    box-shadow: 0 8px 20px -4px rgba(0, 179, 63, 0.45);
   }
   .btn-primary:active {
     transform: translateY(0);
@@ -225,15 +244,16 @@
     justify-content: center;
     gap: 0.5rem;
     background: #FFFFFF;
-    color: #44403C;
+    color: #00203D;
     font-weight: 600;
-    border: 1px solid #E7DCC3;
-    border-radius: 0.85rem;
+    border: 1px solid #D1D5DB;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1.5rem;
     transition: background 0.2s ease, border-color 0.2s ease;
   }
   .btn-ghost:hover {
-    background: #FFF7ED;
-    border-color: #FDBA74;
+    background: #F0FDF4;
+    border-color: #86EFAC;
   }
 
   /* Status badges — light variants */
@@ -259,7 +279,7 @@
   }
   .badge-paid {
     background: #F0FDF4;
-    color: #15803D;
+    color: #00B33F;
     border: 1px solid #BBF7D0;
   }
   .badge-written_off {
@@ -273,13 +293,13 @@
     animation: overduePulse 2.4s ease-in-out infinite;
   }
   @keyframes overduePulse {
-    0%, 100% { box-shadow: 0 1px 2px rgba(120,70,10,.05), 0 0 0 0 rgba(220, 38, 38, 0); }
-    50% { box-shadow: 0 1px 2px rgba(120,70,10,.05), 0 0 0 6px rgba(220, 38, 38, 0.10); }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+    50% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0.10); }
   }
 
   /* Skeleton loading */
   .skeleton {
-    background: linear-gradient(90deg, #F5EEDF 25%, #FBF6EA 50%, #F5EEDF 75%);
+    background: linear-gradient(90deg, #F1F5F9 25%, #F8FAFC 50%, #F1F5F9 75%);
     background-size: 200% 100%;
     border-radius: 0.75rem;
     animation: shimmer 1.6s ease-in-out infinite;
@@ -297,24 +317,16 @@
     right: 0;
     background: rgba(255, 255, 255, 0.96);
     backdrop-filter: blur(12px);
-    border-top: 1px solid #F0E6D2;
-    box-shadow: 0 -8px 24px -12px rgba(120, 70, 10, 0.15);
+    border-top: 1px solid #E5E7EB;
+    box-shadow: 0 -8px 24px -12px rgba(0, 32, 61, 0.12);
     z-index: 50;
     padding-bottom: env(safe-area-inset-bottom);
   }
 
-  /* Tricolor accent strip */
+  /* Green accent strip (replaces tricolor) */
   .tricolor-bar {
     height: 3px;
-    background: linear-gradient(to right, #FF9933 0%, #FF9933 33%, #F5F5F4 33%, #F5F5F4 66%, #138808 66%, #138808 100%);
-  }
-
-  /* Subtle Indian jaali pattern for hero sections */
-  .pattern-jaali {
-    background-image: url("data:image/svg+xml,%3Csvg width='56' height='56' viewBox='0 0 56 56' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M28 0l7 21 21 7-21 7-7 21-7-21-21-7 21-7z' fill='%23EA580C' fill-opacity='0.05'/%3E%3C/svg%3E");
-  }
-  .pattern-jaali-green {
-    background-image: url("data:image/svg+xml,%3Csvg width='56' height='56' viewBox='0 0 56 56' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M28 0l7 21 21 7-21 7-7 21-7-21-21-7 21-7z' fill='%2315803D' fill-opacity='0.05'/%3E%3C/svg%3E");
+    background: linear-gradient(to right, #00B33F 0%, #00B33F 50%, #1FB2A6 50%, #1FB2A6 100%);
   }
 
   /* Amount display */
@@ -331,15 +343,9 @@
     letter-spacing: -0.02em;
   }
 
-  /* Film-grain texture overlay */
-  .texture-grain {
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
-    background-size: 180px 180px;
-  }
-
   /* Subtle dot grid texture */
   .texture-dots {
-    background-image: radial-gradient(rgba(180, 100, 30, 0.07) 1px, transparent 1px);
+    background-image: radial-gradient(rgba(0, 179, 63, 0.07) 1px, transparent 1px);
     background-size: 26px 26px;
   }
   .texture-dots-light {
@@ -388,14 +394,14 @@
     inset: 0;
     border-radius: 1.25rem;
     padding: 1.5px;
-    background: linear-gradient(135deg, #FDBA74, #EA580C 40%, #FDE68A 70%, #FDBA74);
+    background: linear-gradient(135deg, #86EFAC, #00B33F 40%, #BBF7D0 70%, #86EFAC);
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     pointer-events: none;
   }
 
-  /* Section eyebrow */
+  /* Section eyebrow — LegAn style */
   .eyebrow {
     display: inline-flex;
     align-items: center;
@@ -404,33 +410,33 @@
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: #C2410C;
+    color: #00B33F;
   }
   .eyebrow::before {
     content: '';
     width: 1.75rem;
     height: 2px;
-    background: linear-gradient(90deg, #EA580C, #F59E0B);
+    background: linear-gradient(90deg, #00B33F, #1FB2A6);
     border-radius: 2px;
   }
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Scrollbar
+   Scrollbar — green accent
    ───────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #F5EEDF;
+  background: #F1F5F9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #E7DCC3;
+  background: #CBD5E1;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #EA580C;
+  background: #00B33F;
 }
 
 /* ─────────────────────────────────────────────────────────────

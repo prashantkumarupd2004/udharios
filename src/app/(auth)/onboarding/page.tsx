@@ -148,7 +148,7 @@ export default function OnboardingPage() {
 
   /* ------------------------------- left panel ------------------------------ */
   const leftPanel = (
-    <div className="hidden lg:flex flex-col justify-between w-[42%] max-w-[460px] shrink-0 relative overflow-hidden bg-gradient-to-br from-orange-600 via-orange-500 to-amber-500 text-white p-10">
+    <div className="hidden lg:flex flex-col justify-between w-[42%] max-w-[460px] shrink-0 relative overflow-hidden bg-gradient-to-br from-green-600 via-green-500 to-emerald-500 text-white p-10">
       <div className="absolute inset-0 pattern-jaali opacity-20" />
       <div className="absolute -bottom-24 -right-24 w-96 h-96 rounded-full bg-white/10 blur-2xl" />
       <div className="absolute -top-24 -left-24 w-72 h-72 rounded-full bg-amber-300/20 blur-2xl" />
@@ -156,11 +156,11 @@ export default function OnboardingPage() {
       <div className="relative">
         <div className="flex items-center gap-3 mb-12">
           <div className="w-11 h-11 rounded-2xl bg-white/95 flex items-center justify-center shadow-lg">
-            <Store className="w-6 h-6 text-orange-600" />
+            <Store className="w-6 h-6 text-green-600" />
           </div>
           <div>
             <p className="font-extrabold text-xl leading-none">Ugaahi</p>
-            <p className="text-orange-100 text-sm mt-1">उधारी वसूली, smart tarike se</p>
+            <p className="text-green-100 text-sm mt-1">उधारी वसूली, smart tarike se</p>
           </div>
         </div>
 
@@ -173,15 +173,15 @@ export default function OnboardingPage() {
             return (
               <div key={s.key} className="flex items-center gap-4 py-3">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                  done ? 'bg-white text-orange-600' : active ? 'bg-white/25 text-white ring-2 ring-white/60' : 'bg-white/10 text-orange-100'
+                  done ? 'bg-white text-green-600' : active ? 'bg-white/25 text-white ring-2 ring-white/60' : 'bg-white/10 text-green-100'
                 }`}>
                   {done ? <Check className="w-5 h-5" strokeWidth={3} /> : <Icon className="w-5 h-5" />}
                 </div>
                 <div>
-                  <p className={`font-bold text-[15px] ${active || done ? 'text-white' : 'text-orange-100/80'}`}>
+                  <p className={`font-bold text-[15px] ${active || done ? 'text-white' : 'text-green-100/80'}`}>
                     {stepLabel(i)}
                   </p>
-                  <p className="text-orange-100/70 text-xs">
+                  <p className="text-green-100/70 text-xs">
                     {i === 0 && (hi ? 'Dukaan ki pehchaan' : 'Your shop identity')}
                     {i === 1 && (hi ? 'Paise kaise aayenge' : 'How money arrives')}
                     {i === 2 && (hi ? 'Yaad dilane ka time' : 'When to remind')}
@@ -202,11 +202,11 @@ export default function OnboardingPage() {
               ? '“Pehle hafte me hi ₹38,000 ka purana udhaar vasool ho gaya — bina ek phone kiye.”'
               : '"₹38,000 of old dues recovered in the first week — without making a single call."'}
           </p>
-          <p className="text-orange-100 text-sm mt-3 font-semibold">
+          <p className="text-green-100 text-sm mt-3 font-semibold">
             {hi ? '— Ramesh Gupta, Kirana Store, Lucknow' : '— Ramesh Gupta, Kirana Store, Lucknow'}
           </p>
         </div>
-        <div className="flex items-center gap-2 mt-5 text-orange-100 text-sm font-medium">
+        <div className="flex items-center gap-2 mt-5 text-green-100 text-sm font-medium">
           <ShieldCheck className="w-4 h-4" />
           {hi ? '10,000+ vyapariyon ka bharosa' : 'Trusted by 10,000+ merchants'}
         </div>
@@ -218,13 +218,13 @@ export default function OnboardingPage() {
   const mobileHeader = (
     <div className="lg:hidden flex items-center justify-between px-5 pt-5 pb-2">
       <div className="flex items-center gap-2.5">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-md shadow-orange-500/25">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-green-500 to-amber-600 flex items-center justify-center shadow-md shadow-green-500/25">
           <Store className="w-5 h-5 text-white" />
         </div>
-        <p className="font-extrabold text-stone-900">Ugaahi</p>
+        <p className="font-extrabold text-slate-900">Ugaahi</p>
       </div>
       {stepIndex >= 0 && stepIndex < 4 && (
-        <p className="text-xs font-bold text-stone-500 bg-white border border-stone-200 rounded-full px-3 py-1.5">
+        <p className="text-xs font-bold text-slate-500 bg-white border border-slate-200 rounded-full px-3 py-1.5">
           {hi ? `Step ${stepIndex + 1} / 4` : `Step ${stepIndex + 1} of 4`}
         </p>
       )}
@@ -236,8 +236,8 @@ export default function OnboardingPage() {
     <div className="flex gap-2 px-5 sm:px-10 pt-4 lg:pt-10 max-w-2xl w-full mx-auto">
       {[0, 1, 2, 3].map((i) => (
         <div key={i} className="flex-1">
-          <div className={`h-1.5 rounded-full transition-all duration-500 ${i <= stepIndex ? 'bg-gradient-to-r from-orange-500 to-amber-500' : 'bg-stone-200'}`} />
-          <p className={`hidden sm:block text-[11px] font-bold mt-1.5 ${i <= stepIndex ? 'text-orange-700' : 'text-stone-400'}`}>
+          <div className={`h-1.5 rounded-full transition-all duration-500 ${i <= stepIndex ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-slate-200'}`} />
+          <p className={`hidden sm:block text-[11px] font-bold mt-1.5 ${i <= stepIndex ? 'text-green-700' : 'text-slate-400'}`}>
             {stepLabel(i)}
           </p>
         </div>
@@ -264,11 +264,11 @@ export default function OnboardingPage() {
                   <Sparkles className="w-4 h-4" />
                   {hi ? '14 din FREE trial • Card nahi chahiye' : '14-day FREE trial • No card needed'}
                 </div>
-                <h1 className="text-3xl sm:text-4xl font-extrabold text-stone-900 leading-tight">
+                <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 leading-tight">
                   {hi ? 'Namaste! 🙏' : 'Namaste! 🙏'}<br />
                   {hi ? 'Apni udhaari ko autopilot par daalein' : 'Put your udhaari on autopilot'}
                 </h1>
-                <p className="text-stone-500 mt-3 text-[15px] leading-relaxed max-w-lg mx-auto lg:mx-0">
+                <p className="text-slate-500 mt-3 text-[15px] leading-relaxed max-w-lg mx-auto lg:mx-0">
                   {hi
                     ? '2 minute me setup karein — uske baad Ugaahi khud yaad dilayega, payment link bhejega aur hisaab rakhega.'
                     : 'Set up in 2 minutes — then Ugaahi reminds, sends payment links and tracks everything on its own.'}
@@ -280,12 +280,12 @@ export default function OnboardingPage() {
                     { icon: Phone, t: hi ? 'Hindi AI voice calls' : 'Hindi AI voice calls', d: hi ? 'Bade udhaar ke liye phone call' : 'Calls for bigger dues' },
                     { icon: IndianRupee, t: hi ? 'UPI payment links' : 'UPI payment links', d: hi ? 'Ek tap me paisa seedha account me' : 'One tap, money to your account' },
                   ].map((f) => (
-                    <div key={f.t} className="bg-white rounded-2xl border border-orange-100 p-4 shadow-sm">
-                      <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center mb-3">
-                        <f.icon className="w-5 h-5 text-orange-600" />
+                    <div key={f.t} className="bg-white rounded-2xl border border-green-100 p-4 shadow-sm">
+                      <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center mb-3">
+                        <f.icon className="w-5 h-5 text-green-600" />
                       </div>
-                      <p className="font-bold text-stone-900 text-sm">{f.t}</p>
-                      <p className="text-stone-500 text-xs mt-1 leading-relaxed">{f.d}</p>
+                      <p className="font-bold text-slate-900 text-sm">{f.t}</p>
+                      <p className="text-slate-500 text-xs mt-1 leading-relaxed">{f.d}</p>
                     </div>
                   ))}
                 </div>
@@ -294,7 +294,7 @@ export default function OnboardingPage() {
                   <button onClick={() => setScreen(1)} className="btn-primary px-8 py-4 text-base w-full sm:w-auto" id="onboard-start">
                     {hi ? 'Setup shuru karein' : "Let's set up"} <ArrowRight className="w-5 h-5" />
                   </button>
-                  <p className="flex items-center gap-1.5 text-stone-400 text-sm font-medium">
+                  <p className="flex items-center gap-1.5 text-slate-400 text-sm font-medium">
                     <Timer className="w-4 h-4" /> {hi ? 'Sirf ~2 minute lagega' : 'Takes ~2 minutes'}
                   </p>
                 </div>
@@ -304,10 +304,10 @@ export default function OnboardingPage() {
             {/* ============================ BUSINESS ============================ */}
             {screen === 1 && (
               <div>
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-900">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
                   {hi ? 'Aapke business ki details' : 'Your business details'}
                 </h2>
-                <p className="text-stone-500 mt-2 text-[15px]">
+                <p className="text-slate-500 mt-2 text-[15px]">
                   {hi ? 'Ye details reminders, payment links aur profile me dikhengi.' : 'These details appear on reminders, payment links and your profile.'}
                 </p>
 
@@ -339,7 +339,7 @@ export default function OnboardingPage() {
                       {hi ? 'Owner ka naam *' : 'Owner name *'}
                     </label>
                     <div className="relative">
-                      <User className="w-4 h-4 text-stone-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                      <User className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                       <input
                         id="owner-name-input"
                         type="text"
@@ -362,7 +362,7 @@ export default function OnboardingPage() {
                       {hi ? 'Sheher (City) *' : 'City *'}
                     </label>
                     <div className="relative">
-                      <MapPin className="w-4 h-4 text-stone-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                      <MapPin className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                       <input
                         id="city-input"
                         type="text"
@@ -382,7 +382,7 @@ export default function OnboardingPage() {
 
                   <div className="sm:col-span-2">
                     <label className="field-label" htmlFor="address-input">
-                      {hi ? 'Dukaan ka pata' : 'Shop address'} <span className="text-stone-400 font-medium">(optional)</span>
+                      {hi ? 'Dukaan ka pata' : 'Shop address'} <span className="text-slate-400 font-medium">(optional)</span>
                     </label>
                     <input
                       id="address-input"
@@ -397,10 +397,10 @@ export default function OnboardingPage() {
 
                   <div className="sm:col-span-2">
                     <label className="field-label" htmlFor="gst-input">
-                      GST Number <span className="text-stone-400 font-medium">(optional)</span>
+                      GST Number <span className="text-slate-400 font-medium">(optional)</span>
                     </label>
                     <div className="relative">
-                      <FileText className="w-4 h-4 text-stone-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                      <FileText className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                       <input
                         id="gst-input"
                         type="text"
@@ -432,19 +432,19 @@ export default function OnboardingPage() {
                           onClick={() => set('category', cat.value)}
                           className={`p-3.5 rounded-2xl border-2 text-left transition-all ${
                             active
-                              ? 'bg-orange-50 border-orange-500 shadow-md shadow-orange-500/15'
-                              : 'bg-white border-stone-200 hover:border-orange-300 hover:shadow-sm'
+                              ? 'bg-green-50 border-green-500 shadow-md shadow-green-500/15'
+                              : 'bg-white border-slate-200 hover:border-green-300 hover:shadow-sm'
                           }`}
                         >
                           <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-2 ${
-                            active ? 'bg-orange-500 text-white' : 'bg-stone-100 text-stone-500'
+                            active ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-500'
                           }`}>
                             <Icon className="w-[18px] h-[18px]" />
                           </div>
-                          <p className={`text-sm font-bold ${active ? 'text-orange-800' : 'text-stone-700'}`}>
+                          <p className={`text-sm font-bold ${active ? 'text-green-800' : 'text-slate-700'}`}>
                             {hi ? cat.hi : cat.label}
                           </p>
-                          <p className="text-[11px] text-stone-400 mt-0.5">{cat.desc}</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">{cat.desc}</p>
                         </button>
                       )
                     })}
@@ -457,16 +457,16 @@ export default function OnboardingPage() {
                 </div>
 
                 {/* live preview */}
-                <div className="mt-6 bg-white rounded-2xl border border-stone-200 p-4 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center flex-shrink-0 shadow-md shadow-orange-500/25">
+                <div className="mt-6 bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-green-500 to-amber-600 flex items-center justify-center flex-shrink-0 shadow-md shadow-green-500/25">
                     <Store className="w-6 h-6 text-white" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[11px] font-bold text-stone-400 uppercase tracking-wide">
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
                       {hi ? 'Aise dikhega' : 'Preview'}
                     </p>
-                    <p className="font-extrabold text-stone-900 truncate">{bizName}</p>
-                    <p className="text-xs text-stone-500">
+                    <p className="font-extrabold text-slate-900 truncate">{bizName}</p>
+                    <p className="text-xs text-slate-500">
                       {hi ? 'Reminders isi naam se jayenge' : 'Reminders will go out in this name'}
                     </p>
                   </div>
@@ -482,10 +482,10 @@ export default function OnboardingPage() {
             {/* ============================ PAYMENTS ============================ */}
             {screen === 2 && (
               <div>
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-900">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
                   {hi ? 'Paise seedha account me 💸' : 'Money straight to your account 💸'}
                 </h2>
-                <p className="text-stone-500 mt-2 text-[15px]">
+                <p className="text-slate-500 mt-2 text-[15px]">
                   {hi
                     ? 'Apni UPI ID jodein — har payment link me "Pay" button seedha aapke account me jayega.'
                     : 'Add your UPI ID — every payment link will pay directly into your account.'}
@@ -493,7 +493,7 @@ export default function OnboardingPage() {
 
                 <div className="mt-6">
                   <label className="field-label" htmlFor="upi-vpa-input">
-                    {hi ? 'UPI ID / VPA' : 'UPI ID / VPA'} <span className="text-stone-400 font-medium">(optional)</span>
+                    {hi ? 'UPI ID / VPA' : 'UPI ID / VPA'} <span className="text-slate-400 font-medium">(optional)</span>
                   </label>
                   <div className="relative">
                     <input
@@ -524,9 +524,9 @@ export default function OnboardingPage() {
 
                 {/* payment link preview — phone mockup */}
                 <div className="mt-6 flex flex-col sm:flex-row gap-5 items-start">
-                  <div className="mx-auto sm:mx-0 w-[240px] shrink-0 rounded-[28px] border-[6px] border-stone-800 bg-[#EDE7DA] shadow-xl overflow-hidden">
+                  <div className="mx-auto sm:mx-0 w-[240px] shrink-0 rounded-[28px] border-[6px] border-slate-800 bg-[#EDE7DA] shadow-xl overflow-hidden">
                     <div className="bg-[#075E54] px-4 py-2.5 flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center">
+                      <div className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center">
                         <Store className="w-4 h-4 text-white" />
                       </div>
                       <div>
@@ -536,16 +536,16 @@ export default function OnboardingPage() {
                     </div>
                     <div className="p-3 space-y-2 min-h-[190px]">
                       <div className="bg-white rounded-xl rounded-tl-sm p-3 shadow-sm max-w-[200px]">
-                        <p className="text-[11px] text-stone-700 leading-relaxed">
+                        <p className="text-[11px] text-slate-700 leading-relaxed">
                           {hi ? 'Namaste 🙏' : 'Namaste 🙏'} <b>{bizName}</b> {hi ? 'se aapka' : '— your'}{' '}
                           <b>₹1,250</b> {hi ? 'ka payment pending hai.' : 'payment is pending.'}
                         </p>
-                        <div className="mt-2 bg-gradient-to-r from-orange-500 to-amber-500 rounded-lg text-center py-2">
+                        <div className="mt-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg text-center py-2">
                           <p className="text-white text-xs font-extrabold">Pay ₹1,250</p>
                         </div>
-                        <p className="text-[9px] text-stone-400 mt-1.5 text-center">UPI • Cards • Netbanking</p>
+                        <p className="text-[9px] text-slate-400 mt-1.5 text-center">UPI • Cards • Netbanking</p>
                       </div>
-                      <p className="text-[9px] text-stone-400 text-center pt-1">
+                      <p className="text-[9px] text-slate-400 text-center pt-1">
                         {hi ? 'Customer ko aisa dikhega' : "What your customer sees"}
                       </p>
                     </div>
@@ -561,8 +561,8 @@ export default function OnboardingPage() {
                           <Check className="w-3.5 h-3.5 text-green-700" strokeWidth={3} />
                         </span>
                         <div>
-                          <p className="font-bold text-stone-900 text-sm">{b.t}</p>
-                          <p className="text-stone-500 text-xs mt-0.5">{b.d}</p>
+                          <p className="font-bold text-slate-900 text-sm">{b.t}</p>
+                          <p className="text-slate-500 text-xs mt-0.5">{b.d}</p>
                         </div>
                       </div>
                     ))}
@@ -583,35 +583,35 @@ export default function OnboardingPage() {
             {/* ============================ REMINDERS ============================ */}
             {screen === 3 && (
               <div>
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-900">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
                   {hi ? 'Reminders kab jayein? 🔔' : 'When should reminders go? 🔔'}
                 </h2>
-                <p className="text-stone-500 mt-2 text-[15px]">
+                <p className="text-slate-500 mt-2 text-[15px]">
                   {hi
                     ? 'Quiet hours me koi reminder nahi jayega — grahak se rishta bana rahe.'
                     : 'No reminders during quiet hours — keeps customer relationships healthy.'}
                 </p>
 
-                <div className="mt-6 bg-white rounded-2xl border border-stone-200 p-5">
+                <div className="mt-6 bg-white rounded-2xl border border-slate-200 p-5">
                   <div className="flex items-center gap-2 mb-4">
                     <MoonStar className="w-5 h-5 text-indigo-500" />
-                    <p className="font-bold text-stone-900">{hi ? 'Quiet hours' : 'Quiet hours'}</p>
+                    <p className="font-bold text-slate-900">{hi ? 'Quiet hours' : 'Quiet hours'}</p>
                   </div>
                   <div className="flex gap-3 items-end">
                     <div className="flex-1">
-                      <label className="text-xs font-bold text-stone-500 mb-1.5 block">{hi ? 'Shuru' : 'From'}</label>
+                      <label className="text-xs font-bold text-slate-500 mb-1.5 block">{hi ? 'Shuru' : 'From'}</label>
                       <input type="time" value={form.quietStart} onChange={(e) => set('quietStart', e.target.value)} className="field" />
                     </div>
-                    <div className="text-stone-300 font-bold pb-3">→</div>
+                    <div className="text-slate-300 font-bold pb-3">→</div>
                     <div className="flex-1">
-                      <label className="text-xs font-bold text-stone-500 mb-1.5 block">{hi ? 'Tak' : 'To'}</label>
+                      <label className="text-xs font-bold text-slate-500 mb-1.5 block">{hi ? 'Tak' : 'To'}</label>
                       <input type="time" value={form.quietEnd} onChange={(e) => set('quietEnd', e.target.value)} className="field" />
                     </div>
                   </div>
 
                   {/* 24h timeline */}
                   <div className="mt-5">
-                    <div className="relative h-9 rounded-xl overflow-hidden bg-gradient-to-r from-orange-400 via-amber-400 to-orange-400">
+                    <div className="relative h-9 rounded-xl overflow-hidden bg-gradient-to-r from-green-400 via-amber-400 to-green-400">
                       {quietSegments(form.quietStart, form.quietEnd).map(([s, e], i) => (
                         <div
                           key={i}
@@ -625,9 +625,9 @@ export default function OnboardingPage() {
                         ))}
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 mt-2.5 text-xs font-semibold text-stone-500">
+                    <div className="flex items-center gap-4 mt-2.5 text-xs font-semibold text-slate-500">
                       <span className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 rounded bg-gradient-to-r from-orange-400 to-amber-400 inline-block" />
+                        <span className="w-3 h-3 rounded bg-gradient-to-r from-green-400 to-amber-400 inline-block" />
                         {hi ? 'Reminders active' : 'Reminders active'}
                       </span>
                       <span className="flex items-center gap-1.5">
@@ -639,21 +639,21 @@ export default function OnboardingPage() {
                 </div>
 
                 {/* reminder preview */}
-                <div className="mt-4 bg-white rounded-2xl border border-stone-200 p-5">
+                <div className="mt-4 bg-white rounded-2xl border border-slate-200 p-5">
                   <div className="flex items-center gap-2 mb-3">
                     <MessageCircle className="w-5 h-5 text-green-600" />
-                    <p className="font-bold text-stone-900 text-sm">{hi ? 'Reminder ka preview' : 'Reminder preview'}</p>
+                    <p className="font-bold text-slate-900 text-sm">{hi ? 'Reminder ka preview' : 'Reminder preview'}</p>
                   </div>
                   <div className="bg-[#EDE7DA] rounded-xl p-3">
                     <div className="bg-white rounded-xl rounded-tl-sm p-3 shadow-sm">
-                      <p className="text-[13px] text-stone-700 leading-relaxed">
+                      <p className="text-[13px] text-slate-700 leading-relaxed">
                         {hi ? 'Namaste 🙏' : 'Namaste 🙏'} <b>{bizName}</b> {hi ? 'se aapka' : '— your'}{' '}
                         <b>₹2,450</b> {hi ? 'ka udhaar 5 din se pending hai. Kripya jald se jald pay karein:' : 'due has been pending for 5 days. Please pay at the earliest:'}
                       </p>
-                      <p className="text-[13px] text-orange-600 font-bold mt-1.5 underline">pay.udharios.in/x7k2</p>
+                      <p className="text-[13px] text-green-600 font-bold mt-1.5 underline">pay.udharios.in/x7k2</p>
                     </div>
                   </div>
-                  <p className="text-xs text-stone-400 mt-2">
+                  <p className="text-xs text-slate-400 mt-2">
                     {hi ? 'Tone hamesha polite rahega — sakht shabdon ka option dashboard me milega.' : 'Tone stays polite — stricter options available in the dashboard.'}
                   </p>
                 </div>
@@ -672,14 +672,14 @@ export default function OnboardingPage() {
             {/* ============================ REVIEW ============================ */}
             {screen === 4 && (
               <div>
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-900">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
                   {hi ? 'Sab sahi hai? 👀' : 'Everything look right? 👀'}
                 </h2>
-                <p className="text-stone-500 mt-2 text-[15px]">
+                <p className="text-slate-500 mt-2 text-[15px]">
                   {hi ? 'Launch se pehle ek nazar daal lein — baad me dashboard se badal sakte hain.' : 'One last check before launch — you can change these later in settings.'}
                 </p>
 
-                <div className="mt-6 bg-white rounded-2xl border border-stone-200 divide-y divide-stone-100 overflow-hidden">
+                <div className="mt-6 bg-white rounded-2xl border border-slate-200 divide-y divide-stone-100 overflow-hidden">
                   {[
                     { label: hi ? 'Business' : 'Business', value: bizName, sub: `${form.ownerName} • ${form.city}`, go: 1 },
                     { label: hi ? 'Category' : 'Category', value: hi ? CATEGORIES.find(c => c.value === form.category)?.hi : CATEGORIES.find(c => c.value === form.category)?.label, sub: form.gstNumber ? `GST: ${form.gstNumber}` : undefined, go: 1 },
@@ -688,13 +688,13 @@ export default function OnboardingPage() {
                   ].map((row) => (
                     <div key={row.label} className="flex items-center gap-4 p-4">
                       <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-bold text-stone-400 uppercase tracking-wide">{row.label}</p>
-                        <p className="font-bold text-stone-900 truncate">{row.value}</p>
-                        {row.sub && <p className="text-xs text-stone-500 mt-0.5">{row.sub}</p>}
+                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">{row.label}</p>
+                        <p className="font-bold text-slate-900 truncate">{row.value}</p>
+                        {row.sub && <p className="text-xs text-slate-500 mt-0.5">{row.sub}</p>}
                       </div>
                       <button
                         onClick={() => setScreen(row.go)}
-                        className="flex items-center gap-1 text-sm font-bold text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100 rounded-lg px-3 py-2 transition-colors"
+                        className="flex items-center gap-1 text-sm font-bold text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 rounded-lg px-3 py-2 transition-colors"
                       >
                         <Pencil className="w-3.5 h-3.5" /> {hi ? 'Badlein' : 'Edit'}
                       </button>
@@ -742,11 +742,11 @@ export default function OnboardingPage() {
                     <Check className="w-12 h-12 text-white" strokeWidth={3} />
                   </div>
                 </div>
-                <h2 className="text-3xl font-extrabold text-stone-900">
+                <h2 className="text-3xl font-extrabold text-slate-900">
                   {hi ? 'Badhai ho! 🎉' : 'You’re all set! 🎉'}
                 </h2>
-                <p className="text-stone-500 mt-2 max-w-md mx-auto">
-                  <b className="text-stone-800">{bizName}</b>{' '}
+                <p className="text-slate-500 mt-2 max-w-md mx-auto">
+                  <b className="text-slate-800">{bizName}</b>{' '}
                   {hi ? 'ab Ugaahi par live hai. Aage kya karna hai:' : 'is now live on Ugaahi. Here’s what’s next:'}
                 </p>
 
@@ -756,10 +756,10 @@ export default function OnboardingPage() {
                     { n: '2', t: hi ? 'Pehla reminder bhejein' : 'Send first reminder', d: hi ? 'Ek click me WhatsApp reminder' : 'One-click WhatsApp reminder' },
                     { n: '3', t: hi ? 'Vasuli track karein' : 'Track collections', d: hi ? 'Kaun pay kar raha hai, live dekhein' : 'Watch who pays, live' },
                   ].map((s) => (
-                    <div key={s.n} className="bg-white rounded-2xl border border-orange-100 p-4">
-                      <div className="w-8 h-8 rounded-full bg-orange-500 text-white font-extrabold flex items-center justify-center mb-2.5 text-sm">{s.n}</div>
-                      <p className="font-bold text-stone-900 text-sm">{s.t}</p>
-                      <p className="text-stone-500 text-xs mt-1">{s.d}</p>
+                    <div key={s.n} className="bg-white rounded-2xl border border-green-100 p-4">
+                      <div className="w-8 h-8 rounded-full bg-green-500 text-white font-extrabold flex items-center justify-center mb-2.5 text-sm">{s.n}</div>
+                      <p className="font-bold text-slate-900 text-sm">{s.t}</p>
+                      <p className="text-slate-500 text-xs mt-1">{s.d}</p>
                     </div>
                   ))}
                 </div>
@@ -775,7 +775,7 @@ export default function OnboardingPage() {
 
         {/* footer note */}
         {screen < 5 && (
-          <p className="text-center text-xs text-stone-400 pb-6 px-5">
+          <p className="text-center text-xs text-slate-400 pb-6 px-5">
             {hi ? '🔒 Aapka data encrypted aur surakshit hai' : '🔒 Your data is encrypted and secure'}
           </p>
         )}

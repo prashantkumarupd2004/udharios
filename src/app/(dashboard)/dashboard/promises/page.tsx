@@ -32,11 +32,11 @@ export default function PromisesPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-extrabold text-stone-900 flex items-center gap-2">
+        <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
           <Handshake className="w-6 h-6 text-amber-600" />
           {lang === 'hi' ? 'Payment Promises' : 'Payment Promises'}
         </h1>
-        <p className="text-sm text-stone-500 mt-0.5">
+        <p className="text-sm text-slate-500 mt-0.5">
           {lang === 'hi' ? 'Customers ne kab payment ka vaada kiya' : 'When customers promised to pay'}
         </p>
       </div>
@@ -53,8 +53,8 @@ export default function PromisesPage() {
             onClick={() => { setFilter(f.key); setLoading(true) }}
             className={`px-4 py-2 rounded-xl text-sm font-bold transition-all border ${
               filter === f.key
-                ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/30'
-                : 'bg-white text-stone-600 border-stone-200 hover:border-orange-300 hover:text-orange-700'
+                ? 'bg-green-500 text-white border-green-500 shadow-md shadow-green-500/30'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-green-300 hover:text-green-700'
             }`}
           >
             {lang === 'hi' ? f.hi : f.en}
@@ -69,7 +69,7 @@ export default function PromisesPage() {
       ) : promises.length === 0 ? (
         <div className="text-center py-16 glass-card">
           <div className="text-4xl mb-3">🤝</div>
-          <p className="text-stone-500 font-medium">
+          <p className="text-slate-500 font-medium">
             {lang === 'hi' ? 'Is category mein koi promise nahi' : 'No promises in this category'}
           </p>
         </div>
@@ -83,7 +83,7 @@ export default function PromisesPage() {
                 className={`glass-card card-hover p-4 ${
                   p.status === 'broken' ? '!border-red-200' :
                   p.status === 'kept' ? '!border-green-200' :
-                  expired ? '!border-orange-300' : ''
+                  expired ? '!border-green-300' : ''
                 }`}
               >
                 <div className="flex items-start gap-3">
@@ -97,7 +97,7 @@ export default function PromisesPage() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-bold text-stone-900 text-sm">{p.customer.name}</p>
+                      <p className="font-bold text-slate-900 text-sm">{p.customer.name}</p>
                       <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
                         p.status === 'kept' ? 'badge-paid' :
                         p.status === 'broken' ? 'badge-overdue' :
@@ -108,27 +108,27 @@ export default function PromisesPage() {
                          expired ? (lang === 'hi' ? 'Expired!' : 'Expired!') :
                          (lang === 'hi' ? 'Khula' : 'Open')}
                       </span>
-                      <span className="text-xs text-stone-400 capitalize font-medium">{p.source}</span>
+                      <span className="text-xs text-slate-400 capitalize font-medium">{p.source}</span>
                     </div>
-                    <p className="text-xs text-stone-500 mt-1.5">
+                    <p className="text-xs text-slate-500 mt-1.5">
                       {lang === 'hi' ? 'Payment date:' : 'Promised date:'}{' '}
-                      <span className={`font-bold ${expired ? 'text-orange-700' : 'text-amber-700'}`}>
+                      <span className={`font-bold ${expired ? 'text-green-700' : 'text-amber-700'}`}>
                         {formatIndianDate(p.promisedDate)}
                       </span>
                     </p>
                     {p.notes && (
-                      <p className="text-xs text-stone-500 mt-1 italic bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1.5">
+                      <p className="text-xs text-slate-500 mt-1 italic bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
                         “{p.notes}”
                       </p>
                     )}
                   </div>
 
                   <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-bold text-stone-900 amount-display">
+                    <p className="text-sm font-bold text-slate-900 amount-display">
                       {formatINR(parseFloat(p.outstanding.amount))}
                     </p>
                     {p.outstanding.invoiceNo && (
-                      <p className="text-xs text-stone-400">#{p.outstanding.invoiceNo}</p>
+                      <p className="text-xs text-slate-400">#{p.outstanding.invoiceNo}</p>
                     )}
                   </div>
                 </div>

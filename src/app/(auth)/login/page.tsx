@@ -114,7 +114,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[#FDF9F1] pattern-jaali flex items-center justify-center px-4 relative overflow-hidden">
       <div className="absolute top-0 left-0 right-0 tricolor-bar" />
-      <div className="absolute -top-24 left-1/4 w-96 h-96 bg-orange-400/20 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute -top-24 left-1/4 w-96 h-96 bg-green-400/20 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute -bottom-24 right-1/4 w-80 h-80 bg-amber-400/20 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="relative w-full max-w-md">
@@ -122,16 +122,16 @@ export default function LoginPage() {
           <img
             src="/ugaahi-icon.png"
             alt="Ugaahi logo"
-            className="w-16 h-16 mx-auto rounded-2xl shadow-xl shadow-orange-500/30 mb-4 object-cover"
+            className="w-16 h-16 mx-auto rounded-2xl shadow-xl shadow-green-500/30 mb-4 object-cover"
           />
-          <h1 className="text-3xl font-extrabold text-stone-900 tracking-tight">
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
             Ugaahi
           </h1>
-          <p className="text-[11px] font-bold tracking-[0.28em] text-orange-700/70 mt-1">उगाही</p>
-          <p className="text-stone-500 text-sm mt-2">{t.tagline}</p>
+          <p className="text-[11px] font-bold tracking-[0.28em] text-green-700/70 mt-1">उगाही</p>
+          <p className="text-slate-500 text-sm mt-2">{t.tagline}</p>
         </div>
 
-        <div className="bg-white rounded-3xl border border-orange-100 shadow-2xl shadow-orange-900/10 p-8">
+        <div className="bg-white rounded-3xl border border-green-100 shadow-2xl shadow-green-900/10 p-8">
           {IS_DEV && (
             <div className="text-center mb-5">
               <span className="inline-block bg-amber-50 border border-amber-300 text-amber-800 text-xs font-bold px-3 py-1 rounded-full">
@@ -143,7 +143,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit}>
             <label htmlFor="phone" className="field-label !text-sm">{t.phoneLabel}</label>
             <div className="flex shadow-sm">
-              <span className="bg-orange-50 border border-orange-200 border-r-0 rounded-l-xl px-4 flex items-center text-stone-600 text-sm font-bold whitespace-nowrap">
+              <span className="bg-green-50 border border-green-200 border-r-0 rounded-l-xl px-4 flex items-center text-slate-600 text-sm font-bold whitespace-nowrap">
                 🇮🇳 +91
               </span>
               <input
@@ -164,7 +164,7 @@ export default function LoginPage() {
               <div className="mt-3 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 text-red-700 text-sm font-medium">
                 {error}
                 {needsAccess && (
-                  <a href="/request-access" className="block mt-2 font-bold text-orange-700 hover:underline">
+                  <a href="/request-access" className="block mt-2 font-bold text-green-700 hover:underline">
                     {lang === 'hi' ? '→ Access ke liye apply karo' : '→ Apply for access'}
                   </a>
                 )}
@@ -184,13 +184,13 @@ export default function LoginPage() {
 
           {/* Google OAuth login */}
           <div className="flex items-center gap-3 my-5">
-            <div className="flex-1 h-px bg-stone-200" />
-            <span className="text-xs font-semibold text-stone-400">{t.orContinueWith}</span>
-            <div className="flex-1 h-px bg-stone-200" />
+            <div className="flex-1 h-px bg-slate-200" />
+            <span className="text-xs font-semibold text-slate-400">{t.orContinueWith}</span>
+            <div className="flex-1 h-px bg-slate-200" />
           </div>
           <a
             href="/api/auth/google"
-            className="flex items-center justify-center gap-3 w-full py-3.5 rounded-xl border-2 border-stone-200 bg-white text-stone-700 font-bold text-base hover:border-stone-300 hover:bg-stone-50 transition-all"
+            className="flex items-center justify-center gap-3 w-full py-3.5 rounded-xl border-2 border-slate-200 bg-white text-slate-700 font-bold text-base hover:border-slate-300 hover:bg-slate-50 transition-all"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M23.5 12.3c0-.9-.1-1.5-.3-2.3H12v4.5h6.5c-.1 1.1-.8 2.7-2.4 3.8l-.1.1 3.5 2.7.2.1c2.2-2 3.8-5 3.8-8.9z" />
@@ -201,14 +201,14 @@ export default function LoginPage() {
             {t.googleBtn}
           </a>
 
-          <div className="mt-6 flex items-center gap-2 justify-center text-xs text-stone-500">
+          <div className="mt-6 flex items-center gap-2 justify-center text-xs text-slate-500">
             <ShieldCheck className="w-4 h-4 text-green-600" />
             {lang === 'hi' ? 'OTP se secure login • Data India me safe' : 'Secure OTP login • Data stays in India'}
           </div>
 
-          <p className="text-center text-sm text-stone-600 mt-4">
+          <p className="text-center text-sm text-slate-600 mt-4">
             {lang === 'hi' ? 'Naye ho? ' : 'New here? '}
-            <a href="/request-access" className="font-bold text-orange-600 hover:underline">
+            <a href="/request-access" className="font-bold text-green-600 hover:underline">
               {lang === 'hi' ? 'Access ke liye apply karo' : 'Request access'}
             </a>
           </p>
@@ -216,15 +216,15 @@ export default function LoginPage() {
           <div className="text-center mt-4">
             <button
               onClick={() => setLang(l => l === 'hi' ? 'en' : 'hi')}
-              className="text-xs font-semibold text-stone-400 hover:text-orange-600 transition-colors"
+              className="text-xs font-semibold text-slate-400 hover:text-green-600 transition-colors"
             >
               {t.switchLang}
             </button>
           </div>
-          <p className="text-center text-stone-400 text-[11px] mt-2 leading-relaxed">{t.terms}</p>
+          <p className="text-center text-slate-400 text-[11px] mt-2 leading-relaxed">{t.terms}</p>
         </div>
 
-        <p className="text-center text-xs text-stone-400 mt-6">
+        <p className="text-center text-xs text-slate-400 mt-6">
           {lang === 'hi'
             ? 'Kirana stores, wholesalers aur distributors ka bharosa 🇮🇳'
             : 'Trusted by kirana stores, wholesalers & distributors 🇮🇳'}

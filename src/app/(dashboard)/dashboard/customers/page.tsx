@@ -50,11 +50,11 @@ function AddCustomerModal({ onClose, onSuccess, lang }: { onClose: () => void; o
   }
 
   return (
-    <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl border border-orange-100 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+      <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl border border-green-100 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between">
-          <h2 className="font-extrabold text-lg text-stone-900">👤 {lang === 'hi' ? 'Naya Customer' : 'New Customer'}</h2>
-          <button onClick={onClose} className="text-stone-400 hover:text-stone-700 p-2" aria-label="Close">
+          <h2 className="font-extrabold text-lg text-slate-900">👤 {lang === 'hi' ? 'Naya Customer' : 'New Customer'}</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 p-2" aria-label="Close">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -73,7 +73,7 @@ function AddCustomerModal({ onClose, onSuccess, lang }: { onClose: () => void; o
           <div>
             <label className="field-label">{lang === 'hi' ? 'Mobile *' : 'Mobile *'}</label>
             <div className="flex">
-              <span className="bg-stone-100 border border-stone-200 border-r-0 rounded-l-xl px-3 flex items-center text-stone-500 text-sm font-semibold">+91</span>
+              <span className="bg-slate-100 border border-slate-200 border-r-0 rounded-l-xl px-3 flex items-center text-slate-500 text-sm font-semibold">+91</span>
               <input
                 type="tel" inputMode="numeric"
                 value={form.phone}
@@ -104,11 +104,11 @@ function AddCustomerModal({ onClose, onSuccess, lang }: { onClose: () => void; o
           >
             <label className="flex items-start gap-3 cursor-pointer">
               <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all ${
-                form.consent ? 'bg-green-600 border-green-600' : 'border-stone-300 bg-white'
+                form.consent ? 'bg-green-600 border-green-600' : 'border-slate-300 bg-white'
               }`}>
                 {form.consent && <span className="text-white text-xs font-bold">✓</span>}
               </div>
-              <span className="text-sm text-stone-700 font-medium">
+              <span className="text-sm text-slate-700 font-medium">
                 {lang === 'hi'
                   ? 'Customer ne WhatsApp reminders ke liye consent diya hai ✓'
                   : 'Customer has consented to receive WhatsApp reminders ✓'}
@@ -180,8 +180,8 @@ export default function CustomersPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-stone-900">👥 {lang === 'hi' ? 'Customers' : 'Customers'}</h1>
-          <p className="text-sm text-stone-500 mt-0.5">{customers.length} {lang === 'hi' ? 'kul customers' : 'total customers'}</p>
+          <h1 className="text-2xl font-extrabold text-slate-900">👥 {lang === 'hi' ? 'Customers' : 'Customers'}</h1>
+          <p className="text-sm text-slate-500 mt-0.5">{customers.length} {lang === 'hi' ? 'kul customers' : 'total customers'}</p>
         </div>
         <div className="flex gap-2">
           <Link href="/dashboard/customers/import" className="btn-ghost px-3 py-2.5 text-sm">
@@ -196,24 +196,24 @@ export default function CustomersPage() {
       {/* Summary cards */}
       {!loading && customers.length > 0 && (
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white border border-orange-100 rounded-2xl p-4 shadow-sm">
+          <div className="bg-white border border-green-100 rounded-2xl p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-1">
-              <Users className="w-4 h-4 text-orange-500" />
-              <p className="text-[11px] font-bold text-stone-500 uppercase tracking-wide">{lang === 'hi' ? 'Kul' : 'Total'}</p>
+              <Users className="w-4 h-4 text-green-500" />
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">{lang === 'hi' ? 'Kul' : 'Total'}</p>
             </div>
-            <p className="text-2xl font-extrabold text-stone-900">{customers.length}</p>
+            <p className="text-2xl font-extrabold text-slate-900">{customers.length}</p>
           </div>
           <div className="bg-white border border-red-100 rounded-2xl p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-1">
               <IndianRupee className="w-4 h-4 text-red-500" />
-              <p className="text-[11px] font-bold text-stone-500 uppercase tracking-wide">{lang === 'hi' ? 'Kul Baaki' : 'Pending'}</p>
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">{lang === 'hi' ? 'Kul Baaki' : 'Pending'}</p>
             </div>
             <p className="text-2xl font-extrabold text-red-600">₹{totalPending.toLocaleString('en-IN')}</p>
           </div>
           <div className="bg-white border border-emerald-100 rounded-2xl p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-1">
               <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <p className="text-[11px] font-bold text-stone-500 uppercase tracking-wide">{lang === 'hi' ? 'Clear' : 'Clear'}</p>
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">{lang === 'hi' ? 'Clear' : 'Clear'}</p>
             </div>
             <p className="text-2xl font-extrabold text-emerald-600">{customers.length - pendingCount}</p>
           </div>
@@ -222,7 +222,7 @@ export default function CustomersPage() {
 
       {/* Search */}
       <div className="relative">
-        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none">
+        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
           <Search className="w-4 h-4" />
         </span>
         <input
@@ -244,12 +244,12 @@ export default function CustomersPage() {
               onClick={() => setFilter(t.k)}
               className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
                 filter === t.k
-                  ? 'bg-stone-900 text-white shadow'
-                  : 'bg-white border border-stone-200 text-stone-600 hover:border-orange-300'
+                  ? 'bg-slate-900 text-white shadow'
+                  : 'bg-white border border-slate-200 text-slate-600 hover:border-green-300'
               }`}
             >
               {t.label}
-              <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-md ${filter === t.k ? 'bg-white/20' : 'bg-stone-100'}`}>
+              <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-md ${filter === t.k ? 'bg-white/20' : 'bg-slate-100'}`}>
                 {t.count}
               </span>
             </button>
@@ -265,13 +265,13 @@ export default function CustomersPage() {
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 glass-card">
           <div className="text-4xl mb-3">👤</div>
-          <p className="text-stone-500 mb-4 font-medium">
+          <p className="text-slate-500 mb-4 font-medium">
             {search || filter !== 'all'
               ? (lang === 'hi' ? 'Koi customer nahi mila' : 'No customers found')
               : (lang === 'hi' ? 'Abhi koi customer nahi hai' : 'No customers yet')}
           </p>
           {!search && filter === 'all' && (
-            <button onClick={() => setShowAdd(true)} className="text-orange-600 font-semibold text-sm hover:underline">
+            <button onClick={() => setShowAdd(true)} className="text-green-600 font-semibold text-sm hover:underline">
               {lang === 'hi' ? 'Pehla customer add karein →' : 'Add your first customer →'}
             </button>
           )}
@@ -285,28 +285,28 @@ export default function CustomersPage() {
               <Link
                 key={c.id}
                 href={`/dashboard/customers/${c.id}`}
-                className={`bg-white border rounded-2xl p-4 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-orange-200 transition-all group ${isOverdue ? 'border-l-4 border-l-red-400' : 'border-stone-100'}`}
+                className={`bg-white border rounded-2xl p-4 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-green-200 transition-all group ${isOverdue ? 'border-l-4 border-l-red-400' : 'border-slate-100'}`}
               >
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-extrabold flex-shrink-0 ${
-                  c.optedOut ? 'bg-stone-100 text-stone-400' : 'bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/20'
+                  c.optedOut ? 'bg-slate-100 text-slate-400' : 'bg-gradient-to-br from-green-500 to-amber-500 text-white shadow-md shadow-green-500/20'
                 }`}>
                   {c.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-bold text-stone-900 group-hover:text-orange-700 transition-colors truncate">{c.name}</p>
+                    <p className="font-bold text-slate-900 group-hover:text-green-700 transition-colors truncate">{c.name}</p>
                     {c.optedOut && (
-                      <span className="text-[10px] font-bold bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">Opted Out</span>
+                      <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">Opted Out</span>
                     )}
                   </div>
-                  <p className="text-sm text-stone-500 font-medium flex items-center gap-1.5 mt-0.5">
+                  <p className="text-sm text-slate-500 font-medium flex items-center gap-1.5 mt-0.5">
                     <Phone className="w-3 h-3" /> {fmtPhone(c.phone)}
                   </p>
                 </div>
                 <div className="text-right flex-shrink-0">
                   {hasPending ? (
                     <>
-                      <p className={`text-lg font-extrabold ${isOverdue ? 'text-red-600' : 'text-stone-900'}`}>
+                      <p className={`text-lg font-extrabold ${isOverdue ? 'text-red-600' : 'text-slate-900'}`}>
                         ₹{(c.pendingTotal ?? 0).toLocaleString('en-IN')}
                       </p>
                       <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${isOverdue ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
@@ -320,7 +320,7 @@ export default function CustomersPage() {
                     </span>
                   )}
                 </div>
-                <span className="text-stone-300 group-hover:text-orange-500 group-hover:translate-x-0.5 transition-all font-bold">→</span>
+                <span className="text-slate-300 group-hover:text-green-500 group-hover:translate-x-0.5 transition-all font-bold">→</span>
               </Link>
             )
           })}

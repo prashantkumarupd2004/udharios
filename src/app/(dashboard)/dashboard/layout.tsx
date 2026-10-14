@@ -33,7 +33,7 @@ function BrandMark() {
         alt="Ugaahi logo"
         className="w-8 h-8 rounded-lg shadow-md object-cover"
       />
-      <span className="font-extrabold text-lg hidden sm:block tracking-tight text-stone-900">
+      <span className="font-extrabold text-lg hidden sm:block tracking-tight text-slate-900">
         Ugaahi
       </span>
     </div>
@@ -45,10 +45,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { lang, toggleLang } = useLanguage()
 
   return (
-    <div className="min-h-screen bg-[#FDF9F1] flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col">
       <div className="tricolor-bar sticky top-0 z-50" />
-      {/* Desktop header */}
-      <header className="bg-white/90 backdrop-blur-md border-b border-orange-100 sticky top-[3px] z-40 shadow-[0_2px_12px_-6px_rgba(120,70,10,0.12)]">
+      {/* Desktop header — LegAn style: white, thin border, subtle shadow */}
+      <header className="bg-white/95 backdrop-blur-md border-b border-slate-200 sticky top-[3px] z-40 shadow-[0_2px_12px_-6px_rgba(0,32,61,0.08)]">
         <div className="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/dashboard" aria-label="Ugaahi dashboard">
             <BrandMark />
@@ -62,10 +62,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all ${
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all ${
                     isActive
-                      ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
-                      : 'text-stone-600 hover:text-orange-700 hover:bg-orange-50'
+                      ? 'bg-[#00B33F] text-white shadow-md shadow-green-500/25'
+                      : 'text-[#00203D] hover:text-[#00B33F] hover:bg-green-50'
                   }`}
                 >
                   <item.Icon className="w-4 h-4" />
@@ -78,13 +78,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-2">
             <button
               onClick={toggleLang}
-              className="text-xs font-bold text-stone-600 hover:text-orange-600 px-2.5 py-1.5 rounded-lg border border-stone-200 hover:border-orange-300 bg-white transition-all"
+              className="text-xs font-bold text-slate-600 hover:text-[#00B33F] px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-green-300 bg-white transition-all"
             >
               {lang === 'hi' ? 'EN' : 'हिं'}
             </button>
             <Link
               href="/dashboard/settings"
-              className="p-2 text-stone-500 hover:text-orange-600 rounded-xl hover:bg-orange-50 transition-all"
+              className="p-2 text-slate-500 hover:text-[#00B33F] rounded-xl hover:bg-green-50 transition-all"
               aria-label="Settings"
             >
               <Settings className="w-5 h-5" />
@@ -107,7 +107,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               key={item.href}
               href={item.href}
               className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all ${
-                isActive ? 'text-orange-600' : 'text-stone-400 hover:text-stone-600'
+                isActive ? 'text-[#00B33F]' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
               <item.Icon className="w-5 h-5" />
