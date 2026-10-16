@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
 import SiteFooter from '@/components/SiteFooter'
+import InstallAppBanner from '@/components/InstallAppBanner'
 
 /* ── Scroll reveal wrapper ─────────────────────────────────────────── */
 function Reveal({ children, delay = 0, className = '' }: { children: ReactNode; delay?: number; className?: string }) {
@@ -969,6 +970,9 @@ export default function LandingPage() {
           </div>
         </Reveal>
       </section>
+
+      {/* ── Install App (PWA) ── */}
+      <InstallAppBanner />
 
       {/* ── Footer ── */}
       <SiteFooter />

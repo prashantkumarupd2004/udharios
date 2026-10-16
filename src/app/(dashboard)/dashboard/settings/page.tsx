@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react'
 import {
   Settings as SettingsIcon, Store, MoonStar, Languages, LogOut, Crown,
-  CreditCard, Landmark, Bell, User, Check,
+  CreditCard, Landmark, Bell, User, Check, Smartphone,
 } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
 import PaymentGatewaySettings from './PaymentGatewaySettings'
+import InstallAppBanner from '@/components/InstallAppBanner'
 
 interface MerchantSettings {
   businessName: string
@@ -316,6 +317,17 @@ export default function SettingsPage() {
                 {lang === 'hi' ? 'English' : 'हिंग्लिश'}
               </span>
             </div>
+          </div>
+
+          {/* Install App */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
+            <div className="flex items-center gap-2 pb-3 border-b border-slate-100 mb-4">
+              <Smartphone className="w-5 h-5 text-green-600" />
+              <h2 className="font-extrabold text-slate-900">
+                {lang === 'hi' ? 'App Install Karein' : 'Install App'}
+              </h2>
+            </div>
+            <InstallAppBanner variant="compact" />
           </div>
 
           {/* Danger zone */}

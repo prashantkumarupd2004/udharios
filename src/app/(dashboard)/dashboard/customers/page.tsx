@@ -238,7 +238,7 @@ export default function CustomersPage() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">👥 {lang === 'hi' ? 'Customers' : 'Customers'}</h1>
           <p className="text-sm text-slate-500 mt-0.5">{customers.length} {lang === 'hi' ? 'kul customers' : 'total customers'}</p>
@@ -268,27 +268,27 @@ export default function CustomersPage() {
 
       {/* Summary cards */}
       {!loading && customers.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white border border-green-100 rounded-2xl p-4 shadow-sm">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="bg-white border border-green-100 rounded-2xl p-3 sm:p-4 shadow-sm min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <Users className="w-4 h-4 text-green-500" />
-              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">{lang === 'hi' ? 'Kul' : 'Total'}</p>
+              <Users className="w-4 h-4 text-green-500 flex-shrink-0" />
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide truncate">{lang === 'hi' ? 'Kul' : 'Total'}</p>
             </div>
-            <p className="text-2xl font-extrabold text-slate-900">{customers.length}</p>
+            <p className="text-xl sm:text-2xl font-extrabold text-slate-900 truncate">{customers.length}</p>
           </div>
-          <div className="bg-white border border-red-100 rounded-2xl p-4 shadow-sm">
+          <div className="bg-white border border-red-100 rounded-2xl p-3 sm:p-4 shadow-sm min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <IndianRupee className="w-4 h-4 text-red-500" />
-              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">{lang === 'hi' ? 'Kul Baaki' : 'Pending'}</p>
+              <IndianRupee className="w-4 h-4 text-red-500 flex-shrink-0" />
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide truncate">{lang === 'hi' ? 'Kul Baaki' : 'Pending'}</p>
             </div>
-            <p className="text-2xl font-extrabold text-red-600">₹{totalPending.toLocaleString('en-IN')}</p>
+            <p className="text-xl sm:text-2xl font-extrabold text-red-600 truncate">₹{totalPending.toLocaleString('en-IN')}</p>
           </div>
-          <div className="bg-white border border-emerald-100 rounded-2xl p-4 shadow-sm">
+          <div className="bg-white border border-emerald-100 rounded-2xl p-3 sm:p-4 shadow-sm min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">{lang === 'hi' ? 'Clear' : 'Clear'}</p>
+              <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide truncate">{lang === 'hi' ? 'Clear' : 'Clear'}</p>
             </div>
-            <p className="text-2xl font-extrabold text-emerald-600">{customers.length - pendingCount}</p>
+            <p className="text-xl sm:text-2xl font-extrabold text-emerald-600 truncate">{customers.length - pendingCount}</p>
           </div>
         </div>
       )}
