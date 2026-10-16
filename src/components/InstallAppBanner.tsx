@@ -14,7 +14,7 @@ import { usePwaInstall } from '@/hooks/usePwaInstall'
  */
 export default function InstallAppBanner({ variant = 'banner' }: { variant?: 'banner' | 'compact' }) {
   const { lang } = useLanguage()
-  const { canInstall, isInstalled, isIos, promptInstall, dismiss } = usePwaInstall()
+  const { canInstall, isInstalled, promptInstall, dismiss } = usePwaInstall()
   const [showIosModal, setShowIosModal] = useState(false)
   const [busy, setBusy] = useState(false)
   const hi = lang === 'hi'

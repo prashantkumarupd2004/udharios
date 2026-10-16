@@ -34,21 +34,21 @@ function wasDismissedRecently(): boolean {
 
 export function usePwaInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
-  const [isInstalled, setIsInstalled] = useState(false)
-  const [isIos, setIsIos] = useState(false)
-  // Default dismissed=true taaki SSR/first-paint par banner flash na ho;
-  // effect me sahi value set ho jaati hai.
-  const [dismissed, setDismissed] = useState(true)
+  // Lazy initializers taaki effect me sync setState na karna pade (SSR-safe bhi)
+  const [isInstalled, setIsInstalled] = useState(() => {
+    if (typeof window === 'undefined') return false
+    const nav = window.navigator as Navigator & { standalone?: boolean }
+    return window.matchMedia('(display-mode: standalone)').matches || nav.standalone === true
+  })
+  const [isIos] = useState(
+    () => typeof window !== 'undefined' && /iphone|ipad|ipod/i.test(window.navigator.userAgent)
+  )
+  // Default dismissed=true taaki SSR/first-paint par banner flash na ho
+  const [dismissed, setDismissed] = useState(
+    () => typeof window === 'undefined' || wasDismissedRecently()
+  )
 
   useEffect(() => {
-    setIsIos(/iphone|ipad|ipod/i.test(window.navigator.userAgent))
-
-    const nav = window.navigator as Navigator & { standalone?: boolean }
-    setIsInstalled(
-      window.matchMedia('(display-mode: standalone)').matches || nav.standalone === true
-    )
-    setDismissed(wasDismissedRecently())
-
     const onBeforeInstall = (e: Event) => {
       e.preventDefault()
       setDeferredPrompt(e as BeforeInstallPromptEvent)
