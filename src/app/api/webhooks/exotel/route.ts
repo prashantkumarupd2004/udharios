@@ -9,15 +9,33 @@ import { processVoiceAgentTurn, VoiceAgentContext } from '@/lib/voice-agent'
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
 import { overdueDays, formatINR } from '@/lib/date-utils'
 import { logger } from '@/lib/logger'
+import { verifyExotelWebhook, isExotelWebhookVerificationConfigured } from '@/lib/exotel'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
+    // ── Verify the callback really came from Exotel (fail closed) ──
+    if (!isExotelWebhookVerificationConfigured()) {
+      logger.error('Exotel webhook secret not configured (EXOTEL_API_TOKEN missing)')
+      return NextResponse.json(
+        { ok: false, error: 'webhook secret not configured' },
+        { status: 500 }
+      )
+    }
+    // Read the RAW body first — the HMAC is computed over the raw bytes.
+    const rawBody = await request.text()
+    const signature = request.headers.get('x-exotel-signature')
+    if (!verifyExotelWebhook(signature, rawBody)) {
+      logger.warn('Exotel webhook signature invalid — rejecting')
+      return NextResponse.json({ ok: false, error: 'invalid_signature' }, { status: 403 })
+    }
+
     const { searchParams } = request.nextUrl
     const callId = searchParams.get('callId')
 
-    const body = await request.formData()
+    // Parse the already-consumed body (Exotel posts form-encoded params)
+    const body = new URLSearchParams(rawBody)
     const status = body.get('Status') as string
     const callSid = body.get('CallSid') as string
     const recordingUrl = body.get('RecordingUrl') as string | null

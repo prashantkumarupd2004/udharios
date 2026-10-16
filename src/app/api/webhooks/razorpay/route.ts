@@ -11,7 +11,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyRazorpayWebhookSignature } from '@/lib/razorpay'
-import { inngest } from '@/lib/inngest/client'
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
 import { logger } from '@/lib/logger'
 import { formatINR } from '@/lib/date-utils'
@@ -161,11 +160,10 @@ async function handlePaymentReceived(payload: Record<string, unknown>) {
       data: { status: 'kept' },
     })
 
-    // Send Inngest event to cancel pending reminder jobs
-    await inngest.send({
-      name: 'payments/received',
-      data: { outstandingId, merchantId, razorpayPaymentId },
-    })
+    // NOTE: yahan pehle 'payments/received' Inngest event bheja jaata tha
+    // "pending reminder jobs cancel" karne ke liye, lekin iska koi listener
+    // nahi hai — engine DB status guard se khud ruk jaata hai. Dead send
+    // hata diya gaya.
 
     // Create merchant notification
     const amountINR = formatINR(paidAmountRupees)

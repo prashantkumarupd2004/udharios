@@ -81,6 +81,22 @@ export async function GET(request: NextRequest) {
       const o = calls[0].outstanding
       const retryCount = calls.length // kitni baar fail ho chuka
 
+      // Double-dial guard: Inngest engine ne pichle 24h me is outstanding par
+      // koi NON-FAILED call ki hai (initiated/in-progress/completed/queued)?
+      // To skip karo — engine already dial kar chuka hai. (Failed calls par
+      // ye guard nahi lagta, warna retry logic hi toot jayegi.)
+      const recentActiveCall = await prisma.call.findFirst({
+        where: {
+          outstandingId,
+          createdAt: { gte: dayAgo },
+          status: { notIn: ['no-answer', 'busy', 'failed'] },
+        },
+      })
+      if (recentActiveCall) {
+        skipped++
+        continue
+      }
+
       // Max retries cross → escalation (sirf ek baar)
       if (retryCount >= MAX_RETRIES) {
         const alreadyEscalated = await prisma.merchantNotification.findFirst({

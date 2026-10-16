@@ -66,6 +66,7 @@ export const AUDIT_ACTIONS = {
   // Payments
   PAYMENT_RECEIVED: 'payment.received',
   PAYMENT_LINK_CREATED: 'payment_link.created',
+  PAYMENT_LINK_EXPIRED: 'payment_link.expired',
   PAYMENT_MISMATCH: 'payment.amount_mismatch',
 
   // Calls

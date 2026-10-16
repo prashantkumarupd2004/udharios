@@ -115,6 +115,7 @@ export async function POST(request: NextRequest) {
     )
 
     // DB me save karo
+    const expiresAt = link.expiresAt ? new Date(link.expiresAt * 1000) : null
     const paymentLink = await prisma.paymentLink.upsert({
       where: { outstandingId },
       create: {
@@ -126,6 +127,7 @@ export async function POST(request: NextRequest) {
         shortUrl: link.shortUrl,
         amount: outstanding.amount,
         status: 'created',
+        expiresAt,
       },
       update: {
         gateway: gatewayId,
@@ -133,6 +135,7 @@ export async function POST(request: NextRequest) {
         url: link.shortUrl,
         shortUrl: link.shortUrl,
         status: 'created',
+        expiresAt,
       },
     })
 

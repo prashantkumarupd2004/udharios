@@ -8,6 +8,8 @@
  *   - Max 3 OTP sends per phone per hour
  *   - Min 45 seconds between sends
  *   - Max 5 verify attempts per phone per 15 minutes
+ *   - Max 2 voice-OTP retries per phone per hour (MSG91 voice calls cost money)
+ *   - Max 10 check-access lookups per IP per minute (anti-enumeration)
  */
 
 interface SendRecord {
@@ -20,9 +22,22 @@ interface VerifyRecord {
   attempts: number
 }
 
+interface VoiceRetryRecord {
+  timestamps: number[]  // epoch ms of each voice retry
+}
+
+interface IpRecord {
+  windowStart: number   // start of window
+  attempts: number
+}
+
 // Keyed by normalized phone (91XXXXXXXXXX)
 const sendMap = new Map<string, SendRecord>()
 const verifyMap = new Map<string, VerifyRecord>()
+// Keyed by normalized phone (91XXXXXXXXXX)
+const voiceRetryMap = new Map<string, VoiceRetryRecord>()
+// Keyed by arbitrary string, e.g. `check-access:<ip>`
+const ipRateMap = new Map<string, IpRecord>()
 
 const SEND_HOUR_MS    = 60 * 60 * 1000   // 1 hour
 const SEND_COOLDOWN_MS = 45 * 1000        // 45 seconds
@@ -30,6 +45,12 @@ const MAX_SENDS_PER_HOUR = 3
 
 const VERIFY_WINDOW_MS = 15 * 60 * 1000  // 15 minutes
 const MAX_VERIFY_ATTEMPTS = 5
+
+const VOICE_RETRY_WINDOW_MS = 60 * 60 * 1000  // 1 hour
+const MAX_VOICE_RETRIES_PER_HOUR = 2
+
+const IP_WINDOW_MS = 60 * 1000          // 1 minute
+const MAX_IP_ATTEMPTS_PER_MIN = 10
 
 // Cleanup stale entries every 30 minutes to prevent memory leak
 setInterval(() => {
@@ -40,6 +61,13 @@ setInterval(() => {
   }
   for (const [phone, rec] of verifyMap.entries()) {
     if (now - rec.windowStart > 2 * VERIFY_WINDOW_MS) verifyMap.delete(phone)
+  }
+  for (const [phone, rec] of voiceRetryMap.entries()) {
+    const last = rec.timestamps[rec.timestamps.length - 1] ?? 0
+    if (now - last > 2 * VOICE_RETRY_WINDOW_MS) voiceRetryMap.delete(phone)
+  }
+  for (const [key, rec] of ipRateMap.entries()) {
+    if (now - rec.windowStart > 2 * IP_WINDOW_MS) ipRateMap.delete(key)
   }
 }, 30 * 60 * 1000)
 
@@ -110,6 +138,51 @@ export function checkAndRecordVerify(phone: string): RateLimitResult {
  */
 export function resetVerifyAttempts(phone: string): void {
   verifyMap.delete(phone)
+}
+
+/**
+ * Check + record a voice-OTP retry (MSG91 /otp/retry — costs money per call).
+ * Limit: max 2 voice retries per phone per hour. Call BEFORE the API call.
+ */
+export function checkAndRecordVoiceRetry(phone: string): RateLimitResult {
+  const now = Date.now()
+  const rec = voiceRetryMap.get(phone) ?? { timestamps: [] }
+
+  const recent = rec.timestamps.filter((t) => now - t < VOICE_RETRY_WINDOW_MS)
+  if (recent.length >= MAX_VOICE_RETRIES_PER_HOUR) {
+    return { allowed: false, reason: 'hourly_limit' }
+  }
+
+  recent.push(now)
+  voiceRetryMap.set(phone, { timestamps: recent })
+  return { allowed: true }
+}
+
+/**
+ * Generic per-IP rate limiter (anti-enumeration / anti-scrape).
+ * Defaults: max 10 requests per IP per minute. Call BEFORE processing.
+ * Key should be namespaced, e.g. `check-access:<ip>`.
+ */
+export function checkAndRecordIpRequest(
+  key: string,
+  maxAttempts = MAX_IP_ATTEMPTS_PER_MIN,
+  windowMs = IP_WINDOW_MS
+): RateLimitResult {
+  const now = Date.now()
+  const rec = ipRateMap.get(key) ?? { windowStart: now, attempts: 0 }
+
+  // Reset window if expired
+  if (now - rec.windowStart > windowMs) {
+    ipRateMap.set(key, { windowStart: now, attempts: 1 })
+    return { allowed: true }
+  }
+
+  if (rec.attempts >= maxAttempts) {
+    return { allowed: false, reason: 'too_many_attempts' }
+  }
+
+  ipRateMap.set(key, { windowStart: rec.windowStart, attempts: rec.attempts + 1 })
+  return { allowed: true }
 }
 
 /**

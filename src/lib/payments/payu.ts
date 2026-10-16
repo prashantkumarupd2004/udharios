@@ -144,20 +144,6 @@ function extractLink(data: Record<string, unknown>): string | undefined {
   return undefined
 }
 
-function extractInvoiceId(data: Record<string, unknown>): string | undefined {
-  const pools: Record<string, unknown>[] = [data]
-  const nested = data.data
-  if (nested && typeof nested === 'object') pools.push(nested as Record<string, unknown>)
-
-  for (const pool of pools) {
-    for (const key of ['invoice_id', 'invoiceId', 'id']) {
-      const val = pool[key]
-      if (val !== undefined && val !== null && String(val) !== '') return String(val)
-    }
-  }
-  return undefined
-}
-
 function isInvoiceSuccess(data: Record<string, unknown>): boolean {
   const status = data.status
   if (status === 1 || status === '1') return true
@@ -267,12 +253,14 @@ export class PayUGateway implements PaymentGateway {
       })
 
       if (isInvoiceSuccess(data)) {
-        const linkId = extractInvoiceId(data) || txnid
+        // NOTE: linkId hamesha txnid rakho — PayU ka surl/furl POST txnid
+        // wapas bhejta hai (invoice_id guarantee nahi), aur webhook isi se
+        // PaymentLink.gatewayLinkId match karke merchant dhoondta hai.
         const shortUrl = extractLink(data)
         if (shortUrl) {
-          logger.info('PayU invoice created', { txnid, linkId })
+          logger.info('PayU invoice created', { txnid })
           return {
-            linkId,
+            linkId: txnid,
             shortUrl,
             status: 'created',
             expiresAt: input.expiryDate,
@@ -385,7 +373,9 @@ export class PayUGateway implements PaymentGateway {
     return {
       type,
       gatewayPaymentId: p['mihpayid'] || p['txnid'] || '',
-      gatewayLinkId: p['invoice_id'] || undefined,
+      // txnid pehle — surl POST me txnid guarantee hota hai, invoice_id nahi.
+      // createPaymentLink gatewayLinkId me txnid hi store karta hai.
+      gatewayLinkId: p['txnid'] || p['invoice_id'] || undefined,
       amount: Number.isFinite(amountPaise) ? amountPaise : 0,
       currency: 'INR',
       referenceId: p['udf1'] || undefined, // createPaymentLink me outstanding ID yahin rakha tha

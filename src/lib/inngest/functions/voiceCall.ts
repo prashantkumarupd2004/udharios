@@ -22,11 +22,12 @@ export const triggerVoiceCall = inngest.createFunction(
     retries: 2,
   },
   async ({ event, step }) => {
-    const { outstandingId, merchantId, customerId, retryCount } = event.data as {
+    const { outstandingId, merchantId, customerId, retryCount, advanceStage } = event.data as {
       outstandingId: string
       merchantId: string
       customerId: string
       retryCount?: number
+      advanceStage?: boolean
     }
 
     // Fetch full context
@@ -148,6 +149,19 @@ export const triggerVoiceCall = inngest.createFunction(
         payload: { callId: callRecord.id, exotelSid: sid, retryCount: retryCount ?? 0 },
       }).catch(() => {})
     })
+
+    // Reminder stage advance — sirf jab Exotel ne call place confirm ki ho.
+    // reminderSend.ts voice channel ke liye stage advance NAHI karta
+    // (emission ≠ placement), isliye yahan hota hai. advanceStage flag
+    // reminder engine ke voice stage se aata hai.
+    if (advanceStage) {
+      await step.run('advance-reminder-stage', async () => {
+        await prisma.outstanding.update({
+          where: { id: outstandingId },
+          data: { currentStage: { increment: 1 } },
+        })
+      })
+    }
 
     logger.info('Inngest voice call placed', { outstandingId, callId: callRecord.id, sid })
     return { called: true, callId: callRecord.id, exotelSid: sid }

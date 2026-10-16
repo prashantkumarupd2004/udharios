@@ -19,23 +19,41 @@ export const nightlyReminderScan = inngest.createFunction(
   async ({ step }) => {
     logger.info('Starting nightly reminder scan')
 
-    // Fetch all non-terminal outstandings
+    // Fetch all non-terminal outstandings — cursor paginated (pehle take:500
+    // tha, 500 se zyada eligible hone par tail silently drop ho jati thi)
     const outstandings = await step.run('fetch-outstandings', async () => {
       const today = new Date(todayIST())
+      const PAGE_SIZE = 500
 
-      return prisma.outstanding.findMany({
-        where: {
-          status: { in: ['upcoming', 'overdue'] },
-          dueDate: { lte: today },
-          merchant: { isKillSwitched: false },
-        },
-        include: {
-          merchant: {
-            include: { reminderRules: true },
+      const fetchPage = (cursor?: string) =>
+        prisma.outstanding.findMany({
+          where: {
+            status: { in: ['upcoming', 'overdue'] },
+            dueDate: { lte: today },
+            merchant: { isKillSwitched: false },
           },
-        },
-        take: 500,
-      })
+          include: {
+            merchant: {
+              include: { reminderRules: true },
+            },
+          },
+          orderBy: { id: 'asc' },
+          take: PAGE_SIZE,
+          ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        })
+
+      type Page = Awaited<ReturnType<typeof fetchPage>>
+      const all: Page = []
+      let cursor: string | undefined
+
+      for (;;) {
+        const page = await fetchPage(cursor)
+        all.push(...page)
+        if (page.length < PAGE_SIZE) break
+        cursor = page[page.length - 1].id
+      }
+
+      return all
     })
 
     logger.info('Found outstandings to process', { count: outstandings.length })

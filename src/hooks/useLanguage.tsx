@@ -1,12 +1,14 @@
 'use client'
 
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { hi } from '@/i18n/hi'
 import { en } from '@/i18n/en'
 
 type Language = 'hi' | 'en'
 type Strings = typeof hi
+
+const STORAGE_KEY = 'udharios-lang'
 
 interface LanguageContextValue {
   lang: Language
@@ -15,15 +17,28 @@ interface LanguageContextValue {
 }
 
 const LanguageContext = createContext<LanguageContextValue>({
-  lang: 'en',
-  t: en as unknown as Strings,
+  lang: 'hi',
+  t: hi,
   toggleLang: () => {},
 })
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLang] = useState<Language>('en')
+  // Default: Hinglish ('hi') — hi.ts ke hisaab se yehi default language hai
+  const [lang, setLang] = useState<Language>('hi')
 
-  const toggleLang = () => setLang(prev => (prev === 'hi' ? 'en' : 'hi'))
+  // Saved choice client par load karo (SSR hydration mismatch se bachne ke liye effect me)
+  useEffect(() => {
+    const saved = window.localStorage.getItem(STORAGE_KEY)
+    if (saved === 'en' || saved === 'hi') setLang(saved)
+  }, [])
+
+  const toggleLang = () => {
+    setLang(prev => {
+      const next: Language = prev === 'hi' ? 'en' : 'hi'
+      window.localStorage.setItem(STORAGE_KEY, next)
+      return next
+    })
+  }
 
   return (
     <LanguageContext.Provider

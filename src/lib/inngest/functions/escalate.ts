@@ -48,9 +48,20 @@ export const escalateToMerchant = inngest.createFunction(
     })
 
     await step.run('mark-escalated', async () => {
+      // Terminal stage advance: nightlyReminderScan outstanding ko tabhi
+      // skip karta hai jab currentStage >= stages.length ho — isliye rule ke
+      // total stages par set karo taaki agle scan me escalation dobara na fire ho.
+      const rule = await prisma.reminderRule.findFirst({
+        where: { merchantId, isDefault: true },
+        select: { stages: true },
+      })
+      const stageCount = Array.isArray(rule?.stages) ? rule.stages.length : 0
       await prisma.outstanding.update({
         where: { id: outstandingId },
-        data: { status: 'overdue' }, // stays overdue but reminders stop (stage exhausted)
+        data: {
+          status: 'overdue', // stays overdue but reminders stop (stage exhausted)
+          currentStage: stageCount,
+        },
       })
     })
 

@@ -19,6 +19,7 @@ import { decryptCredentials } from '@/lib/payments/crypto'
 import type { GatewayId } from '@/lib/payments/types'
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
 import { logger } from '@/lib/logger'
+import { msg91SendSms } from '@/lib/msg91'
 import { isWithinSendingWindow, overdueDays, formatINR, formatIndianDate, msUntilSendingWindow } from '@/lib/date-utils'
 
 export const sendStagedReminder = inngest.createFunction(
@@ -307,11 +308,37 @@ export const sendStagedReminder = inngest.createFunction(
         failedReason = result.error
       }
     } else if (stage.channel === 'voice') {
-      // Trigger voice call via Inngest event
+      // Trigger voice call via Inngest event.
+      // NOTE: stage advance yahan NAHI hota — voiceCall function tabhi
+      // currentStage badhati hai jab Exotel call place confirm kare.
+      // (Pehle sirf event emit hone par stage consume ho jata tha.)
       await step.sendEvent('trigger-voice-call', {
         name: 'calls/trigger',
-        data: { outstandingId, merchantId, customerId, retryCount: 0 },
+        data: { outstandingId, merchantId, customerId, retryCount: 0, advanceStage: true },
       })
+    } else if (stage.channel === 'sms') {
+      // Real SMS via MSG91 Flow API. Agar bheja nahi ja saka (template/flow
+      // configured nahi, ya API fail) to sendStatus='failed' — stage advance
+      // NAHI hoga aur agli nightly scan me dobara try hoga. Silent no-op nahi.
+      const smsResult = await step.run('send-sms', async () => {
+        const digits = outstanding.customer.phone.replace(/\D/g, '')
+        return msg91SendSms(digits, {
+          VAR1: outstanding.customer.name,
+          VAR2: amountINR,
+          VAR3: formatIndianDate(outstanding.dueDate),
+          VAR4: outstanding.merchant.businessName,
+        })
+      })
+      if (!smsResult.ok) {
+        sendStatus = 'failed'
+        failedReason = smsResult.error
+        logger.warn('SMS reminder failed — stage not advanced, will retry next scan', {
+          outstandingId,
+          error: smsResult.error,
+        })
+      } else {
+        externalMsgId = smsResult.messageId
+      }
     } else if (stage.channel === 'escalate') {
       // Final escalation — notify merchant
       // NOTE: event naam 'outstandings/escalate' hona chahiye (escalate.ts isi ko sunta hai)
@@ -346,8 +373,11 @@ export const sendStagedReminder = inngest.createFunction(
         },
       })
 
-      // Advance the stage counter
-      if (sendStatus === 'sent') {
+      // Advance the stage counter — EXCEPT voice channel: uske liye
+      // triggerVoiceCall (voiceCall.ts) stage badhata hai, tabhi jab Exotel
+      // call place karne ki confirmation de de. Emission par advance karne se
+      // failed/skipped call bhi stage kha jati thi.
+      if (sendStatus === 'sent' && stage.channel !== 'voice') {
         await prisma.outstanding.update({
           where: { id: outstandingId },
           data: { currentStage: { increment: 1 } },

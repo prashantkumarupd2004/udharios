@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { Search, Plus, Upload, X, Users, IndianRupee, CheckCircle2, AlertTriangle, Phone } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
@@ -143,6 +143,8 @@ export default function CustomersPage() {
   const [search, setSearch] = useState('')
   const [showAdd, setShowAdd] = useState(false)
   const [filter, setFilter] = useState<'all' | 'pending' | 'overdue' | 'clear'>('all')
+  const [importing, setImporting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const fetchCustomers = useCallback(async () => {
     const params = search ? `?search=${encodeURIComponent(search)}` : ''
@@ -151,6 +153,64 @@ export default function CustomersPage() {
     setCustomers(data.customers ?? [])
     setLoading(false)
   }, [search])
+
+  // CSV import — file browser me parse karo, phir POST /api/customers/import (JSON) pe bhejo.
+  // API ko { rows, columnMap: { name, phone, notes? } } chahiye.
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // taaki wahi file dobara select ho sake
+    if (!file) return
+    setImporting(true)
+    try {
+      const { default: Papa } = await import('papaparse')
+      const text = await file.text()
+      const parsed = Papa.parse<Record<string, string>>(text, { header: true, skipEmptyLines: true })
+      const rows = parsed.data ?? []
+      if (rows.length === 0) {
+        alert(lang === 'hi' ? 'CSV me koi row nahi mili' : 'No rows found in the CSV file')
+        return
+      }
+      const headers = (parsed.meta.fields ?? []).map(h => h.trim())
+      const findCol = (...keys: string[]) =>
+        headers.find(h => keys.some(k => h.toLowerCase().includes(k)))
+      const nameCol = findCol('name', 'naam')
+      const phoneCol = findCol('phone', 'mobile', 'contact')
+      const notesCol = findCol('note', 'remark')
+      if (!nameCol || !phoneCol) {
+        alert(
+          lang === 'hi'
+            ? 'CSV me "name" aur "phone"/"mobile" header wale columns hone chahiye'
+            : 'CSV must have "name" and "phone"/"mobile" header columns'
+        )
+        return
+      }
+      const res = await fetch('/api/customers/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rows,
+          columnMap: { name: nameCol, phone: phoneCol, notes: notesCol },
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        alert(data.error ?? (lang === 'hi' ? 'Import fail ho gaya' : 'Import failed'))
+        return
+      }
+      const r = data.results ?? { imported: 0, skipped: 0, errors: [] }
+      const errCount = (r.errors ?? []).length
+      alert(
+        lang === 'hi'
+          ? `Import complete: ${r.imported} add hue, ${r.skipped} pehle se the (skip)${errCount > 0 ? `, ${errCount} me error` : ''}`
+          : `Import complete: ${r.imported} added, ${r.skipped} skipped (already existed)${errCount > 0 ? `, ${errCount} errors` : ''}`
+      )
+      fetchCustomers()
+    } catch {
+      alert(lang === 'hi' ? 'File padhne me dikkat aayi' : 'Could not read the file')
+    } finally {
+      setImporting(false)
+    }
+  }
 
   useEffect(() => {
     const timer = setTimeout(fetchCustomers, 300)
@@ -184,9 +244,22 @@ export default function CustomersPage() {
           <p className="text-sm text-slate-500 mt-0.5">{customers.length} {lang === 'hi' ? 'kul customers' : 'total customers'}</p>
         </div>
         <div className="flex gap-2">
-          <Link href="/dashboard/customers/import" className="btn-ghost px-3 py-2.5 text-sm">
-            <Upload className="w-4 h-4" /> {lang === 'hi' ? 'Import' : 'Import'}
-          </Link>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+            className="btn-ghost px-3 py-2.5 text-sm"
+            title={lang === 'hi' ? 'CSV file se customers import karo' : 'Import customers from a CSV file'}
+          >
+            <Upload className="w-4 h-4" /> {importing ? '...' : (lang === 'hi' ? 'Import' : 'Import')}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={handleImportFile}
+            aria-label="Import customers CSV"
+          />
           <button onClick={() => setShowAdd(true)} className="btn-primary px-4 py-2.5 text-sm" id="open-add-customer-btn">
             <Plus className="w-4 h-4" strokeWidth={2.5} /> {lang === 'hi' ? 'Naya Customer' : 'Add Customer'}
           </button>

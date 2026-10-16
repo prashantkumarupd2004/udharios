@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
 import { normalizePhone, msg91RetryVoice } from '@/lib/msg91'
+import { checkAndRecordVoiceRetry } from '@/lib/rateLimit'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -19,6 +20,12 @@ export async function POST(request: NextRequest) {
 
     const mobile91 = normalizePhone(parsed.data.phone)
     if (!mobile91) return NextResponse.json({ ok: false, error: 'invalid_phone' }, { status: 400 })
+
+    // Voice calls cost money per retry — max 2 per phone per hour
+    const rateCheck = checkAndRecordVoiceRetry(mobile91)
+    if (!rateCheck.allowed) {
+      return NextResponse.json({ ok: false, error: 'too_many_attempts' }, { status: 429 })
+    }
 
     const result = await msg91RetryVoice(mobile91)
     if (!result.ok) return NextResponse.json({ ok: false, error: 'send_failed' }, { status: 502 })

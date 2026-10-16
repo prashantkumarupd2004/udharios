@@ -12,9 +12,24 @@ import { prisma } from '@/lib/prisma'
 import { normalizePhone, toE164 } from '@/lib/msg91'
 import { sendOtpSchema } from '@/validations'
 import { isAdminPhone } from '@/lib/admin'
+import { checkAndRecordIpRequest } from '@/lib/rateLimit'
+
+/** Best-effort client IP (Vercel sets x-forwarded-for). */
+function clientIp(request: NextRequest): string {
+  const fwd = request.headers.get('x-forwarded-for')
+  if (fwd) return fwd.split(',')[0].trim()
+  return request.headers.get('x-real-ip')?.trim() || 'unknown'
+}
 
 export async function POST(request: NextRequest) {
   try {
+    // Anti-enumeration: membership lookups are cheap to probe, so cap them
+    // per IP (10/min). Raises the cost of scanning phone numbers.
+    const ipCheck = checkAndRecordIpRequest(`check-access:${clientIp(request)}`)
+    if (!ipCheck.allowed) {
+      return NextResponse.json({ ok: false, error: 'too_many_requests' }, { status: 429 })
+    }
+
     const body = await request.json()
     const parsed = sendOtpSchema.safeParse(body)
     if (!parsed.success) {

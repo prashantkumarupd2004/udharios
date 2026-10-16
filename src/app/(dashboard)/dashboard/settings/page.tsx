@@ -292,9 +292,6 @@ export default function SettingsPage() {
                   </p>
                 </div>
               </div>
-              <a href="/dashboard/billing" className="btn-primary px-5 py-2.5 text-sm">
-                {lang === 'hi' ? 'Upgrade' : 'Upgrade'}
-              </a>
             </div>
           </div>
 

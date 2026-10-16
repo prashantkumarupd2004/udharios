@@ -152,6 +152,10 @@ export class PhonePeGateway implements PaymentGateway {
 
     const merchantTransactionId = buildMerchantTransactionId(input.referenceId)
 
+    // NOTE: PhonePe PG v1 /pg/v1/pay me koi expiry/validity param nahi hai —
+    // isliye input.expiryDate sirf hamare DB (PaymentLink.expiresAt) me save
+    // hota hai, aur generic payment webhook expired links ke against aaye
+    // payments ko khud reject kar deta hai.
     const payload = {
       merchantId,
       merchantTransactionId,

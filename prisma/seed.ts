@@ -34,8 +34,8 @@ async function main() {
           name: 'Default',
           isDefault: true,
           stages: [
-            { dayOffset: 1,  channel: 'whatsapp', templateName: 'T1_polite' },
-            { dayOffset: 3,  channel: 'whatsapp', templateName: 'T2_with_link' },
+            { dayOffset: 1,  channel: 'whatsapp', templateName: 't1_polite' },
+            { dayOffset: 3,  channel: 'whatsapp', templateName: 't2_with_link' },
             { dayOffset: 5,  channel: 'whatsapp', templateName: 'T3_firm' },
             { dayOffset: 7,  channel: 'voice',    templateName: null },
             { dayOffset: 10, channel: 'voice',    templateName: null },
@@ -204,7 +204,7 @@ async function main() {
       action: 'reminder.sent',
       entity: 'outstanding',
       entityId: outstandings[0].id,
-      payload: { channel: 'whatsapp', stage: 0, templateName: 'T1_polite' },
+      payload: { channel: 'whatsapp', stage: 0, templateName: 't1_polite' },
       payloadHash: 'seed-hash-2',
     },
   })

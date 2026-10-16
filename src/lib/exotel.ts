@@ -4,6 +4,7 @@
  */
 
 import { logger } from '@/lib/logger'
+import { createHmac, timingSafeEqual } from 'node:crypto'
 
 const EXOTEL_SID = process.env.EXOTEL_SID!
 const EXOTEL_API_KEY = process.env.EXOTEL_API_KEY!
@@ -138,14 +139,38 @@ export function normalizePhoneForExotel(phone: string): string {
 }
 
 /**
- * Verify Exotel webhook — Exotel signs webhooks with HMAC-SHA1
+ * Verify an Exotel status-callback webhook.
+ *
+ * Per Exotel docs (developer.exotel.com → Advanced Config → Webhooks):
+ * Exotel includes a signature header in each webhook request. The signature
+ * is an HMAC-SHA1 of the RAW request body, keyed with your Exotel API token.
+ * The signing secret therefore comes from the EXOTEL_API_TOKEN env var.
+ *
+ * @param signature  value of the `x-exotel-signature` request header
+ * @param rawBody    the raw (unparsed) request body, exactly as received
+ * @returns true only when the signature is present, the secret is
+ *          configured, and the HMAC matches (constant-time comparison).
+ *          Returns false (fail closed) when the secret is unset or the
+ *          signature is missing/mismatched — the route answers 500 / 403.
  */
 export function verifyExotelWebhook(
-  _signature: string,
-  _rawBody: string
+  signature: string | null,
+  rawBody: string
 ): boolean {
-  // Exotel webhook verification is optional but recommended.
-  // For now, we trust requests from Exotel's IP ranges.
-  // TODO: Implement Exotel HMAC-SHA1 verification when Exotel enables it.
-  return true
+  const secret = process.env.EXOTEL_API_TOKEN
+  if (!secret || !signature) return false
+
+  const expected = createHmac('sha1', secret).update(rawBody, 'utf8').digest('hex')
+  try {
+    const a = Buffer.from(expected, 'utf8')
+    const b = Buffer.from(signature.trim(), 'utf8')
+    return a.length === b.length && timingSafeEqual(a, b)
+  } catch {
+    return false // buffer length mismatch → not equal
+  }
+}
+
+/** True when webhook signature verification is possible (EXOTEL_API_TOKEN set). */
+export function isExotelWebhookVerificationConfigured(): boolean {
+  return !!process.env.EXOTEL_API_TOKEN
 }

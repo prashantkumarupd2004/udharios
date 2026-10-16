@@ -25,6 +25,11 @@ export const maxDuration = 30
 const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://udharios1.vercel.app').replace(/\/+$/, '')
 
 export async function POST(req: NextRequest) {
+  // Test-only endpoint — production me disabled
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
   const testKey = req.headers.get('x-test-key') ?? ''
   if (!process.env.SESSION_SECRET || testKey !== process.env.SESSION_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

@@ -148,7 +148,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
     setMarkingPaid(null)
   }
 
-  const triggerCall = async (outstandingId: string, testMode = false) => {    if (!hasPhone) {
+  const triggerCall = async (outstandingId: string) => {    if (!hasPhone) {
       setCallMsg('Pehle customer ka mobile number add karo')
       return
     }
@@ -158,7 +158,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
       const res = await fetch('/api/calls/trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ outstandingId, skipQuietHours: testMode }),
+        body: JSON.stringify({ outstandingId }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -343,15 +343,6 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                       {markingPaid === o.id ? 'Saving...' : 'Mark Paid'}
                     </button>
                   </div>
-                  {hasPhone && (
-                    <button
-                      onClick={() => triggerCall(o.id, true)}
-                      disabled={calling === o.id}
-                      className="mt-2 w-full text-center text-[11px] font-semibold text-slate-400 hover:text-slate-600 transition-colors"
-                    >
-                      🧪 Test call (bypass quiet hours)
-                    </button>
-                  )}
                 </div>
               )
             })}

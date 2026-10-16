@@ -297,7 +297,7 @@ async function handleDatePromise(
   merchantId: string,
   promisedDate: Date
 ) {
-  await prisma.promise.create({
+  const promise = await prisma.promise.create({
     data: {
       outstandingId: outstanding.id,
       customerId: customer.id,
@@ -313,13 +313,15 @@ async function handleDatePromise(
     data: { status: 'promised' },
   })
 
-  // Schedule promise follow-up
+  // Schedule promise follow-up — REAL promise id bhejo (khaali string se
+  // promiseFollowUp me findUniqueOrThrow fail hota tha aur outstanding
+  // hamesha 'promised' me atka rehta tha)
   await inngest.send({
     name: 'promises/follow-up',
     data: {
       outstandingId: outstanding.id,
       merchantId,
-      promiseId: '', // Will be retrieved in the function
+      promiseId: promise.id,
     },
   })
 

@@ -256,12 +256,29 @@ export default function OutstandingsPage() {
             if (existing) {
               customerId = existing.id
             } else {
+              // Naya customer — phone zaroori hai (API bina valid phone ke reject karta hai)
+              let phone = parsed.phone
+              if (!phone) {
+                const entered = window.prompt(
+                  lang === 'hi'
+                    ? `"${parsed.name}" ka mobile number likho (10 digit):`
+                    : `Enter mobile number for "${parsed.name}" (10 digits):`,
+                  ''
+                )
+                if (entered === null) return // user ne cancel kiya
+                phone = entered.replace(/\D/g, '').replace(/^91/, '')
+                if (!/^[6-9]\d{9}$/.test(phone)) {
+                  alert(lang === 'hi' ? 'Sahi 10-digit mobile number likho' : 'Please enter a valid 10-digit mobile number')
+                  return
+                }
+              }
               const ncRes = await fetch('/api/customers', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   name: parsed.name,
-                  phone: parsed.phone ?? `quick-${Date.now()}`,
+                  phone,
+                  consent: true,
                 }),
               })
               const ncData = await ncRes.json()
@@ -306,8 +323,8 @@ export default function OutstandingsPage() {
         </form>
         <p className="text-[11px] text-slate-400 mt-1.5">
           {lang === 'hi'
-            ? 'Naam + amount likho — phone optional hai. Due date 7 din baad auto-set hogi.'
-            : 'Type name + amount — phone optional. Due date auto-set to 7 days.'}
+            ? 'Naam + amount likho — phone na diya to poocha jayega. Due date 7 din baad auto-set hogi.'
+            : 'Type name + amount — phone optional (asked if skipped). Due date auto-set to 7 days.'}
         </p>
       </div>
 

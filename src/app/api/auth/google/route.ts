@@ -3,7 +3,7 @@
  * Redirects to Google's consent screen.
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getGoogleAuthUrl, isGoogleConfigured } from '@/lib/google-oauth'
+import { getGoogleAuthUrl, isGoogleConfigured, signOAuthState } from '@/lib/google-oauth'
 import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
@@ -13,8 +13,8 @@ export async function GET(request: NextRequest) {
   }
 
   const redirectTo = request.nextUrl.searchParams.get('redirectTo') ?? '/dashboard'
-  // state = where to go after login (validated on callback)
-  const state = Buffer.from(JSON.stringify({ redirectTo })).toString('base64url')
+  // state = where to go after login (HMAC-signed; verified on callback)
+  const state = signOAuthState({ redirectTo })
 
   return NextResponse.redirect(getGoogleAuthUrl(state))
 }

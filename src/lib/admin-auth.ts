@@ -19,7 +19,12 @@ export const ADMIN_COOKIE_NAME = 'ugaahi_admin_session'
 const SESSION_DAYS = 7
 
 function getSecret(): Uint8Array {
-  const secret = process.env.SESSION_SECRET ?? process.env.JWT_SECRET ?? 'dev-secret-change-me'
+  const secret = process.env.SESSION_SECRET
+  if (!secret) {
+    // Fail closed: never fall back to a hardcoded secret — that would allow
+    // forging admin session cookies.
+    throw new Error('SESSION_SECRET env var is required (admin auth cannot start without it)')
+  }
   return new TextEncoder().encode(secret)
 }
 

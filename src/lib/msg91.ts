@@ -111,3 +111,55 @@ export async function msg91RetryVoice(mobile91: string): Promise<SendResult> {
     return { ok: false, error: 'send_failed' }
   }
 }
+
+/**
+ * MSG91 transactional SMS via Flow API.
+ *
+ * Needs:
+ *   MSG91_AUTH_KEY     (same as OTP)
+ *   MSG91_SMS_FLOW_ID  (approved DLT flow id for reminder SMS)
+ *   MSG91_SMS_SENDER   (optional sender id)
+ *
+ * The approved flow template should use variables:
+ *   ##VAR1## = customer name, ##VAR2## = amount, ##VAR3## = due date, ##VAR4## = merchant name
+ *
+ * Agar flow id configured nahi hai to { ok: false } return hota hai —
+ * caller ko stage advance NAHI karna chahiye (agli scan me retry hoga).
+ */
+export async function msg91SendSms(
+  mobile91: string,
+  vars: { VAR1: string; VAR2: string; VAR3: string; VAR4: string }
+): Promise<{ ok: true; messageId?: string } | { ok: false; error: 'sms_not_configured' | 'send_failed' }> {
+  const authKey = getAuthKey()
+  const flowId = process.env.MSG91_SMS_FLOW_ID ?? ''
+  if (!authKey || !flowId) {
+    logger.warn('MSG91 SMS not configured — MSG91_SMS_FLOW_ID set karo')
+    return { ok: false, error: 'sms_not_configured' }
+  }
+
+  try {
+    const res = await fetch('https://control.msg91.com/api/v5/flow/', {
+      method: 'POST',
+      headers: { authkey: authKey, 'Content-Type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({
+        flow_id: flowId,
+        sender: process.env.MSG91_SMS_SENDER ?? '',
+        mobiles: mobile91,
+        ...vars,
+      }),
+    })
+
+    let data: Record<string, unknown> = {}
+    try { data = await res.json() } catch { /* ignore non-JSON */ }
+
+    if (data.type === 'success') {
+      return { ok: true, messageId: typeof data.message === 'string' ? data.message : undefined }
+    }
+
+    logger.warn('MSG91 SMS send failed', { type: data.type, message: data.message })
+    return { ok: false, error: 'send_failed' }
+  } catch (err) {
+    logger.error('MSG91 SMS error', { error: String(err) })
+    return { ok: false, error: 'send_failed' }
+  }
+}

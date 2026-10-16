@@ -14,12 +14,13 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
 import { getGateway } from '@/lib/payments'
 import { decryptCredentials } from '@/lib/payments/crypto'
 import type { GatewayId } from '@/lib/payments/types'
-import { inngest } from '@/lib/inngest/client'
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
 import { logger } from '@/lib/logger'
+import { formatINR } from '@/lib/date-utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,22 +40,35 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Unknown gateway' }, { status: 404 })
   }
 
-  // Raw body (signature ke liye)
-  const rawBody = Buffer.from(await request.arrayBuffer())
-  const rawString = rawBody.toString('utf-8')
-
+  // Raw body (signature ke liye) — body sirf EK baar padh sakte hain.
+  // Isliye pehle text me lo, phir content-type ke hisaab se parse karo.
+  // NOTE: body consume karne ke baad request.formData() dobara kaam nahi
+  // karta — isliye form-encoded (PayU surl/furl) ko rawString se hi parse karo.
+  const contentType = request.headers.get('content-type') ?? ''
+  let rawString: string
   let payload: unknown
-  try {
-    payload = JSON.parse(rawString)
-  } catch {
-    // Kuch gateways form-data bhejte hain
+
+  if (contentType.includes('multipart/form-data')) {
     const form = await request.formData().catch(() => null)
-    if (form) {
-      payload = Object.fromEntries(form.entries())
-    } else {
+    if (!form) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
     }
+    payload = Object.fromEntries(form.entries())
+    rawString = JSON.stringify(payload)
+  } else {
+    rawString = await request.text()
+    if (contentType.includes('application/x-www-form-urlencoded')) {
+      // PayU surl/furl POST — form-encoded body
+      payload = Object.fromEntries(new URLSearchParams(rawString).entries())
+    } else {
+      try {
+        payload = JSON.parse(rawString)
+      } catch {
+        return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
+      }
+    }
   }
+  const rawBody = Buffer.from(rawString, 'utf-8')
 
   // Event parse karo → merchant nikalo
   const event = gateway.parseWebhookEvent(payload)
@@ -98,7 +112,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   // Signature verify karo
   // NOTE: Cashfree ka scheme hai HMAC(secret, timestamp + body)
   // Isliye Cashfree ke liye timestamp header ko body ke aage jodna padta hai
-  const sigHeader =
+  let sigHeader =
     request.headers.get('x-razorpay-signature') ??
     request.headers.get('x-webhook-signature') ??
     request.headers.get('x-verify') ??
@@ -107,6 +121,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   if (gatewayId === 'cashfree') {
     const timestamp = request.headers.get('x-webhook-timestamp') ?? ''
     verifyBody = timestamp + rawString
+  }
+  if (gatewayId === 'payu') {
+    // PayU ka 'hash' body ke ANDAR hota hai (koi signature header nahi aata).
+    // Adapter verifyWebhookSignature khud URL-encoded body se fields nikalta
+    // hai — isliye rawString hi pass karo, hash ko signature ki tarah treat karo.
+    const inBodyHash = (payload as Record<string, string> | null)?.hash ?? ''
+    if (inBodyHash) sigHeader = inBodyHash
+    verifyBody = rawString
   }
   if (sigHeader && !gateway.verifyWebhookSignature(verifyBody, sigHeader, merchantCreds)) {
     logger.warn('Webhook signature mismatch', { gateway: gatewayId, merchantId })
@@ -131,79 +153,175 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   return NextResponse.json({ received: true })
 }
 
+interface PaymentSuccessEvent {
+  gatewayLinkId?: string
+  gatewayPaymentId: string
+  amount: number // paise me
+  referenceId?: string
+  rawPayload?: unknown
+}
+
 async function handlePaymentSuccess(
   merchantId: string,
-  event: { gatewayLinkId?: string; gatewayPaymentId: string; amount: number; referenceId?: string },
+  event: PaymentSuccessEvent,
   gatewayId: string,
 ) {
-  // Outstanding dhoondo
+  // Outstanding dhoondo — pehle referenceId (notes/udf1), phir link se
   let outstandingId = event.referenceId
-  if (!outstandingId && event.gatewayLinkId) {
-    const link = await prisma.paymentLink.findFirst({
+  let link: { id: string; outstandingId: string; expiresAt: Date | null } | null = null
+  if (event.gatewayLinkId) {
+    link = await prisma.paymentLink.findFirst({
       where: { gateway: gatewayId, gatewayLinkId: event.gatewayLinkId },
+      select: { id: true, outstandingId: true, expiresAt: true },
     })
-    outstandingId = link?.outstandingId ?? undefined
+    if (link && !outstandingId) outstandingId = link.outstandingId
   }
   if (!outstandingId) {
     logger.warn('Webhook: outstanding nahi mila', { gateway: gatewayId })
     return
   }
 
+  // Expired link ke against payment — khud enforce karo.
+  // (Kuch gateways expiry ignore karte hain, e.g. PhonePe; PayU khud
+  // validation_period handle karta hai, lekin yahan double-check safe hai.)
+  if (link?.expiresAt && link.expiresAt.getTime() < Date.now()) {
+    await prisma.paymentLink.updateMany({
+      where: { outstandingId },
+      data: { status: 'expired' },
+    })
+    logger.warn('Webhook: expired link ke against payment — ignore', {
+      gateway: gatewayId,
+      outstandingId,
+    })
+    await appendAuditLog({
+      merchantId,
+      actor: 'system',
+      action: AUDIT_ACTIONS.PAYMENT_LINK_EXPIRED,
+      entity: 'outstanding',
+      entityId: outstandingId,
+      payload: { gateway: gatewayId, gatewayPaymentId: event.gatewayPaymentId },
+    })
+    return
+  }
+
   const outstanding = await prisma.outstanding.findFirst({
     where: { id: outstandingId, merchantId },
+    include: {
+      merchant: { select: { businessName: true } },
+      customer: { select: { name: true } },
+    },
   })
   if (!outstanding || outstanding.status === 'paid') return
 
+  // IDEMPOTENCY: kya ye gateway payment pehle process ho chuka hai?
+  // Payment.razorpayPaymentId column unique hai — har gateway ka payment id
+  // yahin store hota hai (tally receipts bhi yahi pattern use karte hain).
+  const paymentKey = event.gatewayPaymentId || `${gatewayId}_${outstandingId}_${event.amount}`
+  const existingPayment = await prisma.payment.findUnique({
+    where: { razorpayPaymentId: paymentKey },
+  })
+  if (existingPayment) {
+    logger.info('Duplicate payment webhook — no-op', { gateway: gatewayId, paymentKey })
+    return
+  }
+
   // Amount tolerance: ±₹1 (100 paise)
   const expectedPaise = Math.round(outstanding.amount.toNumber() * 100)
-  if (Math.abs(event.amount - expectedPaise) > 100) {
+  const needsReview = Math.abs(event.amount - expectedPaise) > 100
+
+  // Payment row banao (legacy razorpay webhook route ki tarah)
+  await prisma.payment.create({
+    data: {
+      razorpayPaymentId: paymentKey,
+      merchantId,
+      outstandingId,
+      amount: event.amount / 100,
+      method: gatewayId,
+      paidAt: new Date(),
+      needsReview,
+      raw: (event.rawPayload ?? {}) as unknown as Prisma.InputJsonValue,
+    },
+  })
+
+  if (!needsReview) {
+    // Paid mark karo
+    await prisma.outstanding.update({
+      where: { id: outstandingId },
+      data: { status: 'paid', paidAt: new Date() },
+    })
+    await prisma.paymentLink.updateMany({
+      where: { outstandingId },
+      data: { status: 'paid' },
+    })
+
+    // Khule promises → kept (legacy route ki tarah)
+    await prisma.promise.updateMany({
+      where: { outstandingId, status: 'open' },
+      data: { status: 'kept' },
+    })
+
+    // Reminder jobs cancel karo — NOTE: koi listener nahi hai is event ka;
+    // engine DB status guard (upcoming|overdue) se khud ruk jaata hai,
+    // isliye dead send hata diya gaya.
+
+    // Merchant notification (legacy route ki tarah)
+    const amountINR = formatINR(event.amount / 100)
+    await prisma.merchantNotification.create({
+      data: {
+        merchantId,
+        type: 'payment_received',
+        title: `Payment mil gaya! ₹${amountINR} ✓`,
+        body: `${outstanding.customer.name} ne ₹${amountINR} ka payment kar diya. Outstanding clear ho gaya.`,
+        entityId: outstandingId,
+        entityType: 'outstanding',
+      },
+    })
+
+    await appendAuditLog({
+      merchantId,
+      actor: 'system',
+      action: AUDIT_ACTIONS.PAYMENT_RECEIVED,
+      entity: 'outstanding',
+      entityId: outstandingId,
+      payload: {
+        gateway: gatewayId,
+        gatewayPaymentId: event.gatewayPaymentId,
+        amount: event.amount / 100,
+      },
+    })
+
+    logger.info('Outstanding marked paid via webhook', { outstandingId, gateway: gatewayId })
+  } else {
+    // Amount mismatch — auto-paid mat karo, manual review ke liye flag karo
+    // (legacy razorpay webhook route ki tarah)
     logger.warn('Webhook: amount mismatch', {
       expected: expectedPaise,
       got: event.amount,
       outstandingId,
     })
-    // Flag karo, auto-paid mat karo
     await appendAuditLog({
       merchantId,
       actor: 'system',
-      action: AUDIT_ACTIONS.PAYMENT_LINK_CREATED,
+      action: AUDIT_ACTIONS.PAYMENT_MISMATCH,
       entity: 'outstanding',
       entityId: outstandingId,
-      payload: { warning: 'amount_mismatch', expected: expectedPaise, got: event.amount },
+      payload: {
+        warning: 'amount_mismatch',
+        gateway: gatewayId,
+        gatewayPaymentId: event.gatewayPaymentId,
+        expected: expectedPaise,
+        got: event.amount,
+      },
     })
-    return
+    await prisma.merchantNotification.create({
+      data: {
+        merchantId,
+        type: 'payment_received',
+        title: '⚠️ Payment mismatch — manual review needed',
+        body: `${outstanding.customer.name} ne ₹${event.amount / 100} bheja, expected ₹${expectedPaise / 100}. Manual review karein.`,
+        entityId: outstandingId,
+        entityType: 'outstanding',
+      },
+    })
   }
-
-  // Paid mark karo
-  await prisma.outstanding.update({
-    where: { id: outstandingId },
-    data: { status: 'paid', paidAt: new Date() },
-  })
-  await prisma.paymentLink.updateMany({
-    where: { outstandingId },
-    data: { status: 'paid' },
-  })
-
-  // Reminder jobs cancel karo
-  try {
-    await inngest.send({
-      name: 'payment.received',
-      data: { merchantId, outstandingId, gateway: gatewayId },
-    })
-  } catch { /* inngest optional */ }
-
-  await appendAuditLog({
-    merchantId,
-    actor: 'system',
-    action: 'payment.received',
-    entity: 'outstanding',
-    entityId: outstandingId,
-    payload: {
-      gateway: gatewayId,
-      gatewayPaymentId: event.gatewayPaymentId,
-      amount: event.amount / 100,
-    },
-  })
-
-  logger.info('Outstanding marked paid via webhook', { outstandingId, gateway: gatewayId })
 }

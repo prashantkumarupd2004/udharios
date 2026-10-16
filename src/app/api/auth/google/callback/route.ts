@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
-import { getGoogleProfile } from '@/lib/google-oauth'
+import { getGoogleProfile, verifyOAuthState } from '@/lib/google-oauth'
 import { createSessionToken, setSessionCookie } from '@/lib/session'
 import { provisionMerchant } from '@/lib/merchant'
 
@@ -23,16 +23,11 @@ function adminEmails(): string[] {
 }
 
 function safeRedirectTo(state: string | null): string {
-  try {
-    if (!state) return '/dashboard'
-    const parsed = JSON.parse(Buffer.from(state, 'base64url').toString()) as {
-      redirectTo?: string
-    }
-    const r = parsed.redirectTo ?? '/dashboard'
-    return r.startsWith('/') && !r.startsWith('//') ? r : '/dashboard'
-  } catch {
-    return '/dashboard'
-  }
+  // Only trust states we signed (login-CSRF protection). Unverifiable
+  // states fall back to the default dashboard redirect.
+  const verified = verifyOAuthState(state)
+  const r = verified?.redirectTo ?? '/dashboard'
+  return r.startsWith('/') && !r.startsWith('//') ? r : '/dashboard'
 }
 
 export async function GET(request: NextRequest) {

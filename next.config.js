@@ -7,7 +7,9 @@ const withPWA = require('next-pwa')({
   disable: process.env.NODE_ENV === 'development',
   runtimeCaching: [
     {
-      urlPattern: /^https?.*/,
+      // /api/* responses kabhi cache mat karo — stale JSON dashboard kharab karega.
+      // Sirf navigations aur static assets offline cache honge.
+      urlPattern: ({ url }: { url: URL }) => !url.pathname.startsWith('/api/'),
       handler: 'NetworkFirst',
       options: {
         cacheName: 'offlineCache',

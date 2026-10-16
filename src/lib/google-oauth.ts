@@ -14,6 +14,7 @@
  */
 
 import { logger } from '@/lib/logger'
+import { createHmac, timingSafeEqual } from 'node:crypto'
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
@@ -36,6 +37,45 @@ function getRedirectUri(): string {
 
 export function isGoogleConfigured(): boolean {
   return !!getClientId() && !!getClientSecret()
+}
+
+function getStateSecret(): string {
+  const secret = process.env.SESSION_SECRET
+  if (!secret) throw new Error('SESSION_SECRET env var is required')
+  return secret
+}
+
+/**
+ * Sign the OAuth `state` payload with HMAC-SHA256 (SESSION_SECRET).
+ * Format: base64url(payload) + '.' + base64url(signature).
+ * Prevents login-CSRF / tampering: the callback only trusts states we minted.
+ */
+export function signOAuthState(payload: { redirectTo: string }): string {
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url')
+  const sig = createHmac('sha256', getStateSecret()).update(body).digest('base64url')
+  return `${body}.${sig}`
+}
+
+/**
+ * Verify + decode a signed OAuth state. Returns null on missing/invalid
+ * signature or malformed payload — the caller must treat this as untrusted.
+ */
+export function verifyOAuthState(state: string | null): { redirectTo: string } | null {
+  try {
+    if (!state) return null
+    const [body, sig] = state.split('.')
+    if (!body || !sig) return null
+    const expected = createHmac('sha256', getStateSecret()).update(body).digest('base64url')
+    const a = Buffer.from(expected, 'utf8')
+    const b = Buffer.from(sig, 'utf8')
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return null
+    const parsed = JSON.parse(Buffer.from(body, 'base64url').toString()) as {
+      redirectTo?: string
+    }
+    return { redirectTo: parsed.redirectTo ?? '/dashboard' }
+  } catch {
+    return null
+  }
 }
 
 /** Build the Google consent-screen URL. `state` carries the post-login redirect. */

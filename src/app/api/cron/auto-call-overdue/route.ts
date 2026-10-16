@@ -73,13 +73,14 @@ export async function GET(request: NextRequest) {
     for (const o of overdues) {
       if (called >= MAX_CALLS_PER_RUN) break
 
-      // Din me 1 call ka limit — aaj already call hui?
-      const startOfDay = new Date()
-      startOfDay.setHours(0, 0, 0, 0)
+      // Double-dial guard — pichle 24 ghante me is outstanding par koi call
+      // hui? (Inngest reminder engine ki voice call bhi count hoti hai,
+      // taaki engine aur cron dono ek hi din me call na karein)
+      const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
       const alreadyCalled = await prisma.call.findFirst({
         where: {
           outstandingId: o.id,
-          createdAt: { gte: startOfDay },
+          createdAt: { gte: dayAgo },
         },
       })
       if (alreadyCalled) {

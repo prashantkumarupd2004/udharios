@@ -2,22 +2,32 @@
  * POST /api/test/send-whatsapp — Test WhatsApp reminder send.
  *
  * Temporary testing endpoint. Sends a t1_polite template to the given number.
- * Protected by CRON_SECRET (same as cron endpoints).
+ * Protected by CRON_SECRET (same as cron endpoints). Fail-closed: denied
+ * unless CRON_SECRET is set AND the bearer token matches.
  *
  * Body: { to: "+918200218733", customerName?: string, amount?: string }
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { timingSafeEqual } from 'node:crypto'
 import { getWhatsAppProvider, buildT1Polite } from '@/lib/providers/WhatsappProvider'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
+/** Constant-time string comparison (resists timing attacks). */
+function safeEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a)
+  const bb = Buffer.from(b)
+  return ab.length === bb.length && timingSafeEqual(ab, bb)
+}
+
 export async function POST(request: NextRequest) {
-  // Same auth as cron endpoints
-  const authHeader = request.headers.get('authorization')
+  // Same auth as cron endpoints — but FAIL CLOSED: if CRON_SECRET is unset,
+  // nobody gets in (previously the guard was skipped entirely).
+  const authHeader = request.headers.get('authorization') ?? ''
   const cronSecret = process.env.CRON_SECRET
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || !safeEqual(authHeader, `Bearer ${cronSecret}`)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
