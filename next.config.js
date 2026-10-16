@@ -9,7 +9,7 @@ const withPWA = require('next-pwa')({
     {
       // /api/* responses kabhi cache mat karo — stale JSON dashboard kharab karega.
       // Sirf navigations aur static assets offline cache honge.
-      urlPattern: ({ url }: { url: URL }) => !url.pathname.startsWith('/api/'),
+      urlPattern: ({ url }) => !url.pathname.startsWith('/api/'),
       handler: 'NetworkFirst',
       options: {
         cacheName: 'offlineCache',
