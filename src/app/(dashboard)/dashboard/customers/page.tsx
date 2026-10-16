@@ -51,9 +51,9 @@ function AddCustomerModal({ onClose, onSuccess, lang }: { onClose: () => void; o
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl border border-green-100 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between">
-          <h2 className="font-extrabold text-lg text-slate-900">👤 {lang === 'hi' ? 'Naya Customer' : 'New Customer'}</h2>
+          <h2 className="font-bold text-lg text-slate-900">{lang === 'hi' ? 'Naya Customer' : 'New Customer'}</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700 p-2" aria-label="Close">
             <X className="w-5 h-5" />
           </button>
@@ -240,7 +240,7 @@ export default function CustomersPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900">👥 {lang === 'hi' ? 'Customers' : 'Customers'}</h1>
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">{lang === 'hi' ? 'Customers' : 'Customers'}</h1>
           <p className="text-sm text-slate-500 mt-0.5">{customers.length} {lang === 'hi' ? 'kul customers' : 'total customers'}</p>
         </div>
         <div className="flex gap-2">
@@ -269,26 +269,32 @@ export default function CustomersPage() {
       {/* Summary cards */}
       {!loading && customers.length > 0 && (
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
-          <div className="bg-white border border-green-100 rounded-2xl p-3 sm:p-4 shadow-sm min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <Users className="w-4 h-4 text-green-500 flex-shrink-0" />
+          <div className="stat-card !p-3 sm:!p-4 min-w-0">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+                <Users className="w-4 h-4 text-slate-500" />
+              </span>
               <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide truncate">{lang === 'hi' ? 'Kul' : 'Total'}</p>
             </div>
-            <p className="text-xl sm:text-2xl font-extrabold text-slate-900 truncate">{customers.length}</p>
+            <p className="text-xl sm:text-2xl font-bold amount-display text-slate-900 truncate">{customers.length}</p>
           </div>
-          <div className="bg-white border border-red-100 rounded-2xl p-3 sm:p-4 shadow-sm min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <IndianRupee className="w-4 h-4 text-red-500 flex-shrink-0" />
+          <div className="stat-card !p-3 sm:!p-4 min-w-0">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+                <IndianRupee className="w-4 h-4 text-slate-500" />
+              </span>
               <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide truncate">{lang === 'hi' ? 'Kul Baaki' : 'Pending'}</p>
             </div>
-            <p className="text-xl sm:text-2xl font-extrabold text-red-600 truncate">₹{totalPending.toLocaleString('en-IN')}</p>
+            <p className="text-xl sm:text-2xl font-bold amount-display text-slate-900 truncate">₹{totalPending.toLocaleString('en-IN')}</p>
           </div>
-          <div className="bg-white border border-emerald-100 rounded-2xl p-3 sm:p-4 shadow-sm min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+          <div className="stat-card !p-3 sm:!p-4 min-w-0">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              </span>
               <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide truncate">{lang === 'hi' ? 'Clear' : 'Clear'}</p>
             </div>
-            <p className="text-xl sm:text-2xl font-extrabold text-emerald-600 truncate">{customers.length - pendingCount}</p>
+            <p className="text-xl sm:text-2xl font-bold amount-display text-slate-900 truncate">{customers.length - pendingCount}</p>
           </div>
         </div>
       )}
@@ -308,21 +314,21 @@ export default function CustomersPage() {
         />
       </div>
 
-      {/* Filter tabs */}
+      {/* Filter tabs — segmented control */}
       {!loading && customers.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="inline-flex max-w-full bg-slate-100 rounded-xl p-1 gap-0.5 overflow-x-auto">
           {tabs.map(t => (
             <button
               key={t.k}
               onClick={() => setFilter(t.k)}
-              className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
+              className={`px-3.5 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${
                 filter === t.k
-                  ? 'bg-slate-900 text-white shadow'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:border-green-300'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               {t.label}
-              <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-md ${filter === t.k ? 'bg-white/20' : 'bg-slate-100'}`}>
+              <span className={`ml-1.5 text-xs font-bold ${filter === t.k ? 'text-slate-500' : 'text-slate-400'}`}>
                 {t.count}
               </span>
             </button>
@@ -336,8 +342,10 @@ export default function CustomersPage() {
           {Array.from({ length: 5 }).map((_, i) => <div key={i} className="skeleton h-20" />)}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 glass-card">
-          <div className="text-4xl mb-3">👤</div>
+        <div className="text-center py-16 bg-white border border-slate-200/80 rounded-2xl">
+          <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+            <Users className="w-5 h-5 text-slate-400" />
+          </div>
           <p className="text-slate-500 mb-4 font-medium">
             {search || filter !== 'all'
               ? (lang === 'hi' ? 'Koi customer nahi mila' : 'No customers found')
@@ -350,7 +358,7 @@ export default function CustomersPage() {
           )}
         </div>
       ) : (
-        <div className="space-y-2.5">
+        <div className="bg-white border border-slate-200/80 rounded-2xl divide-y divide-slate-100 overflow-hidden">
           {filtered.map(c => {
             const hasPending = c._count.outstandings > 0
             const isOverdue = c.overdueCount > 0
@@ -358,42 +366,39 @@ export default function CustomersPage() {
               <Link
                 key={c.id}
                 href={`/dashboard/customers/${c.id}`}
-                className={`bg-white border rounded-2xl p-4 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-green-200 transition-all group ${isOverdue ? 'border-l-4 border-l-red-400' : 'border-slate-100'}`}
+                className="flex items-center gap-4 px-4 sm:px-5 py-4 hover:bg-slate-50 transition-colors"
               >
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-extrabold flex-shrink-0 ${
-                  c.optedOut ? 'bg-slate-100 text-slate-400' : 'bg-gradient-to-br from-green-500 to-amber-500 text-white shadow-md shadow-green-500/20'
-                }`}>
+                <div className={`w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-sm font-bold flex-shrink-0 ${c.optedOut ? 'opacity-50' : ''}`}>
                   {c.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-bold text-slate-900 group-hover:text-green-700 transition-colors truncate">{c.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-slate-900 truncate">{c.name}</p>
                     {c.optedOut && (
-                      <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">Opted Out</span>
+                      <span className="text-[10px] font-semibold uppercase tracking-wide bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full flex-shrink-0">Opted out</span>
                     )}
                   </div>
-                  <p className="text-sm text-slate-500 font-medium flex items-center gap-1.5 mt-0.5">
+                  <p className="text-sm text-slate-500 flex items-center gap-1.5 mt-0.5">
                     <Phone className="w-3 h-3" /> {fmtPhone(c.phone)}
                   </p>
                 </div>
                 <div className="text-right flex-shrink-0">
                   {hasPending ? (
                     <>
-                      <p className={`text-lg font-extrabold ${isOverdue ? 'text-red-600' : 'text-slate-900'}`}>
+                      <p className={`text-[15px] font-bold amount-display ${isOverdue ? 'text-red-600' : 'text-slate-900'}`}>
                         ₹{(c.pendingTotal ?? 0).toLocaleString('en-IN')}
                       </p>
-                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${isOverdue ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+                      <span className={`mt-1 inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ring-1 ${isOverdue ? 'bg-red-50 text-red-700 ring-red-200' : 'bg-amber-50 text-amber-700 ring-amber-200'}`}>
                         {isOverdue && <AlertTriangle className="w-3 h-3" />}
                         {c._count.outstandings} {c._count.outstandings === 1 ? (lang === 'hi' ? 'baaki' : 'due') : (lang === 'hi' ? 'baaki' : 'dues')}
                       </span>
                     </>
                   ) : (
-                    <span className="text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full inline-flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> {lang === 'hi' ? 'Clear' : 'Clear'}
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200">
+                      <CheckCircle2 className="w-3 h-3" /> {lang === 'hi' ? 'Clear' : 'Clear'}
                     </span>
                   )}
                 </div>
-                <span className="text-slate-300 group-hover:text-green-500 group-hover:translate-x-0.5 transition-all font-bold">→</span>
               </Link>
             )
           })}

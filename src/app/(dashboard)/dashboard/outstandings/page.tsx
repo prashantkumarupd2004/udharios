@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Plus, X, CreditCard, Handshake, Zap } from 'lucide-react'
+import { Plus, X, CreditCard, Handshake, Zap, Pause, Play, CalendarDays, Inbox } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatINR, formatIndianDate, overdueDays } from '@/lib/date-utils'
 
@@ -83,10 +83,10 @@ function AddOutstandingModal({
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl border border-green-100 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between">
-          <h2 className="font-extrabold text-lg text-slate-900">
-            ➕ {lang === 'hi' ? 'Naya Udhaar' : 'Add Outstanding'}
+          <h2 className="font-bold text-lg text-slate-900">
+            {lang === 'hi' ? 'Naya Udhaar' : 'Add Outstanding'}
           </h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700 p-2" aria-label="Close">
             <X className="w-5 h-5" />
@@ -241,8 +241,8 @@ export default function OutstandingsPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900">
-            📋 {lang === 'hi' ? 'Udhaari Ledger' : 'Outstandings Ledger'}
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+            {lang === 'hi' ? 'Udhaari Ledger' : 'Outstandings Ledger'}
           </h1>
           {!loading && outstandings.length > 0 && (
             <p className="text-sm text-slate-500 mt-0.5">
@@ -260,9 +260,9 @@ export default function OutstandingsPage() {
       </div>
 
       {/* Quick Add — ek line me entry (chhote dukaandaar ke liye) */}
-      <div className="glass-card p-4 border-2 border-dashed border-green-200">
-        <p className="text-xs font-bold text-slate-500 mb-2">
-          ⚡ {lang === 'hi' ? 'Quick Add — ek line likho, entry ban jayegi!' : 'Quick Add — type one line!'}
+      <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-4">
+        <p className="text-xs font-semibold text-slate-500 mb-2">
+          {lang === 'hi' ? 'Quick Add — ek line likho, entry ban jayegi!' : 'Quick Add — type one line!'}
         </p>
         <form
           onSubmit={async (e) => {
@@ -347,7 +347,7 @@ export default function OutstandingsPage() {
             type="submit"
             className="btn-primary px-5 py-2.5 text-sm whitespace-nowrap"
           >
-            ➕ {lang === 'hi' ? 'Add' : 'Add'}
+            {lang === 'hi' ? 'Add' : 'Add'}
           </button>
         </form>
         <p className="text-[11px] text-slate-400 mt-1.5">
@@ -357,16 +357,16 @@ export default function OutstandingsPage() {
         </p>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      {/* Filter tabs — segmented control */}
+      <div className="inline-flex max-w-full bg-slate-100 rounded-xl p-1 gap-0.5 overflow-x-auto">
         {filters.map(f => (
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
-            className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all border ${
+            className={`px-3.5 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${
               filter === f.key
-                ? 'bg-green-500 text-white border-green-500 shadow-md shadow-green-500/30'
-                : 'bg-white text-slate-600 border-slate-200 hover:border-green-300 hover:text-green-700'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             {lang === 'hi' ? f.hi : f.en}
@@ -380,8 +380,10 @@ export default function OutstandingsPage() {
           {Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-28" />)}
         </div>
       ) : outstandings.length === 0 ? (
-        <div className="text-center py-16 glass-card">
-          <div className="text-4xl mb-3">📭</div>
+        <div className="text-center py-16 bg-white border border-slate-200/80 rounded-2xl">
+          <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+            <Inbox className="w-5 h-5 text-slate-400" />
+          </div>
           <p className="text-slate-500 font-medium">
             {lang === 'hi' ? 'Koi entry nahi mili' : 'No entries found'}
           </p>
@@ -390,24 +392,15 @@ export default function OutstandingsPage() {
           </button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="bg-white border border-slate-200/80 rounded-2xl divide-y divide-slate-100 overflow-hidden">
           {outstandings.map(os => {
             const days = overdueDays(os.dueDate)
             const isOverdue = os.status === 'overdue'
 
             return (
-              <div
-                key={os.id}
-                className={`glass-card card-hover p-4 ${isOverdue ? 'overdue-pulse !border-red-200' : ''}`}
-              >
-                <div className="flex items-start gap-3">
-                  <div className={`w-11 h-11 rounded-full flex items-center justify-center text-base font-extrabold flex-shrink-0 ${
-                    isOverdue
-                      ? 'bg-red-500 text-white shadow-md shadow-red-500/25'
-                      : os.status === 'paid'
-                        ? 'bg-green-500 text-white shadow-md shadow-green-500/25'
-                        : 'bg-gradient-to-br from-green-500 to-amber-500 text-white shadow-md shadow-green-500/25'
-                  }`}>
+              <div key={os.id} className="px-4 sm:px-5 py-4 hover:bg-slate-50/70 transition-colors">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-sm font-bold flex-shrink-0">
                     {os.customer.name.charAt(0).toUpperCase()}
                   </div>
 
@@ -415,23 +408,25 @@ export default function OutstandingsPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <Link
                         href={`/dashboard/customers/${os.customer.id}`}
-                        className="font-bold text-slate-900 hover:text-green-700 transition-colors text-sm"
+                        className="font-semibold text-slate-900 hover:text-green-700 transition-colors text-[15px]"
                       >
                         {os.customer.name}
                       </Link>
                       <StatusBadge status={os.status} lang={lang} />
                       {os.remindersPaused && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border border-amber-300 bg-amber-50 text-amber-800">
-                          ⏸ {lang === 'hi' ? 'Paused' : 'Paused'}
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 ring-1 ring-amber-200">
+                          {lang === 'hi' ? 'Paused' : 'Paused'}
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500 flex-wrap font-medium">
-                      {os.invoiceNo && <span className="bg-slate-100 px-1.5 py-0.5 rounded">#{os.invoiceNo}</span>}
-                      <span>📅 {formatIndianDate(os.dueDate)}</span>
+                    <div className="flex items-center gap-2.5 mt-1 text-xs text-slate-500 flex-wrap">
+                      {os.invoiceNo && <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-[11px]">#{os.invoiceNo}</span>}
+                      <span className="inline-flex items-center gap-1">
+                        <CalendarDays className="w-3 h-3" /> {formatIndianDate(os.dueDate)}
+                      </span>
                       {isOverdue && days > 0 && (
-                        <span className="text-red-700 font-bold bg-red-50 border border-red-200 px-1.5 py-0.5 rounded">
-                          {days} {lang === 'hi' ? 'din overdue' : 'days overdue'}
+                        <span className="text-red-600 font-semibold">
+                          · {days} {lang === 'hi' ? 'din overdue' : 'days overdue'}
                         </span>
                       )}
                       {os._count.promises > 0 && (
@@ -440,7 +435,7 @@ export default function OutstandingsPage() {
                         </span>
                       )}
                       {os._count.disputes > 0 && (
-                        <span className="text-green-700 font-semibold inline-flex items-center gap-1">
+                        <span className="text-orange-700 font-semibold inline-flex items-center gap-1">
                           <Zap className="w-3 h-3" /> {os._count.disputes}
                         </span>
                       )}
@@ -448,14 +443,14 @@ export default function OutstandingsPage() {
                   </div>
 
                   <div className="text-right flex-shrink-0 flex flex-col items-end">
-                    <p className="text-lg font-bold amount-display text-slate-900">
+                    <p className={`text-[15px] font-bold amount-display ${isOverdue ? 'text-red-600' : 'text-slate-900'}`}>
                       {formatINR(parseFloat(os.amount))}
                     </p>
                     {!['paid', 'written_off'].includes(os.status) && (
                       <button
                         onClick={() => handleCreatePayLink(os.id)}
                         disabled={creatingLink === os.id}
-                        className="text-xs font-bold text-green-600 hover:text-green-700 transition-colors mt-1 inline-flex items-center gap-1"
+                        className="text-xs font-semibold text-green-700 hover:text-green-800 transition-colors mt-1.5 inline-flex items-center gap-1"
                       >
                         <CreditCard className="w-3.5 h-3.5" />
                         {creatingLink === os.id
@@ -469,13 +464,13 @@ export default function OutstandingsPage() {
                       <button
                         onClick={() => handleTogglePause(os)}
                         disabled={pausing === os.id}
-                        className="text-xs font-bold text-amber-600 hover:text-amber-700 transition-colors mt-1 inline-flex items-center gap-1"
+                        className="text-xs font-semibold text-slate-500 hover:text-amber-700 transition-colors mt-1 inline-flex items-center gap-1"
                       >
                         {pausing === os.id
                           ? '...'
                           : os.remindersPaused
-                            ? (lang === 'hi' ? '▶ Chalu karo' : '▶ Resume')
-                            : (lang === 'hi' ? '⏸ Roko' : '⏸ Pause')}
+                            ? (<><Play className="w-3 h-3" />{lang === 'hi' ? 'Chalu karo' : 'Resume'}</>)
+                            : (<><Pause className="w-3 h-3" />{lang === 'hi' ? 'Roko' : 'Pause'}</>)}
                       </button>
                     )}
                   </div>
