@@ -170,6 +170,7 @@ model Merchant {
   bankName          String? @map("bank_name")
   ifscCode          String? @map("ifsc_code")
 
+  @@index([createdAt])
   @@map("merchants")
 }
 
@@ -259,6 +260,8 @@ model Outstanding {
   @@index([status])
   @@index([dueDate])
   @@index([merchantId, status])
+  @@index([merchantId, status, dueDate])
+  @@index([merchantId, createdAt])
   @@map("outstandings")
 }
 
@@ -383,6 +386,8 @@ model Payment {
 
   @@index([merchantId])
   @@index([outstandingId])
+  @@index([merchantId, paidAt])
+  @@index([paidAt])
   @@map("payments")
 }
 
@@ -409,6 +414,7 @@ model Promise {
   @@index([customerId])
   @@index([merchantId])
   @@index([promisedDate])
+  @@index([merchantId, status])
   @@map("promises")
 }
 
@@ -433,6 +439,7 @@ model Dispute {
 
   @@index([outstandingId])
   @@index([merchantId])
+  @@index([merchantId, status])
   @@map("disputes")
 }
 
@@ -460,6 +467,7 @@ model Call {
 
   @@index([merchantId])
   @@index([outstandingId])
+  @@index([createdAt])
   @@map("calls")
 }
 
@@ -483,6 +491,7 @@ model AuditLog {
   @@index([merchantId])
   @@index([entity, entityId])
   @@index([createdAt])
+  @@index([merchantId, createdAt])
   @@map("audit_logs")
 }
 
@@ -620,6 +629,7 @@ model AccessRequest {
 
   @@index([status])
   @@index([phone])
+  @@index([createdAt])
   @@map("access_requests")
 }
 

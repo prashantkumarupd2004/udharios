@@ -52,13 +52,6 @@ interface AgingData {
   }>
 }
 
-interface OutstandingRow {
-  id: string
-  amount: string
-  status: string
-  customer: { id: string; name: string; phone: string }
-}
-
 interface TrendPoint {
   date: string
   label: string
@@ -387,11 +380,11 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [sumRes, agingRes, merchRes, outRes, actRes] = await Promise.all([
+        const [sumRes, agingRes, merchRes, debtRes, actRes] = await Promise.all([
           fetch('/api/reports/summary'),
           fetch('/api/reports/aging'),
           fetch('/api/merchant/settings'),
-          fetch('/api/outstandings?status=overdue'),
+          fetch('/api/reports/top-debtors?limit=5'),
           fetch('/api/activity?limit=8'),
         ])
         if (sumRes.ok) setSummary(await sumRes.json())
@@ -400,17 +393,9 @@ export default function DashboardPage() {
           const m = await merchRes.json()
           if (m.merchant?.businessName) setBusinessName(m.merchant.businessName)
         }
-        if (outRes.ok) {
-          const d = await outRes.json()
-          const rows: OutstandingRow[] = d.outstandings ?? []
-          const byCustomer = new Map<string, { name: string; id: string; total: number }>()
-          for (const r of rows) {
-            const amt = parseFloat(r.amount) || 0
-            const cur = byCustomer.get(r.customer.id)
-            if (cur) cur.total += amt
-            else byCustomer.set(r.customer.id, { name: r.customer.name, id: r.customer.id, total: amt })
-          }
-          setTopCustomers([...byCustomer.values()].sort((a, b) => b.total - a.total).slice(0, 5))
+        if (debtRes.ok) {
+          const d = await debtRes.json()
+          setTopCustomers(d.topDebtors ?? [])
         }
         if (actRes.ok) {
           const a = await actRes.json()
@@ -423,7 +408,16 @@ export default function DashboardPage() {
       }
     }
     fetchData()
-    const interval = setInterval(fetchData, 60_000)
+    // Poll sirf halka summary endpoint — poora dashboard (aging/trend/lists)
+    // har minute dobara fetch karne ki zaroorat nahi. Summary route me 30s
+    // server cache bhi hai, to ye poll lagbhag free hai.
+    const pollSummary = async () => {
+      try {
+        const res = await fetch('/api/reports/summary')
+        if (res.ok) setSummary(await res.json())
+      } catch { /* ignore — agle poll par retry */ }
+    }
+    const interval = setInterval(pollSummary, 60_000)
     return () => clearInterval(interval)
   }, [])
 

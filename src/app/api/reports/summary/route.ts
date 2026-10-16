@@ -1,5 +1,10 @@
 /**
  * GET /api/reports/summary — Dashboard KPIs
+ *
+ * Perf notes:
+ * - The 4 outstanding aggregates (total / overdue / paid / overdue-count)
+ *   are a single GROUP BY status instead of 4 separate round-trips.
+ * - Response cached in-memory for 30s per merchant (dashboard polls this).
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -14,41 +19,35 @@ async function getMerchantId(request: NextRequest): Promise<string | null> {
 return session.merchantId ?? null
 }
 
+// Short per-merchant TTL cache — KPIs change slowly; the dashboard polls
+// this endpoint every 60s. Per-instance best-effort. Never caches errors.
+const cache = new Map<string, { data: unknown; ts: number }>()
+const CACHE_TTL_MS = 30_000
+
 export async function GET(request: NextRequest) {
   try {
     const merchantId = await getMerchantId(request)
     if (!merchantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    const cached = cache.get(merchantId)
+    if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
+      return NextResponse.json(cached.data)
+    }
+
     const weekStart = startOfWeekIST()
     const monthStart = new Date(nowIST().getFullYear(), nowIST().getMonth(), 1)
 
     const [
-      totalOutstanding,
-      totalOverdue,
-      totalPaid,
+      statusGroups,
       collectedThisWeek,
       collectedThisMonth,
       openPromises,
       openDisputes,
-      overdueCount,
     ] = await Promise.all([
-      // Total outstanding (not paid, not written off)
-      prisma.outstanding.aggregate({
-        where: { merchantId, status: { notIn: ['paid', 'written_off'] } },
-        _sum: { amount: true },
-        _count: true,
-      }),
-
-      // Total overdue amount
-      prisma.outstanding.aggregate({
-        where: { merchantId, status: 'overdue' },
-        _sum: { amount: true },
-        _count: true,
-      }),
-
-      // Total paid all-time
-      prisma.outstanding.aggregate({
-        where: { merchantId, status: 'paid' },
+      // One GROUP BY replaces 4 separate outstanding aggregates/counts
+      prisma.outstanding.groupBy({
+        by: ['status'],
+        where: { merchantId },
         _sum: { amount: true },
         _count: true,
       }),
@@ -74,15 +73,25 @@ export async function GET(request: NextRequest) {
       prisma.dispute.count({
         where: { merchantId, status: 'open' },
       }),
-
-      // Overdue count
-      prisma.outstanding.count({
-        where: { merchantId, status: 'overdue' },
-      }),
     ])
 
-    const totalOutstandingAmount = Number(totalOutstanding._sum.amount ?? 0)
-    const totalPaidAmount = Number(totalPaid._sum.amount ?? 0)
+    const sumFor = (statuses: string[]) =>
+      statusGroups
+        .filter(g => statuses.includes(g.status))
+        .reduce((a, g) => a + Number(g._sum.amount ?? 0), 0)
+    const countFor = (statuses: string[]) =>
+      statusGroups
+        .filter(g => statuses.includes(g.status))
+        .reduce((a, g) => a + g._count, 0)
+
+    const ACTIVE = ['upcoming', 'overdue', 'promised', 'disputed']
+    const totalOutstandingAmount = sumFor(ACTIVE)
+    const totalOutstandingCount = countFor(ACTIVE)
+    const overdueAmount = sumFor(['overdue'])
+    const overdueCount = countFor(['overdue'])
+    const totalPaidAmount = sumFor(['paid'])
+    const totalPaidCount = countFor(['paid'])
+
     const collectionRate =
       totalPaidAmount + totalOutstandingAmount > 0
         ? Math.round(
@@ -90,26 +99,35 @@ export async function GET(request: NextRequest) {
           )
         : 0
 
-    return NextResponse.json({
+    const data = {
       totalOutstanding: {
         amount: totalOutstandingAmount,
-        count: totalOutstanding._count,
+        count: totalOutstandingCount,
       },
       totalOverdue: {
-        amount: Number(totalOverdue._sum.amount ?? 0),
-        count: totalOverdue._count,
+        amount: overdueAmount,
+        count: overdueCount,
       },
       collectedThisWeek: Number(collectedThisWeek._sum.amount ?? 0),
       collectedThisMonth: Number(collectedThisMonth._sum.amount ?? 0),
       totalPaid: {
         amount: totalPaidAmount,
-        count: totalPaid._count,
+        count: totalPaidCount,
       },
       openPromises,
       openDisputes,
       overdueCount,
       collectionRate,
-    })
+    }
+
+    cache.set(merchantId, { data, ts: Date.now() })
+    // Bound memory: drop entries older than 5 min on each write
+    if (cache.size > 500) {
+      const cutoff = Date.now() - 5 * 60_000
+      for (const [k, v] of cache) if (v.ts < cutoff) cache.delete(k)
+    }
+
+    return NextResponse.json(data)
   } catch (err) {
     logger.error('GET /api/reports/summary error', { error: String(err) })
     return NextResponse.json({ error: 'Server error' }, { status: 500 })

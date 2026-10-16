@@ -1,5 +1,11 @@
 /**
  * GET /api/reports/aging — Aging buckets (0-30, 30-60, 60-90, 90+ days)
+ *
+ * Perf notes:
+ * - Bucket counts/amounts are aggregated in SQL (GROUP BY CASE) instead of
+ *   pulling every unpaid outstanding into JS. Same numbers, tiny payload.
+ * - Defaulter list is a separate TOP-20 query ordered by amount — the UI
+ *   only renders the top 5.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -25,53 +31,46 @@ export async function GET(request: NextRequest) {
     const d60 = new Date(today); d60.setDate(today.getDate() - 60)
     const d90 = new Date(today); d90.setDate(today.getDate() - 90)
 
-    const outstandings = await prisma.outstanding.findMany({
-      where: {
-        merchantId,
-        status: { in: ['overdue', 'upcoming', 'promised', 'disputed'] },
-      },
-      select: {
-        id: true,
-        amount: true,
-        dueDate: true,
-        status: true,
-        customer: { select: { id: true, name: true, phone: true } },
-      },
-      orderBy: { dueDate: 'asc' },
+    const [bucketRows, defaulterRows] = await Promise.all([
+      prisma.$queryRaw<{ bucket: string; count: number; amount: number }[]>`
+        SELECT
+          CASE
+            WHEN due_date >= ${d30} THEN 'current'
+            WHEN due_date >= ${d60} THEN 'd30'
+            WHEN due_date >= ${d90} THEN 'd60'
+            ELSE 'd90'
+          END AS bucket,
+          COUNT(*)::int AS count,
+          COALESCE(SUM(amount), 0)::float AS amount
+        FROM outstandings
+        WHERE merchant_id = ${merchantId}
+          AND status IN ('overdue', 'upcoming', 'promised', 'disputed')
+        GROUP BY 1`,
+      // 90+ din wale defaulters — UI sirf top 5 dikhata hai
+      prisma.outstanding.findMany({
+        where: {
+          merchantId,
+          status: { in: ['overdue', 'upcoming', 'promised', 'disputed'] },
+          dueDate: { lt: d90 },
+        },
+        select: {
+          id: true,
+          amount: true,
+          dueDate: true,
+          customer: { select: { id: true, name: true, phone: true } },
+        },
+        orderBy: { amount: 'desc' },
+        take: 20,
+      }),
+    ])
+
+    const byBucket = new Map(bucketRows.map(r => [r.bucket, r]))
+    const pick = (key: string) => ({
+      count: byBucket.get(key)?.count ?? 0,
+      amount: byBucket.get(key)?.amount ?? 0,
     })
 
-    const buckets = {
-      current: { label: '0–30 din', count: 0, amount: 0, items: [] as typeof outstandings },
-      bucket30: { label: '30–60 din', count: 0, amount: 0, items: [] as typeof outstandings },
-      bucket60: { label: '60–90 din', count: 0, amount: 0, items: [] as typeof outstandings },
-      bucket90: { label: '90+ din', count: 0, amount: 0, items: [] as typeof outstandings },
-    }
-
-    for (const os of outstandings) {
-      const dueDate = new Date(os.dueDate)
-      const amount = Number(os.amount)
-
-      if (dueDate >= d30) {
-        buckets.current.count++
-        buckets.current.amount += amount
-        buckets.current.items.push(os)
-      } else if (dueDate >= d60) {
-        buckets.bucket30.count++
-        buckets.bucket30.amount += amount
-        buckets.bucket30.items.push(os)
-      } else if (dueDate >= d90) {
-        buckets.bucket60.count++
-        buckets.bucket60.amount += amount
-        buckets.bucket60.items.push(os)
-      } else {
-        buckets.bucket90.count++
-        buckets.bucket90.amount += amount
-        buckets.bucket90.items.push(os)
-      }
-    }
-
-    // Defaulter list — overdue 90+ days
-    const defaulters = buckets.bucket90.items.map(os => ({
+    const defaulters = defaulterRows.map(os => ({
       customerId: os.customer.id,
       customerName: os.customer.name,
       phone: os.customer.phone,
@@ -85,12 +84,13 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       buckets: {
-        current: { ...buckets.current, items: undefined },
-        d30: { ...buckets.bucket30, items: undefined },
-        d60: { ...buckets.bucket60, items: undefined },
-        d90: { ...buckets.bucket90, items: undefined },
+        current: { label: '0–30 din', ...pick('current') },
+        d30: { label: '30–60 din', ...pick('d30') },
+        d60: { label: '60–90 din', ...pick('d60') },
+        d90: { label: '90+ din', ...pick('d90') },
       },
-      defaulters: defaulters.sort((a, b) => b.amount - a.amount),
+      // Already amount-desc from SQL (UI slices top 5)
+      defaulters,
     })
   } catch (err) {
     logger.error('GET /api/reports/aging error', { error: String(err) })
