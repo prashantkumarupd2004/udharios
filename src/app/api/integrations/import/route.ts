@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
+import { prisma } from '@/lib/prisma'
 import {
   syncBillsFromTally,
   applyTallyReceipts,
@@ -188,7 +189,9 @@ export async function POST(request: NextRequest) {
             partyName: b.partyName.trim(),
             amount: Number(b.amount) || 0,
             receiptDate: b.billDate || new Date().toISOString().slice(0, 10),
-            billRef: b.billRef?.trim() || undefined,
+            // billRef nahi bhejte — file import me pata nahi receipt kis bill ke against hai;
+            // applyTallyReceipts FIFO waterfall se sabse purane pending bill pe lagayega
+            billRef: undefined,
             voucherType: RECEIPT_TYPE[b.kind] ?? 'Receipt',
           })
         } else {
@@ -197,6 +200,36 @@ export async function POST(request: NextRequest) {
       }
 
       const source = 'file_import' as BillSource
+
+      // Replace mode: purana file_import data hatao taaki dobara import clean ho.
+      // (Purane buggy import ka galat pending/outstanding data saaf ho jayega.)
+      // Sirf file_import source ka data delete hota hai — manual/Tally ka nahi.
+      // Customer record rehne do (dobara match ho jayega).
+      let replaced = 0
+      if ((form.get('replace') as string) === 'true') {
+        const oldBills = await prisma.bill.findMany({
+          where: { merchantId, source: 'file_import' },
+          select: { billRef: true },
+        })
+        const oldRefs = oldBills.map((b) => b.billRef)
+        if (oldRefs.length > 0) {
+          const oldOutstandings = await prisma.outstanding.findMany({
+            where: { merchantId, invoiceNo: { in: oldRefs } },
+            select: { id: true },
+          })
+          const oldOutIds = oldOutstandings.map((o) => o.id)
+          if (oldOutIds.length > 0) {
+            // Sirf tally/file-import se bani payment records hatao (manual payments safe)
+            await prisma.payment.deleteMany({
+              where: { outstandingId: { in: oldOutIds }, razorpayPaymentId: { startsWith: 'tally_' } },
+            })
+            await prisma.outstanding.deleteMany({ where: { id: { in: oldOutIds } } })
+          }
+          await prisma.bill.deleteMany({ where: { merchantId, source: 'file_import' } })
+        }
+        replaced = oldBills.length
+      }
+
       const billResult =
         billInputs.length > 0
           ? await syncBillsFromTally(merchantId, billInputs, source)
@@ -226,6 +259,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         ok: true,
         imported: billResult.billsUpserted + receiptResult.receiptsApplied,
+        replaced,
         outstandingsUpserted: billResult.outstandingsUpserted,
         billsPaidOff: billResult.billsPaid + receiptResult.billsPaidOff,
         customersCreated: billResult.customersCreated,

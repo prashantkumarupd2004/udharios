@@ -79,6 +79,7 @@ export default function IntegrationsPage() {
 
   // bills
   const [bills, setBills] = useState<Bill[]>([])
+  const [impReplace, setImpReplace] = useState(false)
   const [search, setSearch] = useState('')
   const [pendingOnly, setPendingOnly] = useState(true)
 
@@ -220,12 +221,13 @@ export default function IntegrationsPage() {
       const form = new FormData()
       form.append('action', 'import')
       form.append('bills', JSON.stringify(impBills))
+      if (impReplace) form.append('replace', 'true')
       const res = await fetch('/api/integrations/import', { method: 'POST', body: form })
       const data = await res.json()
       if (res.ok) {
         setImpResult(
           hi
-            ? `${data.imported} records import hue — ${data.outstandingsUpserted} udhaari records bane/update hue${data.skipped > 0 ? `, ${data.skipped} skip hue` : ''}`
+            ? `${data.imported} records import hue${data.replaced > 0 ? ` (${data.replaced} purane hate)` : ''} — ${data.outstandingsUpserted} udhaari records bane/update hue${data.skipped > 0 ? `, ${data.skipped} skip hue` : ''}`
             : `${data.imported} records imported — ${data.outstandingsUpserted} ledger records created/updated${data.skipped > 0 ? `, ${data.skipped} skipped` : ''}`
         )
         setImpBills([])
@@ -581,7 +583,20 @@ export default function IntegrationsPage() {
                   </tbody>
                 </table>
               </div>
-              <button onClick={handleImpImport} disabled={impImporting} className="btn-primary w-full py-3.5 mt-4">
+              <label className="flex items-center gap-2.5 mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={impReplace}
+                  onChange={(e) => setImpReplace(e.target.checked)}
+                  className="w-4 h-4 accent-amber-600"
+                />
+                <span className="text-sm text-amber-800 font-medium">
+                  {hi
+                    ? 'Pehle ka file import hata ke naya import karo (dobara upload kar rahe ho to tick karo)'
+                    : 'Remove previous file import first (tick if re-uploading)'}
+                </span>
+              </label>
+              <button onClick={handleImpImport} disabled={impImporting} className="btn-primary w-full py-3.5 mt-3">
                 {impImporting
                   ? <RefreshCw className="w-4 h-4 animate-spin" />
                   : <><Upload className="w-4 h-4" /> {hi ? `Import Karo (${impBills.length})` : `Import (${impBills.length})`}</>}

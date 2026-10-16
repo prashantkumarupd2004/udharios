@@ -280,6 +280,10 @@ export interface ReceiptSyncResult {
  * - Receipt / Credit Note → pending amount KAM hota hai
  * - Debit Note → pending amount BADHTA hai
  * - Agar pending 0 ho jaye → outstanding 'paid' mark, call band!
+ *
+ * WATERFALL: ek receipt ka amount ek se zyada bills pe lag sakta hai.
+ * Sabse purane pending bill se shuru karo; jo bache use agle bill pe lagao.
+ * (Pehle wala code bacha hua amount gira deta tha — bills galat outstanding dikhte the.)
  */
 export async function applyTallyReceipts(
   merchantId: string,
@@ -293,82 +297,101 @@ export async function applyTallyReceipts(
       const partyName = r.partyName.trim()
       if (!partyName || r.amount <= 0) continue
 
-      // Bill dhundo: pehle billRef se, phir party ke sabse purane pending bill se
-      let bill = null
-      if (r.billRef) {
-        bill = await prisma.bill.findFirst({
-          where: {
-            merchantId,
-            billRef: r.billRef.trim(),
-            pendingAmount: { gt: 0 },
-          },
-          orderBy: { billDate: 'asc' },
-        })
-      }
-      if (!bill) {
-        // Party ke pending bills me se sabse purana uthao (FIFO)
-        bill = await prisma.bill.findFirst({
-          where: {
-            merchantId,
-            partyName: { equals: partyName, mode: 'insensitive' },
-            pendingAmount: { gt: 0 },
-          },
-          orderBy: { billDate: 'asc' },
-        })
-      }
-      if (!bill) {
-        // Koi pending bill nahi — receipt ignore (pehle se paid ya bill sync nahi hua)
-        continue
-      }
-
       const isIncrease = r.voucherType === 'Debit Note'
-      const newPending = isIncrease
-        ? Number(bill.pendingAmount) + r.amount
-        : Math.max(0, Number(bill.pendingAmount) - r.amount)
+      let remaining = Math.round(r.amount * 100) / 100
+      let appliedAny = false
+      let guard = 0
 
-      await prisma.bill.update({
-        where: { id: bill.id },
-        data: { pendingAmount: newPending, syncedAt: new Date() },
-      })
+      // Pehle specific bill (agar billRef diya hai aur match karta hai), phir FIFO waterfall
+      const billOrder: { id: string }[] = []
+      if (r.billRef) {
+        const specific = await prisma.bill.findFirst({
+          where: { merchantId, billRef: r.billRef.trim(), pendingAmount: { gt: 0 } },
+          select: { id: true },
+        })
+        if (specific) billOrder.push(specific)
+      }
 
-      // Outstanding bhi update karo
-      const outstanding = await prisma.outstanding.findFirst({
-        where: { merchantId, invoiceNo: bill.billRef, status: { not: 'paid' } },
-      })
-      if (outstanding) {
-        if (newPending <= 0) {
-          await prisma.outstanding.update({
-            where: { id: outstanding.id },
-            data: { status: 'paid', paidAt: new Date() },
+      while (remaining > 0.005 && guard < 500) {
+        guard++
+        let bill = null
+        if (billOrder.length > 0) {
+          const next = billOrder.shift()!
+          bill = await prisma.bill.findFirst({
+            where: { id: next.id, pendingAmount: { gt: 0 } },
           })
-          result.billsPaidOff++
-        } else {
-          await prisma.outstanding.update({
-            where: { id: outstanding.id },
-            data: { amount: newPending },
+        }
+        if (!bill) {
+          // Party ka sabse purana pending bill (FIFO)
+          bill = await prisma.bill.findFirst({
+            where: {
+              merchantId,
+              partyName: { equals: partyName, mode: 'insensitive' },
+              pendingAmount: { gt: 0 },
+            },
+            orderBy: { billDate: 'asc' },
+          })
+        }
+        if (!bill) break // koi pending bill nahi — bacha amount ignore
+
+        const billPending = Math.round(Number(bill.pendingAmount) * 100) / 100
+        const applied = Math.min(billPending, remaining)
+        if (applied <= 0) break
+        const newPending = Math.round((billPending - applied) * 100) / 100
+
+        await prisma.bill.update({
+          where: { id: bill.id },
+          data: { pendingAmount: isIncrease ? billPending + r.amount : newPending, syncedAt: new Date() },
+        })
+        // Note: Debit Note pura amount ek bill pe lagta hai (increase), waterfall nahi
+        const thisApplied = isIncrease ? r.amount : applied
+
+        // Outstanding bhi update karo
+        const outstanding = await prisma.outstanding.findFirst({
+          where: { merchantId, invoiceNo: bill.billRef, status: { not: 'paid' } },
+        })
+        if (outstanding) {
+          const outPending = isIncrease
+            ? Math.round((Number(outstanding.amount) + r.amount) * 100) / 100
+            : newPending
+          if (!isIncrease && newPending <= 0) {
+            await prisma.outstanding.update({
+              where: { id: outstanding.id },
+              data: { status: 'paid', paidAt: new Date() },
+            })
+            result.billsPaidOff++
+          } else {
+            await prisma.outstanding.update({
+              where: { id: outstanding.id },
+              data: { amount: outPending },
+            })
+          }
+
+          // Payment record banao (Tally receipt se)
+          await prisma.payment.create({
+            data: {
+              razorpayPaymentId: `tally_${r.voucherType.replace(/\s/g, '_')}_${r.receiptRef}_${Date.now()}_${guard}`,
+              merchantId,
+              outstandingId: outstanding.id,
+              amount: thisApplied,
+              method: r.voucherType === 'Receipt' ? 'tally_receipt' : r.voucherType === 'Credit Note' ? 'credit_note' : 'debit_note',
+              paidAt: new Date(r.receiptDate),
+              raw: {
+                source: 'tally',
+                voucherType: r.voucherType,
+                receiptRef: r.receiptRef,
+                billRef: bill.billRef,
+              },
+            },
           })
         }
 
-        // Payment record banao (Tally receipt se)
-        await prisma.payment.create({
-          data: {
-            razorpayPaymentId: `tally_${r.voucherType.replace(/\s/g, '_')}_${r.receiptRef}_${Date.now()}`,
-            merchantId,
-            outstandingId: outstanding.id,
-            amount: r.amount,
-            method: r.voucherType === 'Receipt' ? 'tally_receipt' : r.voucherType === 'Credit Note' ? 'credit_note' : 'debit_note',
-            paidAt: new Date(r.receiptDate),
-            raw: {
-              source: 'tally',
-              voucherType: r.voucherType,
-              receiptRef: r.receiptRef,
-              billRef: bill.billRef,
-            },
-          },
-        })
+        appliedAny = true
+        if (isIncrease) break // debit note: ek bill pe pura increase, waterfall nahi
+        remaining = Math.round((remaining - applied) * 100) / 100
       }
 
-      result.receiptsApplied++
+      if (appliedAny) result.receiptsApplied++
     } catch (err) {
       const msg = `Receipt ${r.receiptRef} fail: ${err instanceof Error ? err.message : String(err)}`
       logger.error('Tally receipt apply failed', { merchantId, receiptRef: r.receiptRef, error: String(err) })

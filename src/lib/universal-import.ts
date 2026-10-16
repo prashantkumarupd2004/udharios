@@ -331,11 +331,28 @@ export function parseLedgerPdfText(text: string): { bills: ParsedBill[]; warning
   let skipped = 0
   let openingSkipped = false
 
-  // Opening balance = pehli transaction ka prev balance (Dr default — customer ledger me debit hi hota hai)
+  // Opening balance = pehli transaction ka prev balance.
+  // Isko SKIP nahi karte — ek bill bana ke import karte hain, warna poora hisaab gadbad
+  // ho jayega (receipts opening ke dues pe bhi lagte hain). Dr = customer se lena (invoice),
+  // Cr = customer ko dena/advance (credit note). Date = opening wali line ki date.
   let prevSigned: number | null = null
-  const obM = text.match(/opening\s+balance\s*([\d,]+\.\d{2})\s*(Dr|Cr)?/i)
-  if (obM) {
-    prevSigned = (obM[2] && obM[2].toLowerCase() === 'cr' ? -1 : 1) * parseMoney(obM[1])
+  let openingBill: ParsedBill | null = null
+  const obLineM = text.match(/^(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{2,4})[^\n]*?opening\s+balance\s*([\d,]+\.\d{2})\s*(Dr|Cr)?/im)
+  if (obLineM) {
+    const obAmount = parseMoney(obLineM[2])
+    const obSide = obLineM[3] ? obLineM[3].toLowerCase() : 'dr'
+    const obDate = parseLedgerDate(obLineM[1]) ?? new Date().toISOString().slice(0, 10)
+    prevSigned = (obSide === 'cr' ? -1 : 1) * obAmount
+    if (obAmount > 0) {
+      openingBill = {
+        kind: obSide === 'cr' ? 'credit_note' : 'invoice',
+        billRef: 'OPENING-BALANCE',
+        partyName,
+        amount: Math.round(obAmount * 100) / 100,
+        pendingAmount: Math.round(obAmount * 100) / 100,
+        billDate: obDate,
+      }
+    }
   }
 
   for (const rawLine of text.split('\n')) {
@@ -382,8 +399,11 @@ export function parseLedgerPdfText(text: string): { bills: ParsedBill[]; warning
     })
   }
 
-  if (openingSkipped) {
-    warnings.push('Opening Balance skip kiya — use alag se manual entry karein')
+  if (openingBill) {
+    bills.unshift(openingBill)
+    warnings.push(
+      `Opening Balance ₹${openingBill.amount.toLocaleString('en-IN')} (${openingBill.billDate}) opening dues ke roop me add kiya gaya`
+    )
   }
   if (skipped > 0) warnings.push(`${skipped} zero-amount entries skip ki gayin`)
   if (bills.length === 0) {
