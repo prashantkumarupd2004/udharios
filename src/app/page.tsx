@@ -845,63 +845,43 @@ export default function LandingPage() {
               {hi ? 'Simple pricing. Koi hidden fees nahi, kabhi bhi cancel karo.' : 'Simple pricing. No hidden fees, cancel anytime.'}
             </p>
           </Reveal>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch max-w-5xl mx-auto">
-            {[
-              { ...t.landing.pricing.trial, highlight: false },
-              { ...t.landing.pricing.starter, highlight: false },
-              { ...t.landing.pricing.pro, highlight: true },
-            ].map((plan, i) => (
-              <Reveal key={plan.name} delay={i * 90} className="h-full">
-                <div
-                  className={`rounded-3xl p-8 flex flex-col h-full transition-all duration-300 hover:-translate-y-2 bg-white ${
-                    plan.highlight
-                      ? 'border-2 border-green-500 shadow-2xl shadow-green-500/25 relative'
-                      : 'border border-green-100 shadow-lg shadow-green-900/5 hover:border-green-300 hover:shadow-xl'
-                  }`}
-                >
-                  {plan.highlight && (
-                    <>
-                      <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-green-500 via-amber-400 to-green-500 rounded-t-[1.4rem]" />
-                      <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg whitespace-nowrap">
-                        {hi ? '⭐ Sabse Popular' : '⭐ Most Popular'}
-                      </div>
-                    </>
-                  )}
-                  <h3 className="font-display text-lg font-bold text-slate-900 mb-1 mt-2">{plan.name}</h3>
-                  <div className="flex items-baseline gap-2 mb-6">
-                    <span className="font-display text-5xl font-extrabold text-slate-900 amount-display">{plan.price}</span>
-                    {'duration' in plan && plan.duration && (
-                      <span className="text-sm text-slate-500">/ {plan.duration}</span>
-                    )}
-                  </div>
-                  <ul className="space-y-3.5 flex-1 mb-8">
-                    {plan.features.map((f: string, j: number) => (
-                      <li key={j} className="flex items-start gap-2.5 text-sm text-slate-700">
-                        <span className="w-5 h-5 rounded-full bg-green-100 border border-green-200 flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <Check className="w-3 h-3 text-green-700" strokeWidth={3} />
-                        </span>
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link
-                    href="/request-access"
-                    className={`w-full py-4 rounded-2xl text-center font-bold transition-all flex items-center justify-center gap-2 ${
-                      plan.highlight ? 'btn-primary text-base shadow-xl shadow-green-500/30' : 'btn-ghost'
-                    }`}
-                  >
-                    {hi ? 'Shuru Karein' : 'Get Started'} <ArrowRight className="w-4 h-4" />
-                  </Link>
+          <div className="max-w-md mx-auto">
+            <Reveal className="h-full">
+              <div className="rounded-3xl p-8 flex flex-col h-full transition-all duration-300 hover:-translate-y-2 bg-white border-2 border-green-500 shadow-2xl shadow-green-500/25 relative">
+                <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-green-500 via-amber-400 to-green-500 rounded-t-[1.4rem]" />
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg whitespace-nowrap">
+                  {hi ? '⭐ Sab Kuch Included' : '⭐ Everything Included'}
                 </div>
-              </Reveal>
-            ))}
+                <h3 className="font-display text-lg font-bold text-slate-900 mb-1 mt-2">{t.landing.pricing.plan.name}</h3>
+                <div className="flex items-baseline gap-2 mb-6">
+                  <span className="font-display text-5xl font-extrabold text-slate-900 amount-display">{t.landing.pricing.plan.price}</span>
+                  <span className="text-sm text-slate-500">/ {t.landing.pricing.plan.duration}</span>
+                </div>
+                <ul className="space-y-3.5 flex-1 mb-8">
+                  {t.landing.pricing.plan.features.map((f: string, j: number) => (
+                    <li key={j} className="flex items-start gap-2.5 text-sm text-slate-700">
+                      <span className="w-5 h-5 rounded-full bg-green-100 border border-green-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Check className="w-3 h-3 text-green-700" strokeWidth={3} />
+                      </span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href="/request-access"
+                  className="w-full py-4 rounded-2xl text-center font-bold transition-all flex items-center justify-center gap-2 btn-primary text-base shadow-xl shadow-green-500/30"
+                >
+                  {hi ? 'Shuru Karein' : 'Get Started'} <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </Reveal>
           </div>
           <Reveal delay={150}>
             <p className="text-center text-sm text-slate-500 mt-8 flex items-center justify-center gap-2">
               <Wallet className="w-4 h-4" />
               {hi
-                ? 'WhatsApp/SMS/Call ke operator charges alag se (paise me, actual usage pe)'
-                : 'Operator charges for WhatsApp/SMS/calls billed separately (pennies, pay-as-you-go)'}
+                ? 'Fair-use limits: 2,000 WhatsApp reminders, 150 voice minutes, 20 background checks — har mahine'
+                : 'Fair-use limits: 2,000 WhatsApp reminders, 150 voice minutes, 20 background checks — every month'}
             </p>
           </Reveal>
         </div>

@@ -150,10 +150,23 @@ export const en = {
       demo: 'Watch Demo',
     },
     pricing: {
-      title: 'Simple Pricing',
-      trial: { name: 'Free Trial', duration: '14 days', price: '₹0', features: ['5 customers', '50 reminders', 'Dashboard'] },
-      starter: { name: 'Starter', price: '₹499/month', features: ['Unlimited customers', 'WhatsApp reminders', 'Razorpay payment links', 'Dashboard'] },
-      pro: { name: 'Pro', price: '₹999/month', features: ['All starter features', 'AI voice calls', 'CSV import', 'Priority support'] },
+      title: 'One Simple Plan',
+      plan: {
+        name: 'Complete Plan',
+        duration: '3 months',
+        price: '₹5,999',
+        features: [
+          'Unlimited customers',
+          '2,000 WhatsApp reminders / month',
+          '150 AI voice call minutes / month (Hindi)',
+          '20 background checks / month',
+          'Payment links (Razorpay / Cashfree / UPI)',
+          'Tally sync',
+          'Promise tracking + dispute management',
+          'Dashboard + reports',
+          'Priority support',
+        ],
+      },
     },
   },
 }

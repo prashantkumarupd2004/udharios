@@ -161,10 +161,23 @@ export const hi = {
       demo: 'Demo dekho',
     },
     pricing: {
-      title: 'Simple Pricing',
-      trial: { name: 'Free Trial', duration: '14 din', price: '₹0', features: ['5 customers', '50 reminders', 'Dashboard'] },
-      starter: { name: 'Starter', price: '₹499/maah', features: ['Unlimited customers', 'WhatsApp reminders', 'Razorpay payment links', 'Dashboard'] },
-      pro: { name: 'Pro', price: '₹999/maah', features: ['Sab starter features', 'AI voice calls', 'CSV import', 'Priority support'] },
+      title: 'Ek Simple Plan',
+      plan: {
+        name: 'Complete Plan',
+        duration: '3 mahine',
+        price: '₹5,999',
+        features: [
+          'Unlimited customers',
+          '2,000 WhatsApp reminders / mahina',
+          '150 AI voice call minutes / mahina (Hindi)',
+          '20 background checks / mahina',
+          'Payment links (Razorpay / Cashfree / UPI)',
+          'Tally sync',
+          'Promise tracking + dispute management',
+          'Dashboard + reports',
+          'Priority support',
+        ],
+      },
     },
   },
 }
