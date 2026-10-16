@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react'
 import {
   Plug, Upload, Copy, Check, RefreshCw, FileUp, Download,
   Building2, KeyRound, AlertCircle, Search, ReceiptText, Clock,
+  FileSpreadsheet, X,
 } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
+import { KIND_LABELS } from '@/lib/universal-import'
 
 interface TallyStatus {
   connected: boolean
@@ -30,6 +32,27 @@ interface Bill {
   source: string
   syncedAt: string
 }
+
+interface ImpBill {
+  kind: string
+  billRef: string
+  partyName: string
+  partyPhone?: string
+  amount: number
+  pendingAmount: number
+  billDate: string
+}
+
+const KIND_BADGE: Record<string, string> = {
+  invoice: 'bg-blue-50 text-blue-700 border-blue-200',
+  credit_note: 'bg-green-50 text-green-700 border-green-200',
+  debit_note: 'bg-amber-50 text-amber-700 border-amber-200',
+  ledger: 'bg-purple-50 text-purple-700 border-purple-200',
+  receipt: 'bg-teal-50 text-teal-700 border-teal-200',
+  unknown: 'bg-slate-100 text-slate-500 border-slate-300',
+}
+
+const KIND_OPTIONS = ['invoice', 'credit_note', 'debit_note', 'ledger', 'receipt']
 
 function inr(n: number): string {
   return '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 })
@@ -58,6 +81,16 @@ export default function IntegrationsPage() {
   const [bills, setBills] = useState<Bill[]>([])
   const [search, setSearch] = useState('')
   const [pendingOnly, setPendingOnly] = useState(true)
+
+  // universal import (PDF / Excel — Vyapar & others)
+  const [impFile, setImpFile] = useState<File | null>(null)
+  const [impPreviewing, setImpPreviewing] = useState(false)
+  const [impBills, setImpBills] = useState<ImpBill[]>([])
+  const [impKind, setImpKind] = useState('')
+  const [impWarnings, setImpWarnings] = useState<string[]>([])
+  const [impError, setImpError] = useState('')
+  const [impImporting, setImpImporting] = useState(false)
+  const [impResult, setImpResult] = useState('')
 
   const loadStatus = async () => {
     const res = await fetch('/api/integrations/tally/status')
@@ -139,6 +172,74 @@ export default function IntegrationsPage() {
         </div>
       </div>
     )
+  }
+
+  // ---- universal import handlers ----
+  const handleImpPreview = async () => {
+    if (!impFile) return
+    setImpPreviewing(true)
+    setImpError('')
+    setImpResult('')
+    setImpBills([])
+    setImpWarnings([])
+    try {
+      const form = new FormData()
+      form.append('file', impFile)
+      form.append('action', 'preview')
+      const res = await fetch('/api/integrations/import', { method: 'POST', body: form })
+      const data = await res.json()
+      if (res.ok) {
+        setImpBills(data.bills ?? [])
+        setImpKind(data.fileKind ?? '')
+        setImpWarnings(data.warnings ?? [])
+      } else {
+        setImpError(data.error ?? 'Preview failed')
+      }
+    } catch {
+      setImpError(hi ? 'Network error' : 'Network error')
+    } finally {
+      setImpPreviewing(false)
+    }
+  }
+
+  const updateImpRow = (idx: number, patch: Partial<ImpBill>) => {
+    setImpBills((prev) => prev.map((b, i) => (i === idx ? { ...b, ...patch } : b)))
+  }
+
+  const removeImpRow = (idx: number) => {
+    setImpBills((prev) => prev.filter((_, i) => i !== idx))
+  }
+
+  const handleImpImport = async () => {
+    if (impBills.length === 0) return
+    if (!confirm(hi ? `${impBills.length} bills import karein?` : `Import ${impBills.length} bills?`)) return
+    setImpImporting(true)
+    setImpError('')
+    setImpResult('')
+    try {
+      const form = new FormData()
+      form.append('action', 'import')
+      form.append('bills', JSON.stringify(impBills))
+      const res = await fetch('/api/integrations/import', { method: 'POST', body: form })
+      const data = await res.json()
+      if (res.ok) {
+        setImpResult(
+          hi
+            ? `${data.imported} records import hue — ${data.outstandingsUpserted} udhaari records bane/update hue${data.skipped > 0 ? `, ${data.skipped} skip hue` : ''}`
+            : `${data.imported} records imported — ${data.outstandingsUpserted} ledger records created/updated${data.skipped > 0 ? `, ${data.skipped} skipped` : ''}`
+        )
+        setImpBills([])
+        setImpFile(null)
+        loadStatus()
+        loadBills()
+      } else {
+        setImpError(data.error ?? 'Import failed')
+      }
+    } catch {
+      setImpError(hi ? 'Network error' : 'Network error')
+    } finally {
+      setImpImporting(false)
+    }
   }
 
   return (
@@ -330,6 +431,164 @@ export default function IntegrationsPage() {
               : <><Upload className="w-4 h-4" /> {hi ? 'Upload & Sync' : 'Upload & Sync'}</>}
           </button>
         </div>
+
+        {/* -------- universal import card (PDF / Excel — Vyapar & others) -------- */}
+        <div className="bg-white rounded-3xl border border-green-100 shadow-sm p-6 lg:col-span-2">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center">
+              <FileSpreadsheet className="w-6 h-6 text-amber-700" />
+            </div>
+            <div>
+              <h2 className="font-extrabold text-slate-900 text-lg">{hi ? 'PDF / Excel Import' : 'PDF / Excel Import'}</h2>
+              <p className="text-xs text-slate-500 font-medium">
+                {hi ? 'Vyapar ya kisi bhi billing app se — pehle preview dekhein, phir import karein' : 'From Vyapar or any billing app — preview first, then import'}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="bg-[#FDF9F1] border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center">
+              <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+              <label className="cursor-pointer">
+                <span className="btn-ghost px-5 py-2.5 !text-sm">
+                  {impFile ? impFile.name : (hi ? 'File chunein' : 'Choose file')}
+                </span>
+                <input
+                  type="file"
+                  accept=".pdf,.xlsx,.xls,.csv"
+                  className="hidden"
+                  onChange={(e) => {
+                    setImpFile(e.target.files?.[0] ?? null)
+                    setImpBills([])
+                    setImpResult('')
+                    setImpError('')
+                    setImpWarnings([])
+                  }}
+                />
+              </label>
+              <p className="text-xs text-slate-400 mt-2">PDF / Excel / CSV • max 10MB</p>
+              <button onClick={handleImpPreview} disabled={!impFile || impPreviewing} className="btn-primary w-full py-3 mt-4">
+                {impPreviewing
+                  ? <RefreshCw className="w-4 h-4 animate-spin" />
+                  : <>{hi ? 'Preview Dekhein' : 'See Preview'}</>}
+              </button>
+            </div>
+            <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-sm text-blue-900">
+              <p className="font-bold mb-1.5">{hi ? 'Kaise kaam karta hai:' : 'How it works:'}</p>
+              <ol className="list-decimal list-inside space-y-1 text-[13px] leading-relaxed">
+                <li>{hi ? 'Vyapar/app se bill ka PDF ya Excel nikalein' : 'Export bill PDF or Excel from Vyapar/your app'}</li>
+                <li>{hi ? 'Yahan upload karke Preview dekhein — system bill, credit note, ledger samajhta hai' : 'Upload here and preview — the system understands bills, credit notes, ledgers'}</li>
+                <li>{hi ? 'Galat rows hatayein ya type sudharein, phir Import Karo dabayein' : 'Remove wrong rows or fix types, then hit Import'}</li>
+              </ol>
+            </div>
+          </div>
+
+          {impError && (
+            <p className="flex items-start gap-2 text-red-700 text-sm bg-red-50 border border-red-200 rounded-xl px-4 py-3 mt-4 font-medium">
+              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" /> {impError}
+            </p>
+          )}
+          {impWarnings.length > 0 && (
+            <div className="text-amber-800 text-sm bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mt-4 font-medium">
+              {impWarnings.map((w, i) => (
+                <p key={i} className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" /> {w}
+                </p>
+              ))}
+            </div>
+          )}
+          {impResult && (
+            <p className="flex items-start gap-2 text-green-800 text-sm bg-green-50 border border-green-200 rounded-xl px-4 py-3 mt-4 font-medium">
+              <Check className="w-4 h-4 mt-0.5 flex-shrink-0" /> {impResult}
+            </p>
+          )}
+
+          {impBills.length > 0 && (
+            <div className="mt-5">
+              <p className="font-bold text-slate-900 mb-2">
+                {hi ? `Preview — ${impBills.length} rows mile (${impKind})` : `Preview — ${impBills.length} rows found (${impKind})`}
+              </p>
+              <div className="overflow-x-auto -mx-6 px-6">
+                <table className="w-full text-sm min-w-[760px]">
+                  <thead>
+                    <tr className="text-left text-[11px] uppercase tracking-wide text-slate-400 border-b border-slate-100">
+                      <th className="pb-2.5 font-bold pr-2">{hi ? 'Type' : 'Type'}</th>
+                      <th className="pb-2.5 font-bold pr-2">{hi ? 'Bill no' : 'Bill no'}</th>
+                      <th className="pb-2.5 font-bold pr-2">{hi ? 'Party' : 'Party'}</th>
+                      <th className="pb-2.5 font-bold pr-2">{hi ? 'Phone' : 'Phone'}</th>
+                      <th className="pb-2.5 font-bold pr-2 text-right">{hi ? 'Rashi' : 'Amount'}</th>
+                      <th className="pb-2.5 font-bold pr-2">{hi ? 'Date' : 'Date'}</th>
+                      <th className="pb-2.5" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-100">
+                    {impBills.map((b, i) => (
+                      <tr key={i} className={b.kind === 'unknown' ? 'bg-amber-50/60' : ''}>
+                        <td className="py-2 pr-2">
+                          <select
+                            value={b.kind}
+                            onChange={(e) => updateImpRow(i, { kind: e.target.value })}
+                            className={`text-[11px] font-bold px-2 py-1.5 rounded-full border ${KIND_BADGE[b.kind] ?? KIND_BADGE.unknown}`}
+                          >
+                            {b.kind === 'unknown' && <option value="unknown">{KIND_LABELS.unknown[hi ? 'hi' : 'en']}</option>}
+                            {KIND_OPTIONS.map((k) => (
+                              <option key={k} value={k}>{KIND_LABELS[k as keyof typeof KIND_LABELS][hi ? 'hi' : 'en']}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="py-2 pr-2">
+                          <input
+                            value={b.billRef}
+                            onChange={(e) => updateImpRow(i, { billRef: e.target.value })}
+                            className="field !py-1.5 !text-[13px] w-28"
+                          />
+                        </td>
+                        <td className="py-2 pr-2">
+                          <input
+                            value={b.partyName}
+                            onChange={(e) => updateImpRow(i, { partyName: e.target.value })}
+                            className="field !py-1.5 !text-[13px] w-36"
+                          />
+                        </td>
+                        <td className="py-2 pr-2 text-[13px] text-slate-600">{b.partyPhone ?? '—'}</td>
+                        <td className="py-2 pr-2">
+                          <input
+                            type="number"
+                            value={b.pendingAmount}
+                            onChange={(e) => updateImpRow(i, { pendingAmount: Number(e.target.value), amount: Number(e.target.value) })}
+                            className="field !py-1.5 !text-[13px] w-24 text-right"
+                          />
+                        </td>
+                        <td className="py-2 pr-2">
+                          <input
+                            type="date"
+                            value={b.billDate}
+                            onChange={(e) => updateImpRow(i, { billDate: e.target.value })}
+                            className="field !py-1.5 !text-[13px] w-36"
+                          />
+                        </td>
+                        <td className="py-2">
+                          <button
+                            onClick={() => removeImpRow(i)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"
+                            title={hi ? 'Row hatayein' : 'Remove row'}
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <button onClick={handleImpImport} disabled={impImporting} className="btn-primary w-full py-3.5 mt-4">
+                {impImporting
+                  ? <RefreshCw className="w-4 h-4 animate-spin" />
+                  : <><Upload className="w-4 h-4" /> {hi ? `Import Karo (${impBills.length})` : `Import (${impBills.length})`}</>}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* -------- bills table -------- */}
@@ -401,9 +660,9 @@ export default function IntegrationsPage() {
                     </td>
                     <td className="py-3">
                       <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
-                        b.source === 'tally_agent' ? 'bg-blue-50 text-blue-700' : b.source === 'tally_xml' ? 'bg-purple-50 text-purple-700' : 'bg-slate-100 text-slate-600'
+                        b.source === 'tally_agent' ? 'bg-blue-50 text-blue-700' : b.source === 'tally_xml' ? 'bg-purple-50 text-purple-700' : b.source === 'file_import' ? 'bg-orange-50 text-orange-700' : 'bg-slate-100 text-slate-600'
                       }`}>
-                        {b.source === 'tally_agent' ? (hi ? 'Auto-sync' : 'Auto-sync') : b.source === 'tally_xml' ? 'XML' : (hi ? 'Manual' : 'Manual')}
+                        {b.source === 'tally_agent' ? (hi ? 'Auto-sync' : 'Auto-sync') : b.source === 'tally_xml' ? 'XML' : b.source === 'file_import' ? 'PDF/Excel' : (hi ? 'Manual' : 'Manual')}
                       </span>
                     </td>
                   </tr>
