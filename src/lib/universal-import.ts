@@ -206,9 +206,200 @@ function extractPhone(text: string): string | undefined {
 // PDF text → ParsedBill
 // ---------------------------------------------------------------------------
 
-export function parsePdfText(text: string): { bill: ParsedBill; warnings: string[] } {
+// ---------------------------------------------------------------------------
+// Tally "Ledger Account" PDF → har transaction line se ek ParsedBill
+//
+// Tally ledger export ka format (pdf-parse ke baad):
+//   "01 Apr 26Cr GST SALES 1SalesSF-0213,078.00-18,99,116.18 Dr"   (date wali line)
+//   "Cr GST SALES 1SalesSF-05343,539.00-16,20,397.18 Dr"            (continuation — date nahi)
+//   "02 Apr 26Dr The Kalupur Co Op Bank( CC / AC )Receipt10-3,63,639.0015,35,477.18 Dr"
+//   "01 Apr 26Opening Balance18,86,038.18"                          (skip — opening balance)
+//
+// Strategy: line ko RIGHT se peel karo (balance → credit → debit → vch no →
+// vch type → date/side/particulars), kyunki left side chipka hota hai.
+// ---------------------------------------------------------------------------
+
+function parseLedgerDate(raw: string): string | null {
+  const m = raw.trim().match(/^(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{2,4})$/)
+  if (!m) return null
+  const day = parseInt(m[1], 10)
+  const mon = MONTHS[m[2].slice(0, 3).toLowerCase()]
+  if (!mon || day < 1 || day > 31) return null
+  let year = parseInt(m[3], 10)
+  if (year < 100) year = year < 50 ? 2000 + year : 1900 + year
+  return `${year}-${mon}-${String(day).padStart(2, '0')}`
+}
+
+interface LedgerTxn {
+  date: string
+  vchType: string
+  vchNo: string
+  debit: number
+  credit: number
+}
+
+/** Ek ledger line parse karo. Continuation lines ke liye fallbackDate do. */
+function parseLedgerLine(
+  line: string,
+  fallbackDate: string | null,
+  prevSigned: number | null
+): (LedgerTxn & { newSigned: number }) | null {
+  let s = line.trim()
+  if (!s) return null
+
+  // 1. Balance peel: "<amount> Dr|Cr" line ke end me (hamesha hota hai).
+  //    Credit aur balance chipke hote hain ("3,63,639.0015,35,477.18") — isliye
+  //    Indian number grouping (15,35,477.18) se exact balance start nikalo,
+  //    taaki greedy match credit ke digits na kha jaye.
+  const balM = s.match(/(\d{1,2}(?:,\d{2})*,\d{3}\.\d{2}|\d{1,3}\.\d{2})\s*(Dr|Cr)\s*$/)
+  if (!balM || balM.index === undefined) return null
+  const newSigned = (balM[2] === 'Cr' ? -1 : 1) * parseMoney(balM[1])
+  s = s.slice(0, balM.index).trim()
+
+  // 2. Voucher-type peel (title-case Sales/Receipt; particulars me "GST SALES" caps me hota hai).
+  //    Uske baad vch-no + debit + credit chipke hote hain (SF-02 + 13,078.00).
+  const typeM = s.match(
+    /(Sales|Receipt|Payment|Journal|Purchase|Contra|Credit\s*Note|Debit\s*Note)\s*([A-Za-z0-9\-\/]*(?:-|[\d,]+\.\d{2})(?:-|[\d,]+\.\d{2}))\s*$/
+  )
+  if (!typeM || typeM.index === undefined) return null
+  const vchType = typeM[1].replace(/\s+/g, ' ')
+  const segment = typeM[2]
+  s = s.slice(0, typeM.index).trim()
+
+  // 3. Vch-no/amount segment ko balance checksum se sahi jagah split karo
+  const split = splitVchAmounts(segment, prevSigned, newSigned)
+  if (!split) return null
+
+  // 4. Head: "[date]Dr|Cr particulars" ya "Dr|Cr particulars" (continuation line)
+  const headM = s.match(/^(?:(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{2,4}))?\s*(Dr|Cr)\s+(.+)$/)
+  if (!headM) return null
+  const dateStr = headM[1] ? parseLedgerDate(headM[1]) : fallbackDate
+  if (!dateStr) return null
+
+  return { date: dateStr, vchType, vchNo: split.vchNo, debit: split.debit, credit: split.credit, newSigned }
+}
+
+/**
+ * Vch-no/amount segment (e.g. "SF-0213,078.00-") ko sahi jagah split karo.
+ * Vch-no aur amount chipke hote hain — "SF-02"+"13,078.00" vs "SF-021"+"3,078.00"
+ * dono dikhne me valid lagte hain. Ledger ka running balance checksum batata
+ * hai kaun sa split sahi hai: prevBalance + debit - credit == newBalance.
+ */
+function splitVchAmounts(
+  segment: string,
+  prevSigned: number | null,
+  newSigned: number
+): { vchNo: string; debit: number; credit: number } | null {
+  const prefixM = segment.match(/^([A-Za-z0-9\-\/]*)/)
+  const prefix = prefixM ? prefixM[1] : ''
+  const isCleanAmount = (a: string) =>
+    a === '-' || /^[1-9][\d,]*\.\d{2}$/.test(a) || /^0\.\d{2}$/.test(a)
+
+  let fallback: { vchNo: string; debit: number; credit: number } | null = null
+  for (let len = prefix.length; len >= 0; len--) {
+    const vchNo = prefix.slice(0, len)
+    const rest = segment.slice(len)
+    const m = rest.match(/^(-|[\d,]+\.\d{2})(-|[\d,]+\.\d{2})$/)
+    if (!m) continue
+    if (!isCleanAmount(m[1]) || !isCleanAmount(m[2])) continue
+    const debit = m[1] === '-' ? 0 : parseMoney(m[1])
+    const credit = m[2] === '-' ? 0 : parseMoney(m[2])
+    const cand = { vchNo, debit, credit }
+    if (!fallback) fallback = cand
+    if (prevSigned !== null && Math.abs(prevSigned + debit - credit - newSigned) < 0.011) {
+      return cand // checksum match — yehi sahi split hai
+    }
+  }
+  return fallback // balance continuity nahi mili to pehla sane candidate
+}
+
+/** Tally ledger party name: "PARTY NAME\nLedger Account" pattern */
+function extractLedgerParty(text: string): string {
+  const m = text.match(/^([^\n]{2,80})\n\s*Ledger Account/mi)
+  return m ? m[1].trim().replace(/\s+/g, ' ') : ''
+}
+
+export function parseLedgerPdfText(text: string): { bills: ParsedBill[]; warnings: string[] } {
   const warnings: string[] = []
-  const { kind, confidence } = classifyDocument(text)
+  const bills: ParsedBill[] = []
+  const partyName = extractLedgerParty(text)
+  if (!partyName) warnings.push('Ledger me party ka naam nahi mila — preview me check karein')
+  // Ledger me party ka phone nahi hota (header me company ka hota hai) — galat phone attach na ho
+  warnings.push('Phone number ledger PDF me nahi hota — zaroorat ho to customer me baad me add karein')
+
+  let currentDate: string | null = null
+  let skipped = 0
+  let openingSkipped = false
+
+  // Opening balance = pehli transaction ka prev balance (Dr default — customer ledger me debit hi hota hai)
+  let prevSigned: number | null = null
+  const obM = text.match(/opening\s+balance\s*([\d,]+\.\d{2})\s*(Dr|Cr)?/i)
+  if (obM) {
+    prevSigned = (obM[2] && obM[2].toLowerCase() === 'cr' ? -1 : 1) * parseMoney(obM[1])
+  }
+
+  for (const rawLine of text.split('\n')) {
+    const line = rawLine.trim()
+    if (!line) continue
+    if (/opening\s+balance/i.test(line)) {
+      openingSkipped = true
+      continue
+    }
+    const txn = parseLedgerLine(line, currentDate, prevSigned)
+    if (!txn) {
+      // date wali line thi lekin parse nahi hui — date tracker update mat karo
+      const d = line.match(/^(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{2,4})/)
+      if (d) {
+        const parsed = parseLedgerDate(d[1])
+        if (parsed) currentDate = parsed
+      }
+      continue
+    }
+    currentDate = txn.date
+    prevSigned = txn.newSigned
+
+    const amount = Math.max(txn.debit, txn.credit)
+    if (amount <= 0) {
+      skipped++
+      continue
+    }
+    // Customer ledger me: Sales=udhaari badi, Receipt=payment mila (kam hui),
+    // Credit Note=kam hui, Debit Note=badi, Payment/Journal=direction se decide
+    let kind: DocumentKind
+    if (txn.vchType === 'Sales') kind = 'invoice'
+    else if (txn.vchType === 'Receipt') kind = 'receipt'
+    else if (/credit/i.test(txn.vchType)) kind = 'credit_note'
+    else if (/debit/i.test(txn.vchType)) kind = 'debit_note'
+    else kind = txn.debit > 0 ? 'debit_note' : 'receipt' // Payment/Journal/Purchase/Contra: direction se
+
+    bills.push({
+      kind,
+      billRef: txn.vchNo || `LEDGER-${txn.date.replace(/-/g, '')}`,
+      partyName,
+      amount: Math.round(amount * 100) / 100,
+      pendingAmount: Math.round(amount * 100) / 100,
+      billDate: txn.date,
+    })
+  }
+
+  if (openingSkipped) {
+    warnings.push('Opening Balance skip kiya — use alag se manual entry karein')
+  }
+  if (skipped > 0) warnings.push(`${skipped} zero-amount entries skip ki gayin`)
+  if (bills.length === 0) {
+    warnings.push('Ledger me koi transaction nahi mili — format alag ho sakta hai')
+  }
+  return { bills, warnings }
+}
+
+export function parsePdfText(text: string): { bills: ParsedBill[]; warnings: string[] } {
+  const { kind: docKind, confidence: docConfidence } = classifyDocument(text)
+  // Tally "Ledger Account" PDF: har transaction line alag bill/receipt banti hai
+  if (docKind === 'ledger') {
+    return parseLedgerPdfText(text)
+  }
+
+  const warnings: string[] = []
 
   // --- bill / invoice number ---
   let billRef = extractBillRef(text)
@@ -263,21 +454,25 @@ export function parsePdfText(text: string): { bill: ParsedBill; warnings: string
   const billDate = extractDate(text) ?? new Date().toISOString().slice(0, 10)
   if (!extractDate(text)) warnings.push('Bill date nahi mili — aaj ki date li gayi hai')
 
+  const kind = docKind
+  const confidence = docConfidence
   if (confidence < 0.5 && kind !== 'unknown') {
     warnings.push(`Document type pakka nahi (${kind}) — sahi hai ya nahi check karein`)
   }
 
   return {
-    bill: {
-      kind,
-      billRef,
-      partyName,
-      partyPhone,
-      amount: Math.round(amount * 100) / 100,
-      pendingAmount: Math.round(pendingAmount * 100) / 100,
-      billDate,
-      rawText: text.slice(0, 2000),
-    },
+    bills: [
+      {
+        kind,
+        billRef,
+        partyName,
+        partyPhone,
+        amount: Math.round(amount * 100) / 100,
+        pendingAmount: Math.round(pendingAmount * 100) / 100,
+        billDate,
+        rawText: text.slice(0, 2000),
+      },
+    ],
     warnings,
   }
 }

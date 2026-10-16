@@ -45,8 +45,11 @@ async function parseUploadedFile(file: File): Promise<PreviewResult> {
 
   if (name.endsWith('.pdf')) {
     const buf = Buffer.from(await file.arrayBuffer())
-    // Dynamic import — pdf-parse Node-only hai, build-time edge issues avoid karo
-    const pdfParse = (await import('pdf-parse')).default as (
+    // Dynamic import — pdf-parse Node-only hai, build-time edge issues avoid karo.
+    // NOTE: 'pdf-parse' ka main entry (index.js) me debug code hai jo bundled
+    // env (Vercel/Next.js) me './test/data/05-versions-space.pdf' dhoondta hai
+    // aur ENOENT deta hai — isliye seedha lib/pdf-parse.js import karo.
+    const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default as (
       b: Buffer
     ) => Promise<{ text: string }>
     const data = await pdfParse(buf)
@@ -60,8 +63,8 @@ async function parseUploadedFile(file: File): Promise<PreviewResult> {
         ],
       }
     }
-    const { bill, warnings: w } = parsePdfText(text)
-    return { bills: [bill], fileKind: 'pdf', warnings: [...warnings, ...w] }
+    const { bills, warnings: w } = parsePdfText(text)
+    return { bills, fileKind: 'pdf', warnings: [...warnings, ...w] }
   }
 
   if (name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.csv')) {
