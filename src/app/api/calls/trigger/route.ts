@@ -46,6 +46,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Already paid' }, { status: 400 })
     }
 
+    // Merchant ne is ledger ke reminders manually pause kiye hain
+    if (outstanding.remindersPaused) {
+      return NextResponse.json(
+        { error: 'Reminders is ledger ke liye paused hain — pehle resume karo' },
+        { status: 409 }
+      )
+    }
+
     // Check sending window (skipQuietHours = testing ke liye)
     if (!skipQuietHours && !isWithinSendingWindow(outstanding.merchant.quietStart, outstanding.merchant.quietEnd)) {
       return NextResponse.json(

@@ -24,7 +24,7 @@ export async function GET(
           orderBy: { dueDate: 'asc' },
           select: {
             id: true, invoiceNo: true, amount: true, dueDate: true,
-            status: true, paidAt: true, notes: true,
+            status: true, paidAt: true, notes: true, remindersPaused: true,
           },
         },
         bills: {

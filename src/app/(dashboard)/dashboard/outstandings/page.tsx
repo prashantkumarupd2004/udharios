@@ -14,6 +14,7 @@ interface Outstanding {
   amount: string
   dueDate: string
   status: OutstandingStatus
+  remindersPaused: boolean
   customer: { id: string; name: string; phone: string }
   paymentLink: { url: string; status: string } | null
   _count: { promises: number; disputes: number }
@@ -168,6 +169,7 @@ export default function OutstandingsPage() {
   const [filter, setFilter] = useState('active')
   const [showAdd, setShowAdd] = useState(false)
   const [creatingLink, setCreatingLink] = useState<string | null>(null)
+  const [pausing, setPausing] = useState<string | null>(null)
 
   const fetch_ = useCallback(async () => {
     const params = filter !== 'active' ? `?status=${filter}` : '?status=active'
@@ -194,6 +196,33 @@ export default function OutstandingsPage() {
       }
     } finally {
       setCreatingLink(null)
+    }
+  }
+
+  const handleTogglePause = async (os: Outstanding) => {
+    const willPause = !os.remindersPaused
+    if (willPause) {
+      const ok = window.confirm(
+        lang === 'hi'
+          ? `${os.customer.name} ke is udhaar ke saare auto reminders (WhatsApp/SMS/voice call) rokne hain?`
+          : `Pause all auto reminders (WhatsApp/SMS/voice calls) for ${os.customer.name}?`
+      )
+      if (!ok) return
+    }
+    setPausing(os.id)
+    try {
+      const res = await fetch(`/api/outstandings/${os.id}/pause`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paused: willPause }),
+      })
+      if (res.ok) {
+        setOutstandings(prev =>
+          prev.map(o => (o.id === os.id ? { ...o, remindersPaused: willPause } : o))
+        )
+      }
+    } finally {
+      setPausing(null)
     }
   }
 
@@ -391,6 +420,11 @@ export default function OutstandingsPage() {
                         {os.customer.name}
                       </Link>
                       <StatusBadge status={os.status} lang={lang} />
+                      {os.remindersPaused && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border border-amber-300 bg-amber-50 text-amber-800">
+                          ⏸ {lang === 'hi' ? 'Paused' : 'Paused'}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500 flex-wrap font-medium">
                       {os.invoiceNo && <span className="bg-slate-100 px-1.5 py-0.5 rounded">#{os.invoiceNo}</span>}
@@ -413,7 +447,7 @@ export default function OutstandingsPage() {
                     </div>
                   </div>
 
-                  <div className="text-right flex-shrink-0">
+                  <div className="text-right flex-shrink-0 flex flex-col items-end">
                     <p className="text-lg font-bold amount-display text-slate-900">
                       {formatINR(parseFloat(os.amount))}
                     </p>
@@ -429,6 +463,19 @@ export default function OutstandingsPage() {
                           : os.paymentLink?.status === 'created'
                             ? (lang === 'hi' ? 'Link share karo' : 'Share link')
                             : (lang === 'hi' ? 'Pay link banao' : 'Create pay link')}
+                      </button>
+                    )}
+                    {!['paid', 'written_off'].includes(os.status) && (
+                      <button
+                        onClick={() => handleTogglePause(os)}
+                        disabled={pausing === os.id}
+                        className="text-xs font-bold text-amber-600 hover:text-amber-700 transition-colors mt-1 inline-flex items-center gap-1"
+                      >
+                        {pausing === os.id
+                          ? '...'
+                          : os.remindersPaused
+                            ? (lang === 'hi' ? '▶ Chalu karo' : '▶ Resume')
+                            : (lang === 'hi' ? '⏸ Roko' : '⏸ Pause')}
                       </button>
                     )}
                   </div>

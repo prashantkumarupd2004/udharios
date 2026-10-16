@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
       where: {
         dueDate: { lt: graceDate },
         status: { in: ['overdue', 'upcoming'] },
+        remindersPaused: false,
         merchant: {
           isKillSwitched: false,
           isApproved: true,

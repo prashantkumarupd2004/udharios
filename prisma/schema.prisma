@@ -242,6 +242,8 @@ model Outstanding {
   paidAt       DateTime?         @map("paid_at")
   currentStage Int               @default(0) @map("current_stage")
   inngestJobId String?           @map("inngest_job_id")
+  remindersPaused Boolean         @default(false) @map("reminders_paused")
+  pausedAt        DateTime?       @map("paused_at")
   notes        String?
   createdAt    DateTime          @default(now()) @map("created_at")
   updatedAt    DateTime          @updatedAt @map("updated_at")

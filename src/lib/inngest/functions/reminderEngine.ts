@@ -30,6 +30,7 @@ export const nightlyReminderScan = inngest.createFunction(
           where: {
             status: { in: ['upcoming', 'overdue'] },
             dueDate: { lte: today },
+            remindersPaused: false,
             merchant: { isKillSwitched: false },
           },
           include: {

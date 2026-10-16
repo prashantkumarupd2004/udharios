@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
         createdAt: { gte: dayAgo },
         outstanding: {
           status: { in: ['overdue', 'upcoming'] }, // paid nahi hua
+          remindersPaused: false, // merchant ne manually pause kiya ho to skip
           merchant: { isKillSwitched: false, isApproved: true },
           customer: { optedOut: false, consent: true },
         },

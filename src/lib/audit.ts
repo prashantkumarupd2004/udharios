@@ -94,6 +94,8 @@ export const AUDIT_ACTIONS = {
   OUTSTANDING_CREATED: 'outstanding.created',
   OUTSTANDING_PAID: 'outstanding.paid',
   OUTSTANDING_WRITTEN_OFF: 'outstanding.written_off',
+  OUTSTANDING_PAUSED: 'outstanding.paused',
+  OUTSTANDING_RESUMED: 'outstanding.resumed',
 
   // Subscriptions
   SUBSCRIPTION_CREATED: 'subscription.created',

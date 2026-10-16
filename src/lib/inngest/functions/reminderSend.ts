@@ -56,6 +56,12 @@ export const sendStagedReminder = inngest.createFunction(
       return { skipped: true, reason: `status is ${outstanding.status}` }
     }
 
+    // Guard: Merchant ne is ledger ke reminders manually pause kiye hain
+    if (outstanding.remindersPaused) {
+      logger.info('Reminders paused by merchant — skipping reminder', { outstandingId })
+      return { skipped: true, reason: 'reminders paused by merchant' }
+    }
+
     // Guard: Check opt-out
     if (outstanding.customer.optedOut) {
       return { skipped: true, reason: 'customer opted out' }

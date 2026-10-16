@@ -58,6 +58,11 @@ export const triggerVoiceCall = inngest.createFunction(
       return { skipped: true, reason: `status is ${outstanding.status}` }
     }
 
+    // Guard: merchant ne is ledger ke reminders manually pause kiye hain
+    if (outstanding.remindersPaused) {
+      return { skipped: true, reason: 'reminders paused by merchant' }
+    }
+
     // Guard: opt-out
     if (outstanding.customer.optedOut) {
       return { skipped: true, reason: 'customer opted out' }

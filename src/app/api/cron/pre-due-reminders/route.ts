@@ -55,6 +55,7 @@ async function getEligibleOutstandings(dueDate: Date) {
     where: {
       dueDate: { gte: dayStart, lt: dayEnd },
       status: { in: ['upcoming', 'overdue'] },
+      remindersPaused: false,
       merchant: { isKillSwitched: false, isApproved: true },
       customer: {
         optedOut: false,

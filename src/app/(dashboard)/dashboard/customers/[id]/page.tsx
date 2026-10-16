@@ -16,6 +16,7 @@ interface Outstanding {
   dueDate: string
   status: string
   paidAt: string | null
+  remindersPaused: boolean
 }
 
 interface Bill {
@@ -114,6 +115,42 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   }
 
   const [markingPaid, setMarkingPaid] = useState<string | null>(null)
+  const [pausing, setPausing] = useState<string | null>(null)
+
+  const togglePause = async (o: Outstanding) => {
+    const willPause = !o.remindersPaused
+    if (willPause) {
+      const ok = window.confirm(
+        lang === 'hi'
+          ? 'Is udhaar ke saare auto reminders (WhatsApp/SMS/voice call) rokne hain?'
+          : 'Pause all auto reminders (WhatsApp/SMS/voice calls) for this outstanding?'
+      )
+      if (!ok) return
+    }
+    setPausing(o.id)
+    try {
+      const res = await fetch(`/api/outstandings/${o.id}/pause`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paused: willPause }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setCallMsg(data.error ?? 'Pause update nahi ho paya')
+      } else {
+        setCallMsg(willPause ? '⏸ Reminders rok diye gaye' : '▶ Reminders chalu ho gaye')
+        setCustomer(c => c ? {
+          ...c,
+          outstandings: c.outstandings.map(x =>
+            x.id === o.id ? { ...x, remindersPaused: willPause } : x
+          ),
+        } : c)
+      }
+    } catch {
+      setCallMsg('Network error — dobara try karo')
+    }
+    setPausing(null)
+  }
 
   const markPaid = async (outstandingId: string) => {
     const method = window.prompt('Payment kaise mila? (cash / upi / bank_transfer)', 'cash')
@@ -310,6 +347,11 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                         <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${isOd ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
                           {isOd ? 'overdue' : o.status}
                         </span>
+                        {o.remindersPaused && (
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-300">
+                            ⏸ {lang === 'hi' ? 'Paused' : 'Paused'}
+                          </span>
+                        )}
                       </div>
                       <p className={`text-xs font-medium flex items-center gap-1.5 mt-1 ${isOd ? 'text-red-600' : 'text-slate-500'}`}>
                         <CalendarCheck className="w-3.5 h-3.5" />
@@ -341,6 +383,21 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                     >
                       {markingPaid === o.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
                       {markingPaid === o.id ? 'Saving...' : 'Mark Paid'}
+                    </button>
+                    <button
+                      onClick={() => togglePause(o)}
+                      disabled={pausing === o.id}
+                      className={`flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold px-4 py-2.5 rounded-xl transition-all disabled:opacity-50 border ${
+                        o.remindersPaused
+                          ? 'bg-green-50 border-green-300 text-green-700 hover:bg-green-100'
+                          : 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'
+                      }`}
+                    >
+                      {pausing === o.id
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : o.remindersPaused
+                          ? (lang === 'hi' ? '▶ Chalu karo' : '▶ Resume')
+                          : (lang === 'hi' ? '⏸ Roko' : '⏸ Pause')}
                     </button>
                   </div>
                 </div>
