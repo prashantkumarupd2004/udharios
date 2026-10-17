@@ -53,7 +53,23 @@ async function parseUploadedFile(file: File): Promise<PreviewResult> {
     const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default as (
       b: Buffer
     ) => Promise<{ text: string }>
-    const data = await pdfParse(buf)
+    let data: { text: string }
+    try {
+      data = await pdfParse(buf)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      // pdf.js ka "Command token too long" — kharab/corrupt PDF
+      if (msg.includes('Command token too long') || msg.includes('FormatError')) {
+        return {
+          bills: [],
+          fileKind: 'pdf',
+          warnings: [
+            'Ye PDF kharab hai ya Tally se sahi export nahi hua. Tally me: Gateway → Display → Ledger → Export → PDF (phir se export karke try karein). Ya Excel me export karke upload karein.',
+          ],
+        }
+      }
+      throw err
+    }
     const text = data.text?.trim() ?? ''
     if (!text) {
       return {
