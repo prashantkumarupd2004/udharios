@@ -49,7 +49,7 @@ export interface DtmfCallContent {
 export function buildDtmfGreetingText(c: DtmfCallContent): string {
   return (
     `Namaste ${c.customerName}! Main ${c.merchantName} ki taraf se bol rahi hoon. ` +
-    `Aapka bill number ${c.billRef}, ${c.amountINR} rupaye, ${c.daysOverdue} din se pending hai. ` +
+    `Aapka bill number ${c.billRef}, ${c.amountINR}, ${c.daysOverdue} din se pending hai. ` +
     `Kripya dhyaan dein. ` +
     `Agar aap aaj payment karenge, to 1 dabayein. ` +
     `Agar aap kal payment karenge, to 2 dabayein. ` +
@@ -60,16 +60,14 @@ export function buildDtmfGreetingText(c: DtmfCallContent): string {
 export function buildDtmfOpt1Text(c: DtmfCallContent): string {
   return (
     `Dhanyavaad ${c.customerName}! ` +
-    `Aaj aapke ${c.amountINR} rupaye ke payment ka intezaar rahega. ` +
-    `${c.merchantName} aapke sahyog ke liye aabhaari hai. Namaste!`
+    `Aaj aapke ${c.amountINR} ke payment ka intezaar rahega. Namaste!`
   )
 }
 
 export function buildDtmfOpt2Text(c: DtmfCallContent): string {
   return (
     `Dhanyavaad ${c.customerName}! ` +
-    `Kal aapke ${c.amountINR} rupaye ke payment ka intezaar rahega. ` +
-    `${c.merchantName} aapke sahyog ke liye aabhaari hai. Namaste!`
+    `Kal aapke ${c.amountINR} ke payment ka intezaar rahega. Namaste!`
   )
 }
 

@@ -118,8 +118,12 @@ export async function POST(request: NextRequest) {
   const gatherAction = (retry: boolean) =>
     `${APP_URL}/api/voice/vobiz/gather?callId=${encodeURIComponent(callId)}${retry ? '&retried=1' : ''}`
 
-  // Pre-generated Sarvam audio (<Play>) — <Speak> TTS slow + kharab tha.
-  const vobizAudio = (await resolveVoiceCtx(callId).catch(() => null))?.vobizAudio
+  // Pre-generated Sarvam audio (<Play>) — query params me aata hai (tez, DB nahi).
+  // Fallback: voice ctx se.
+  const sp2 = request.nextUrl.searchParams
+  const vobizAudio = sp2.get('ag')
+    ? { greeting: sp2.get('ag')!, opt1: sp2.get('a1') ?? '', opt2: sp2.get('a2') ?? '', opt3: sp2.get('a3') ?? '' }
+    : (await resolveVoiceCtx(callId).catch(() => null))?.vobizAudio
   const speakOrPlay = (key: 'opt1' | 'opt2' | 'opt3', text: string) =>
     vobizAudio?.[key]
       ? `<Play>${xmlEscape(vobizAudio[key])}</Play>`

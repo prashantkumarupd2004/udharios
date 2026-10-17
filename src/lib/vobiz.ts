@@ -11,6 +11,12 @@
 import { logger } from '@/lib/logger'
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import type { PlaceCallInput } from '@/lib/exotel'
+import type { VobizCallAudioUrls } from '@/lib/voice-dtmf'
+
+/** Vobiz placeCall input — exotel shape + pre-generated audio URLs (query params me jayenge). */
+export interface VobizPlaceCallInput extends PlaceCallInput {
+  vobizAudioUrls?: VobizCallAudioUrls
+}
 
 const VOBIZ_AUTH_ID = process.env.VOBIZ_AUTH_ID ?? ''
 const VOBIZ_AUTH_TOKEN = process.env.VOBIZ_AUTH_TOKEN ?? ''
@@ -34,7 +40,7 @@ export function isVobizConfigured(): boolean {
  * dono callers (Inngest voiceCall + manual trigger) customField me callId bhejte hain.
  * Usi se answer_url / hangup_url banta hai.
  */
-export async function placeCall(input: PlaceCallInput): Promise<VobizCallResponse> {
+export async function placeCall(input: VobizPlaceCallInput): Promise<VobizCallResponse> {
   if (!isVobizConfigured()) {
     const err = 'Vobiz credentials configured nahi hain — VOBIZ_AUTH_ID, VOBIZ_AUTH_TOKEN, VOBIZ_FROM_NUMBER env vars set karo'
     logger.error('Vobiz placeCall aborted: credentials missing')
@@ -58,7 +64,15 @@ export async function placeCall(input: PlaceCallInput): Promise<VobizCallRespons
     }
   }
   const q = callRecordId ? `?callId=${encodeURIComponent(callRecordId)}` : ''
-  const answerUrl = `${APP_URL}/api/voice/vobiz/answer${q}`
+  // Pre-generated audio URLs seedha query params me — answer/gather webhooks ko
+  // DB query nahi karni padegi (tez response, kam delay).
+  const audioQ = input.vobizAudioUrls
+    ? `&ag=${encodeURIComponent(input.vobizAudioUrls.greeting)}` +
+      `&a1=${encodeURIComponent(input.vobizAudioUrls.opt1)}` +
+      `&a2=${encodeURIComponent(input.vobizAudioUrls.opt2)}` +
+      `&a3=${encodeURIComponent(input.vobizAudioUrls.opt3)}`
+    : ''
+  const answerUrl = `${APP_URL}/api/voice/vobiz/answer${q}${audioQ}`
   // callbackUrl (status webhook) caller de to wahi, warna hamara vobiz webhook
   const hangupUrl = input.callbackUrl || `${APP_URL}/api/webhooks/vobiz${q}`
 

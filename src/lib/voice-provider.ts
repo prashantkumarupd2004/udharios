@@ -12,7 +12,7 @@
 import { prisma } from '@/lib/prisma'
 import { placeCall as exotelPlaceCall, type PlaceCallInput } from '@/lib/exotel'
 import { placeCall as vobizPlaceCall, isVobizConfigured } from '@/lib/vobiz'
-import { prepareVobizCallAudio, type DtmfCallContent } from '@/lib/voice-dtmf'
+import { prepareVobizCallAudio, type DtmfCallContent, type VobizCallAudioUrls } from '@/lib/voice-dtmf'
 import { resolveVoiceCtx, saveVoiceCtx } from '@/lib/voice-ctx'
 import { overdueDays, formatINR } from '@/lib/date-utils'
 import { logger } from '@/lib/logger'
@@ -47,11 +47,12 @@ export async function placeVoiceCall(
 
   if (provider === 'vobiz') {
     // Vobiz: Sarvam Hindi audio PEHLE generate karo (fast <Play>, achha voice).
-    // Answer webhook me <Speak> TTS slow + kharab tha — isliye pre-generated audio.
-    await prepareVobizAudio(input).catch((err) =>
+    // URLs query params me jayenge — answer/gather webhooks ko DB query nahi karni padegi (tez!).
+    const audioUrls = await prepareVobizAudio(input).catch((err) => {
       logger.error('Vobiz audio pre-gen failed — fallback to <Speak>', { error: String(err) })
-    )
-    const res = await vobizPlaceCall(input) // env missing → clear error throw karta hai
+      return undefined
+    })
+    const res = await vobizPlaceCall({ ...input, vobizAudioUrls: audioUrls })
     logger.info('Voice call placed via Vobiz', { merchantId, callId: res.callId })
     return { providerCallId: res.callId, provider }
   }
@@ -65,7 +66,7 @@ export async function placeVoiceCall(
  * voice_call_sessions me save karo. Answer/gather webhooks <Play> se bajayenge.
  * Fail ho to silently skip — webhooks <Speak> fallback use karenge.
  */
-async function prepareVobizAudio(input: PlaceCallInput): Promise<void> {
+async function prepareVobizAudio(input: PlaceCallInput): Promise<VobizCallAudioUrls> {
   let cf: Record<string, unknown> = {}
   try {
     cf = JSON.parse(input.customField ?? '{}') as Record<string, unknown>
@@ -74,7 +75,7 @@ async function prepareVobizAudio(input: PlaceCallInput): Promise<void> {
   const outstandingId = String(cf.outstandingId ?? '')
   if (!callId || !outstandingId) {
     logger.warn('prepareVobizAudio: callId/outstandingId missing in customField — skipping')
-    return
+    throw new Error('callId/outstandingId missing')
   }
 
   const outstanding = await prisma.outstanding.findUnique({
@@ -86,7 +87,7 @@ async function prepareVobizAudio(input: PlaceCallInput): Promise<void> {
   })
   if (!outstanding) {
     logger.warn('prepareVobizAudio: outstanding not found', { outstandingId })
-    return
+    throw new Error('outstanding not found')
   }
 
   const content: DtmfCallContent = {
@@ -116,6 +117,7 @@ async function prepareVobizAudio(input: PlaceCallInput): Promise<void> {
   }
   await saveVoiceCtx(callId, merged)
   logger.info('Vobiz audio URLs saved to voice ctx', { callId })
+  return urls
 }
 
 /** Kya diya gaya provider call karne layak configured hai? (Settings UI hint ke liye) */

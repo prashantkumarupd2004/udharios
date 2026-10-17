@@ -56,7 +56,8 @@ export async function POST(request: NextRequest) {
     logger.warn('Vobiz answer webhook: signature INVALID — serving XML anyway (temp diag mode)')
   }
 
-  const callId = request.nextUrl.searchParams.get('callId') ?? ''
+  const sp = request.nextUrl.searchParams
+  const callId = sp.get('callId') ?? ''
   const params = parseBody(rawBody)
   const callUuid = params.CallUUID ?? params.call_uuid ?? params.request_uuid ?? ''
   logger.info('Vobiz answer webhook', { callId, callUuid, from: params.From })
@@ -66,6 +67,43 @@ export async function POST(request: NextRequest) {
     return voiceXml(`  <Speak>${xmlEscape('Namaste! Ye ek payment reminder call hai. Dhanyavaad!')}</Speak>\n  <Hangup/>`)
   }
 
+  // Audio URLs query params me aate hain (tez path — DB query nahi chahiye).
+  // Fallback: voice ctx se (purane calls ke liye).
+  const qpAudio = sp.get('ag')
+    ? { greeting: sp.get('ag')!, opt1: sp.get('a1') ?? '', opt2: sp.get('a2') ?? '', opt3: sp.get('a3') ?? '' }
+    : (await resolveVoiceCtx(callId).catch(() => null))?.vobizAudio
+
+  const gatherAction =
+    `${APP_URL}/api/voice/vobiz/gather?callId=${encodeURIComponent(callId)}` +
+    (qpAudio?.greeting
+      ? `&ag=${encodeURIComponent(qpAudio.greeting)}&a1=${encodeURIComponent(qpAudio.opt1)}` +
+        `&a2=${encodeURIComponent(qpAudio.opt2)}&a3=${encodeURIComponent(qpAudio.opt3)}`
+      : '')
+
+  const repeatPrompt = xmlEscape(
+    'Maaf kijiye, koi vikalp nahi chuna gaya. Kripya 1, 2 ya 3 dabayein.'
+  )
+
+  if (qpAudio?.greeting) {
+    // FAST PATH: pre-generated audio — DB query skip, turant XML wapas
+    if (callUuid) {
+      // Background me CallUUID save karo (response block nahi karega)
+      prisma.call.update({
+        where: { id: callId },
+        data: { exotelSid: callUuid, status: 'in-progress' },
+      }).catch((err) => logger.error('Vobiz answer: call update failed', { error: String(err) }))
+    }
+    logger.info('Vobiz answer: serving DTMF gather (fast path)', { callId })
+    return voiceXml(
+      `  <Gather numDigits="1" timeout="10" action="${gatherAction}" method="POST">\n` +
+      `    <Play>${xmlEscape(qpAudio.greeting)}</Play>\n` +
+      `  </Gather>\n` +
+      `  <Speak>${repeatPrompt}</Speak>\n` +
+      `  <Hangup/>`
+    )
+  }
+
+  // SLOW FALLBACK: audio nahi mila — DB se context nikal ke <Speak> use karo
   const call = await prisma.call.findUnique({
     where: { id: callId },
     include: {
@@ -83,7 +121,6 @@ export async function POST(request: NextRequest) {
     return voiceXml(`  <Hangup/>`)
   }
 
-  // Call record me Vobiz ka CallUUID save karo (status webhooks se match karega)
   if (callUuid) {
     await prisma.call.update({
       where: { id: callId },
@@ -100,22 +137,11 @@ export async function POST(request: NextRequest) {
     billRef: o.invoiceNo ?? '',
   }
   const greeting = xmlEscape(buildDtmfGreetingText(content))
-  const repeatPrompt = xmlEscape(
-    'Maaf kijiye, koi vikalp nahi chuna gaya. Kripya 1, 2 ya 3 dabayein.'
-  )
-  const gatherAction = `${APP_URL}/api/voice/vobiz/gather?callId=${encodeURIComponent(callId)}`
 
-  // Pre-generated Sarvam Hindi audio (fast <Play>) — <Speak> TTS slow + kharab tha.
-  // placeVoiceCall me prepareVobizAudio() se banta hai; na mile to <Speak> fallback.
-  const vobizAudio = (await resolveVoiceCtx(callId).catch(() => null))?.vobizAudio
-  const greetingXml = vobizAudio?.greeting
-    ? `<Play>${xmlEscape(vobizAudio.greeting)}</Play>`
-    : `<Speak>${greeting}</Speak>`
-
-  logger.info('Vobiz answer: serving DTMF gather', { callId, audioMode: vobizAudio?.greeting ? 'play' : 'speak' })
+  logger.info('Vobiz answer: serving DTMF gather (speak fallback)', { callId })
   return voiceXml(
     `  <Gather numDigits="1" timeout="10" action="${gatherAction}" method="POST">\n` +
-    `    ${greetingXml}\n` +
+    `    <Speak>${greeting}</Speak>\n` +
     `  </Gather>\n` +
     `  <Speak>${repeatPrompt}</Speak>\n` +
     `  <Hangup/>`
