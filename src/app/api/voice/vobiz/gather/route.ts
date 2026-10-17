@@ -55,14 +55,14 @@ async function appendTranscript(callId: string, entry: Record<string, unknown>) 
   try {
     const call = await prisma.call.findUnique({ where: { id: callId }, select: { transcript: true } })
     const existing = (call?.transcript as unknown[]) ?? []
+    const newTranscript = [
+      ...existing,
+      { ...entry, timestamp: new Date().toISOString() },
+    ]
+    const updateData: Record<string, unknown> = { transcript: newTranscript }
     await prisma.call.update({
       where: { id: callId },
-      data: {
-        transcript: [
-          ...existing,
-          { ...entry, timestamp: new Date().toISOString() },
-        ],
-      },
+      data: updateData,
     })
   } catch (err) {
     logger.error('Vobiz gather: transcript append failed', { callId, error: String(err) })
