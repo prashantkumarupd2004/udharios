@@ -124,6 +124,11 @@ export async function syncBillsFromTally(
   bills: TallyBillInput[],
   source: BillSource
 ): Promise<SyncResult> {
+  // 100+ bills → bulk fast path (4000 bills: ~20,000 queries → ~50 queries)
+  if (bills.length > 100) {
+    return syncBillsFromTallyBulk(merchantId, bills, source)
+  }
+
   const result: SyncResult = {
     billsUpserted: 0,
     billsPaid: 0,
@@ -420,4 +425,193 @@ export async function verifyTallyApiKey(key: string) {
     where: { apiKeyHash: hash, status: 'active' },
   })
   return conn
+}
+
+/**
+ * BULK sync — 100+ bills ke liye fast path.
+ * Per-bill sequential queries ki jagah batch operations.
+ * 4000 bills: ~20,000 queries → ~50 queries
+ */
+export async function syncBillsFromTallyBulk(
+  merchantId: string,
+  bills: TallyBillInput[],
+  source: BillSource
+): Promise<SyncResult> {
+  const result: SyncResult = {
+    billsUpserted: 0,
+    billsPaid: 0,
+    customersMatched: 0,
+    customersCreated: 0,
+    outstandingsUpserted: 0,
+  }
+  const errors: string[] = []
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  // Deduplicate by billRef (last wins)
+  const billMap = new Map<string, TallyBillInput>()
+  for (const b of bills) {
+    const ref = b.billRef?.trim()
+    if (ref && b.partyName?.trim()) billMap.set(ref, b)
+  }
+  const uniqueBills = [...billMap.values()]
+  if (uniqueBills.length === 0) return { ...result, errors }
+
+  try {
+    // --- STEP 1: Customers (bulk) ---
+    const partyNames = [...new Set(uniqueBills.map(b => b.partyName.trim()))]
+    // Existing customers dhoondho (exact name match)
+    const existingCustomers = await prisma.customer.findMany({
+      where: { merchantId, name: { in: partyNames } },
+      select: { id: true, name: true },
+    })
+    const customerByName = new Map<string, string>(existingCustomers.map(c => [c.name.toLowerCase(), c.id] as [string, string]))
+    result.customersMatched = existingCustomers.length
+
+    // Missing customers banao
+    const missingNames = partyNames.filter(n => !customerByName.has(n.toLowerCase()))
+    if (missingNames.length > 0) {
+      // createMany ke baad IDs chahiye — ek-ek karke banao (ye kam hain)
+      for (const name of missingNames) {
+        const bill = uniqueBills.find(b => b.partyName.trim() === name)
+        const created = await prisma.customer.create({
+          data: {
+            merchantId,
+            name,
+            phone: bill?.partyPhone?.trim() || `tally-${bill?.billRef || Date.now()}`,
+            consent: true,
+            consentAt: new Date(),
+            notes: 'Auto-created from Tally bulk import',
+          },
+          select: { id: true },
+        })
+        customerByName.set(name.toLowerCase(), created.id)
+        result.customersCreated++
+      }
+    }
+
+    // --- STEP 2: Bills (bulk upsert) ---
+    const billRefs = uniqueBills.map(b => b.billRef.trim())
+    const existingBills = await prisma.bill.findMany({
+      where: { merchantId, billRef: { in: billRefs } },
+      select: { id: true, billRef: true },
+    })
+    const billIdByRef = new Map<string, string>(existingBills.map(b => [b.billRef, b.id] as [string, string]))
+
+    const billsToCreate: Parameters<typeof prisma.bill.createMany>[0]['data'] = []
+    const billsToUpdate: { id: string; data: any }[] = []
+
+    for (const b of uniqueBills) {
+      const ref = b.billRef.trim()
+      const pending = Math.max(0, Number(b.pendingAmount) || 0)
+      const amount = Number(b.amount) || pending
+      const customerId = customerByName.get(b.partyName.trim().toLowerCase())
+      const billDate = parseDate(b.billDate) ?? today
+      const dueDate = parseDate(b.dueDate)
+
+      const data = {
+        merchantId,
+        customerId: customerId ?? null,
+        billRef: ref,
+        partyName: b.partyName.trim(),
+        partyPhone: b.partyPhone?.trim() || null,
+        amount,
+        pendingAmount: pending,
+        billDate,
+        dueDate,
+        voucherType: b.voucherType || null,
+        source,
+        tallyCompany: b.tallyCompany || null,
+      }
+
+      const existingId = billIdByRef.get(ref)
+      if (existingId) {
+        billsToUpdate.push({ id: existingId, data: data as any })
+      } else {
+        billsToCreate.push(data as any)
+      }
+    }
+
+    // Bulk create (batches of 500)
+    for (let i = 0; i < billsToCreate.length; i += 500) {
+      const batch = billsToCreate.slice(i, i + 500)
+      await prisma.bill.createMany({ data: batch, skipDuplicates: true })
+      result.billsUpserted += batch.length
+    }
+    // Updates (parallel batches of 50)
+    for (let i = 0; i < billsToUpdate.length; i += 50) {
+      const batch = billsToUpdate.slice(i, i + 50)
+      await Promise.all(batch.map(({ id, data }) =>
+        prisma.bill.update({ where: { id }, data }).catch(e => errors.push(`Bill update ${id}: ${e.message}`))
+      ))
+      result.billsUpserted += batch.length
+    }
+
+    // --- STEP 3: Outstandings (bulk upsert) ---
+    // Bill IDs chahiye (newly created ke liye phir se fetch)
+    const allBills = await prisma.bill.findMany({
+      where: { merchantId, billRef: { in: billRefs } },
+      select: { id: true, billRef: true, customerId: true, pendingAmount: true, dueDate: true, partyName: true },
+    })
+    const billByRef = new Map(allBills.map(b => [b.billRef, b]))
+
+    const existingOs = await prisma.outstanding.findMany({
+      where: { merchantId, invoiceNo: { in: billRefs } },
+      select: { id: true, invoiceNo: true },
+    })
+    const osIdByRef = new Map<string, string>(existingOs.map(o => [o.invoiceNo, o.id] as [string, string]))
+
+    const osToCreate: Parameters<typeof prisma.outstanding.createMany>[0]['data'] = []
+    const osToUpdate: { id: string; data: any }[] = []
+
+    for (const b of uniqueBills) {
+      const ref = b.billRef.trim()
+      const bill = billByRef.get(ref)
+      if (!bill) continue
+      const pending = Math.max(0, Number(b.pendingAmount) || 0)
+      const dueDate = parseDate(b.dueDate) ?? parseDate(b.billDate) ?? today
+      const status = pending <= 0 ? 'paid' : (dueDate < today ? 'overdue' : 'upcoming')
+
+      const data = {
+        merchantId,
+        customerId: bill.customerId,
+        billId: bill.id,
+        invoiceNo: ref,
+        amount: Number(b.amount) || pending,
+        pendingAmount: pending,
+        dueDate,
+        status,
+        source,
+      }
+
+      const existingId = osIdByRef.get(ref)
+      if (existingId) {
+        osToUpdate.push({ id: existingId, data: data as any })
+      } else {
+        osToCreate.push(data as any)
+      }
+      if (pending <= 0) result.billsPaid++
+    }
+
+    for (let i = 0; i < osToCreate.length; i += 500) {
+      const batch = osToCreate.slice(i, i + 500)
+      await prisma.outstanding.createMany({ data: batch, skipDuplicates: true })
+      result.outstandingsUpserted += batch.length
+    }
+    for (let i = 0; i < osToUpdate.length; i += 50) {
+      const batch = osToUpdate.slice(i, i + 50)
+      await Promise.all(batch.map(({ id, data }) =>
+        prisma.outstanding.update({ where: { id }, data }).catch(e => errors.push(`OS update ${id}: ${e.message}`))
+      ))
+      result.outstandingsUpserted += batch.length
+    }
+
+    logger.info('Tally bulk sync complete', { merchantId, source, ...result, errors: errors.length })
+  } catch (err) {
+    const msg = `Bulk sync failed: ${err instanceof Error ? err.message : String(err)}`
+    logger.error(msg, { merchantId })
+    errors.push(msg)
+  }
+
+  return { ...result, errors }
 }
