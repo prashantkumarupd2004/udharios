@@ -104,7 +104,7 @@ export async function ensureGreetingAudio(data: GreetingData): Promise<string | 
     logger.info('Greeting audio cache MISS, generating', { filename })
 
     // Sarvam Bulbul v3, Hindi female voice 'priya', 8kHz for telephony
-    const { audioBase64 } = await synthesizeSpeech(script, 'priya', 'hi-IN', 1.0)
+    const { audioBase64 } = await synthesizeSpeech(script, 'kavya_hi_conversational', 'hi-IN', 1.0)
     const audioBuffer = Buffer.from(audioBase64, 'base64')
 
     await uploadVoiceAudio(audioBuffer, filename, 'audio/wav')

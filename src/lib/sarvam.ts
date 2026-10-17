@@ -71,7 +71,13 @@ export interface SynthesizeResult {
 }
 
 export type SarvamVoice =
-  | 'priya'    // Female, Hindi (default)
+  // Bulbul v4-flash voices (<name>_<lang>_<style>) — zyada natural, latest
+  | 'kavya_hi_conversational' // Female, Hindi conversational (default — collection calls)
+  | 'ananya_hi_conversational' // Female, Hindi conversational
+  | 'priya_hi_conversational' // Female, Hindi conversational
+  | 'neha_hi_conversational' // Female, Hindi conversational
+  // Bulbul v3 legacy voices
+  | 'priya'    // Female, Hindi (v3 default)
   | 'neha'     // Female, Hindi
   | 'pooja'    // Female, Hindi
   | 'simran'   // Female, Hindi
@@ -91,7 +97,7 @@ export type SarvamVoice =
  */
 export async function synthesizeSpeech(
   text: string,
-  voice: SarvamVoice = 'priya',
+  voice: SarvamVoice = 'kavya_hi_conversational',
   languageCode = 'hi-IN',
   speed = 1.0
 ): Promise<SynthesizeResult> {
@@ -105,12 +111,10 @@ export async function synthesizeSpeech(
       inputs: [text],
       target_language_code: languageCode,
       speaker: voice,
-      pitch: 0,
       pace: speed,
-      loudness: 1.5,
       speech_sample_rate: 8000,   // 8kHz for telephony
       enable_preprocessing: true,
-      model: 'bulbul:v3',
+      model: 'bulbul:v4-flash',   // Latest — zyada natural, 40% tez, sasta (₹20 vs ₹30/10k chars)
     }),
   })
 

@@ -359,6 +359,6 @@ async function getCustomerPhone(customerId: string): Promise<string> {
 // ---------------------------------------------------------------------------
 
 export async function synthesizeAgentResponse(text: string): Promise<Buffer> {
-  const { audioBase64 } = await synthesizeSpeech(text, 'priya', 'hi-IN', 0.9)
+  const { audioBase64 } = await synthesizeSpeech(text, 'kavya_hi_conversational', 'hi-IN', 0.9)
   return Buffer.from(audioBase64, 'base64')
 }
