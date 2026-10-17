@@ -144,24 +144,29 @@ export async function POST(request: NextRequest) {
     const promisedDate = new Date()
     promisedDate.setDate(promisedDate.getDate() + daysFromNow)
     promisedDate.setHours(0, 0, 0, 0)
-    await createPromise(
-      {
-        callId,
-        outstandingId: o.id,
-        merchantId: call.merchantId,
-        customerId: call.customerId,
-        merchantName: o.merchant.businessName,
-        customerName: o.customer.name,
-        amountINR: formatINR(o.amount.toNumber()),
-        daysOverdue: overdueDays(o.dueDate),
-        billRef: o.invoiceNo ?? undefined,
-      },
-      promisedDate
-    )
-    await prisma.call.update({
-      where: { id: callId },
-      data: { outcome: 'promised' },
-    }).catch((err) => logger.error('Vobiz gather: outcome update failed', { error: String(err) }))
+    // Dono writes PARALLEL me — sequential me slow tha
+    await Promise.all([
+      createPromise(
+        {
+          callId,
+          outstandingId: o.id,
+          merchantId: call.merchantId,
+          customerId: call.customerId,
+          merchantName: o.merchant.businessName,
+          customerName: o.customer.name,
+          amountINR: formatINR(o.amount.toNumber()),
+          daysOverdue: overdueDays(o.dueDate),
+          billRef: o.invoiceNo ?? undefined,
+        },
+        promisedDate
+      ).catch((err) =>
+        logger.error('Vobiz gather: promise save failed', { callId, error: String(err) })
+      ),
+      prisma.call.update({
+        where: { id: callId },
+        data: { outcome: 'promised' },
+      }).catch((err) => logger.error('Vobiz gather: outcome update failed', { error: String(err) })),
+    ])
     logger.info('Vobiz gather: promise saved', { callId, digitLabel, promisedDate: promisedDate.toISOString().slice(0, 10) })
   }
 
@@ -212,29 +217,32 @@ export async function POST(request: NextRequest) {
 
   // --- Digit 3: vivaad — dispute create karo ---
   if (digits === '3') {
-    await createDispute(
-      {
-        callId,
-        outstandingId: o.id,
-        merchantId: call.merchantId,
-        customerId: call.customerId,
-        merchantName: o.merchant.businessName,
-        customerName: o.customer.name,
-        amountINR: formatINR(o.amount.toNumber()),
-        daysOverdue: overdueDays(o.dueDate),
-        billRef: o.invoiceNo ?? undefined,
-      },
-      'DTMF 3 — bill me vivaad (Vobiz call)'
-    )
-    await prisma.call.update({
-      where: { id: callId },
-      data: { outcome: 'disputed' },
-    }).catch((err) => logger.error('Vobiz gather: outcome update failed', { error: String(err) }))
-    await appendTranscript(callId, {
+    // Dispute + outcome PARALLEL me — transcript background me (tez jawab)
+    await Promise.all([
+      createDispute(
+        {
+          callId,
+          outstandingId: o.id,
+          merchantId: call.merchantId,
+          customerId: call.customerId,
+          merchantName: o.merchant.businessName,
+          customerName: o.customer.name,
+          amountINR: formatINR(o.amount.toNumber()),
+          daysOverdue: overdueDays(o.dueDate),
+          billRef: o.invoiceNo ?? undefined,
+        },
+        'DTMF 3 — bill me vivaad (Vobiz call)'
+      ),
+      prisma.call.update({
+        where: { id: callId },
+        data: { outcome: 'disputed' },
+      }).catch((err) => logger.error('Vobiz gather: outcome update failed', { error: String(err) })),
+    ])
+    appendTranscript(callId, {
       customerSpeech: '[DTMF 3]',
       agentResponse: buildDtmfOpt3Text(content),
       outcome: 'disputed',
-    })
+    }).catch(() => {})
     return voiceXml(`  ${speakOrPlay('opt3', buildDtmfOpt3Text(content))}\n  <Hangup/>`)
   }
   // --- Galat / koi digit nahi: ek baar dobara puchho, phir hangup ---

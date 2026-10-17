@@ -273,30 +273,31 @@ export async function processVoiceAgentTurn(
 
 export async function createPromise(ctx: VoiceAgentContext, promisedDate: Date): Promise<void> {
   try {
-    await prisma.promise.create({
-      data: {
-        outstandingId: ctx.outstandingId,
-        customerId: ctx.customerId,
+    // Teeno writes PARALLEL me — sequential me 3x slow tha
+    await Promise.all([
+      prisma.promise.create({
+        data: {
+          outstandingId: ctx.outstandingId,
+          customerId: ctx.customerId,
+          merchantId: ctx.merchantId,
+          promisedDate,
+          source: 'voice',
+          status: 'open',
+        },
+      }),
+      prisma.outstanding.update({
+        where: { id: ctx.outstandingId },
+        data: { status: 'promised' },
+      }),
+      appendAuditLog({
         merchantId: ctx.merchantId,
-        promisedDate,
-        source: 'voice',
-        status: 'open',
-      },
-    })
-
-    await prisma.outstanding.update({
-      where: { id: ctx.outstandingId },
-      data: { status: 'promised' },
-    })
-
-    await appendAuditLog({
-      merchantId: ctx.merchantId,
-      actor: 'system:voice-agent',
-      action: AUDIT_ACTIONS.PROMISE_CREATED,
-      entity: 'outstanding',
-      entityId: ctx.outstandingId,
-      payload: { promisedDate, source: 'voice' },
-    })
+        actor: 'system:voice-agent',
+        action: AUDIT_ACTIONS.PROMISE_CREATED,
+        entity: 'outstanding',
+        entityId: ctx.outstandingId,
+        payload: { promisedDate, source: 'voice' },
+      }).catch(() => {}),
+    ])
   } catch (err) {
     logger.error('Failed to create promise from voice call', { error: String(err) })
   }
@@ -304,32 +305,32 @@ export async function createPromise(ctx: VoiceAgentContext, promisedDate: Date):
 
 export async function createDispute(ctx: VoiceAgentContext, reason: string): Promise<void> {
   try {
-    await prisma.dispute.create({
-      data: {
-        outstandingId: ctx.outstandingId,
-        customerId: ctx.customerId,
-        merchantId: ctx.merchantId,
-        reason,
-        status: 'open',
-      },
-    })
-
-    await prisma.outstanding.update({
-      where: { id: ctx.outstandingId },
-      data: { status: 'disputed' },
-    })
-
-    // Create merchant notification
-    await prisma.merchantNotification.create({
-      data: {
-        merchantId: ctx.merchantId,
-        type: 'escalation',
-        title: `${ctx.customerName} ne dispute kiya`,
-        body: `Voice call me ${ctx.customerName} ne problem bataya: "${reason}". Aap khud baat karein.`,
-        entityId: ctx.outstandingId,
-        entityType: 'outstanding',
-      },
-    })
+    // Saare writes PARALLEL me — sequential me 4x slow tha
+    await Promise.all([
+      prisma.dispute.create({
+        data: {
+          outstandingId: ctx.outstandingId,
+          customerId: ctx.customerId,
+          merchantId: ctx.merchantId,
+          reason,
+          status: 'open',
+        },
+      }),
+      prisma.outstanding.update({
+        where: { id: ctx.outstandingId },
+        data: { status: 'disputed' },
+      }),
+      // Create merchant notification
+      prisma.merchantNotification.create({
+        data: {
+          merchantId: ctx.merchantId,
+          type: 'escalation',
+          title: `${ctx.customerName} ne dispute kiya`,
+          body: `Voice call me ${ctx.customerName} ne problem bataya: "${reason}". Aap khud baat karein.`,
+          entityId: ctx.outstandingId,
+          entityType: 'outstanding',
+        },
+      }),
 
     await appendAuditLog({
       merchantId: ctx.merchantId,
@@ -338,7 +339,8 @@ export async function createDispute(ctx: VoiceAgentContext, reason: string): Pro
       entity: 'outstanding',
       entityId: ctx.outstandingId,
       payload: { reason, source: 'voice' },
-    })
+    }).catch(() => {}),
+    ])
   } catch (err) {
     logger.error('Failed to create dispute from voice call', { error: String(err) })
   }
