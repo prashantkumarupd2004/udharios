@@ -107,13 +107,13 @@ export async function prepareVobizCallAudio(
     
   ]
   const audios = [greeting, opt1, opt2, opt3]
-  // Upload to Supabase (proxy URL ignore karo — direct public URL use karenge)
+  // Hamare proxy se serve karo — bucket private ho sakta hai, proxy me
+  // service-role fallback hai (direct Supabase URL se Vobiz ko 404 milta tha).
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://udharios.vercel.app').replace(/\/+$/, '')
+  const proxy = (n: string) => `${appUrl}/api/voice/audio/dynamic/${n}`
   await Promise.all(names.map((n, i) => uploadDynamic(n, audios[i])))
-  // DIRECT Supabase public URL — hamare proxy ka Vercel cold start skip hota hai (~2-4s bachat).
-  // Bucket public hona chahiye.
-  const direct = (n: string) => `${SUPABASE_URL}/storage/v1/object/public/voice-audio/dynamic/${n}`
-  const urls = { greeting: direct(names[0]), opt1: direct(names[1]), opt2: direct(names[2]), opt3: direct(names[3]) }
-  logger.info('Vobiz call audio prepared (direct URLs)', { callId: safeId })
+  const urls = { greeting: proxy(names[0]), opt1: proxy(names[1]), opt2: proxy(names[2]), opt3: proxy(names[3]) }
+  logger.info('Vobiz call audio prepared (proxy URLs)', { callId: safeId })
   return urls
 }
 
