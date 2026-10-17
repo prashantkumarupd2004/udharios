@@ -23,6 +23,7 @@ import {
 import { createDispute } from '@/lib/voice-agent'
 import { getWhatsAppProvider, buildT2WithLink } from '@/lib/providers/WhatsappProvider'
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
+import { resolveVoiceCtx } from '@/lib/voice-ctx'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -118,6 +119,13 @@ export async function POST(request: NextRequest) {
   const gatherAction = (retry: boolean) =>
     `${APP_URL}/api/voice/vobiz/gather?callId=${encodeURIComponent(callId)}${retry ? '&retried=1' : ''}`
 
+  // Pre-generated Sarvam audio (<Play>) — <Speak> TTS slow + kharab tha.
+  const vobizAudio = (await resolveVoiceCtx(callId).catch(() => null))?.vobizAudio
+  const speakOrPlay = (key: 'opt1' | 'opt2' | 'opt3', text: string) =>
+    vobizAudio?.[key]
+      ? `<Play>${xmlEscape(vobizAudio[key])}</Play>`
+      : `<Speak>${xmlEscape(text)}</Speak>`
+
   // --- Digit 1: aaj payment — WhatsApp par payment link bhejo ---
   if (digits === '1') {
     const paymentLinkUrl = o.paymentLink
@@ -158,7 +166,7 @@ export async function POST(request: NextRequest) {
       entityId: callId,
       payload: { digit: '1', outcome: 'paid_already' },
     }).catch(() => {})
-    return voiceXml(`  <Speak>${xmlEscape(buildDtmfOpt1Text(content))}</Speak>\n  <Hangup/>`)
+    return voiceXml(`  ${speakOrPlay('opt1', buildDtmfOpt1Text(content))}\n  <Hangup/>`)
   }
 
   // --- Digit 2: vivaad — dispute create karo ---
@@ -186,7 +194,7 @@ export async function POST(request: NextRequest) {
       agentResponse: buildDtmfOpt2Text(content),
       outcome: 'disputed',
     })
-    return voiceXml(`  <Speak>${xmlEscape(buildDtmfOpt2Text(content))}</Speak>\n  <Hangup/>`)
+    return voiceXml(`  ${speakOrPlay('opt2', buildDtmfOpt2Text(content))}\n  <Hangup/>`)
   }
 
   // --- Digit 3: baad me baat karenge ---
@@ -196,7 +204,7 @@ export async function POST(request: NextRequest) {
       agentResponse: buildDtmfOpt3Text(content),
       outcome: 'callback_later',
     })
-    return voiceXml(`  <Speak>${xmlEscape(buildDtmfOpt3Text(content))}</Speak>\n  <Hangup/>`)
+    return voiceXml(`  ${speakOrPlay('opt3', buildDtmfOpt3Text(content))}\n  <Hangup/>`)
   }
 
   // --- Galat / koi digit nahi: ek baar dobara puchho, phir hangup ---

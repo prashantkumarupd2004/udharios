@@ -70,7 +70,8 @@ export async function placeCall(input: PlaceCallInput): Promise<VobizCallRespons
     answer_method: 'POST',
     hangup_url: hangupUrl,
     hangup_method: 'POST',
-    machine_detection: 'hangup',
+    // NOTE: machine_detection hataya — AMD se ~10 sec delay ho raha tha
+    // (pehle human/machine detect, phir answer_url). Ab turant bolega.
     time_limit: input.timeLimit ?? 300,
   }
 

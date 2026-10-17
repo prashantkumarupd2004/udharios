@@ -14,6 +14,7 @@ import { formatINR, overdueDays } from '@/lib/date-utils'
 import { logger } from '@/lib/logger'
 import { verifyVobizWebhook } from '@/lib/vobiz'
 import { buildDtmfGreetingText, type DtmfCallContent } from '@/lib/voice-dtmf'
+import { resolveVoiceCtx } from '@/lib/voice-ctx'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -104,10 +105,17 @@ export async function POST(request: NextRequest) {
   )
   const gatherAction = `${APP_URL}/api/voice/vobiz/gather?callId=${encodeURIComponent(callId)}`
 
-  logger.info('Vobiz answer: serving DTMF gather', { callId })
+  // Pre-generated Sarvam Hindi audio (fast <Play>) — <Speak> TTS slow + kharab tha.
+  // placeVoiceCall me prepareVobizAudio() se banta hai; na mile to <Speak> fallback.
+  const vobizAudio = (await resolveVoiceCtx(callId).catch(() => null))?.vobizAudio
+  const greetingXml = vobizAudio?.greeting
+    ? `<Play>${xmlEscape(vobizAudio.greeting)}</Play>`
+    : `<Speak>${greeting}</Speak>`
+
+  logger.info('Vobiz answer: serving DTMF gather', { callId, audioMode: vobizAudio?.greeting ? 'play' : 'speak' })
   return voiceXml(
     `  <Gather numDigits="1" timeout="10" action="${gatherAction}" method="POST">\n` +
-    `    <Speak>${greeting}</Speak>\n` +
+    `    ${greetingXml}\n` +
     `  </Gather>\n` +
     `  <Speak>${repeatPrompt}</Speak>\n` +
     `  <Hangup/>`

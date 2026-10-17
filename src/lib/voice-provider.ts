@@ -12,6 +12,9 @@
 import { prisma } from '@/lib/prisma'
 import { placeCall as exotelPlaceCall, type PlaceCallInput } from '@/lib/exotel'
 import { placeCall as vobizPlaceCall, isVobizConfigured } from '@/lib/vobiz'
+import { prepareVobizCallAudio, type DtmfCallContent } from '@/lib/voice-dtmf'
+import { resolveVoiceCtx, saveVoiceCtx } from '@/lib/voice-ctx'
+import { overdueDays, formatINR } from '@/lib/date-utils'
 import { logger } from '@/lib/logger'
 
 export type VoiceProviderName = 'exotel' | 'vobiz'
@@ -43,6 +46,11 @@ export async function placeVoiceCall(
   const provider = await getVoiceProvider(merchantId)
 
   if (provider === 'vobiz') {
+    // Vobiz: Sarvam Hindi audio PEHLE generate karo (fast <Play>, achha voice).
+    // Answer webhook me <Speak> TTS slow + kharab tha — isliye pre-generated audio.
+    await prepareVobizAudio(input).catch((err) =>
+      logger.error('Vobiz audio pre-gen failed — fallback to <Speak>', { error: String(err) })
+    )
     const res = await vobizPlaceCall(input) // env missing → clear error throw karta hai
     logger.info('Voice call placed via Vobiz', { merchantId, callId: res.callId })
     return { providerCallId: res.callId, provider }
@@ -50,6 +58,64 @@ export async function placeVoiceCall(
 
   const res = await exotelPlaceCall(input)
   return { providerCallId: res.Call.Sid, provider }
+}
+
+/**
+ * Vobiz call ke liye personalized Sarvam Hindi audio pre-generate karke
+ * voice_call_sessions me save karo. Answer/gather webhooks <Play> se bajayenge.
+ * Fail ho to silently skip — webhooks <Speak> fallback use karenge.
+ */
+async function prepareVobizAudio(input: PlaceCallInput): Promise<void> {
+  let cf: Record<string, unknown> = {}
+  try {
+    cf = JSON.parse(input.customField ?? '{}') as Record<string, unknown>
+  } catch { /* ignore */ }
+  const callId = String(cf.callId ?? '')
+  const outstandingId = String(cf.outstandingId ?? '')
+  if (!callId || !outstandingId) {
+    logger.warn('prepareVobizAudio: callId/outstandingId missing in customField — skipping')
+    return
+  }
+
+  const outstanding = await prisma.outstanding.findUnique({
+    where: { id: outstandingId },
+    include: {
+      merchant: { select: { businessName: true } },
+      customer: { select: { name: true } },
+    },
+  })
+  if (!outstanding) {
+    logger.warn('prepareVobizAudio: outstanding not found', { outstandingId })
+    return
+  }
+
+  const content: DtmfCallContent = {
+    customerName: String(cf.customerName ?? outstanding.customer.name),
+    merchantName: String(cf.merchantName ?? outstanding.merchant.businessName),
+    amountINR: formatINR(outstanding.amount.toNumber()),
+    daysOverdue: overdueDays(outstanding.dueDate),
+    billRef: outstanding.invoiceNo ?? '',
+  }
+  const urls = await prepareVobizCallAudio(callId, content)
+
+  // Existing ctx ke saath merge karo (overwrite nahi)
+  const existing = await resolveVoiceCtx(callId).catch(() => null)
+  const merged = {
+    ...(existing ?? {
+      callId,
+      outstandingId,
+      merchantId: String(cf.merchantId ?? ''),
+      customerId: String(cf.customerId ?? ''),
+      merchantName: content.merchantName,
+      customerName: content.customerName,
+      amountINR: content.amountINR,
+      daysOverdue: content.daysOverdue,
+      billRef: content.billRef,
+    }),
+    vobizAudio: urls,
+  }
+  await saveVoiceCtx(callId, merged)
+  logger.info('Vobiz audio URLs saved to voice ctx', { callId })
 }
 
 /** Kya diya gaya provider call karne layak configured hai? (Settings UI hint ke liye) */

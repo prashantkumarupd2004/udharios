@@ -85,6 +85,41 @@ export function buildDtmfOpt3Text(c: DtmfCallContent): string {
  * Generate all 4 audio files for a DTMF collection call.
  * Returns the static URLs (same every call, content overwritten).
  */
+export interface VobizCallAudioUrls {
+  greeting: string
+  opt1: string
+  opt2: string
+  opt3: string
+}
+
+/**
+ * Vobiz ke liye per-call unique Sarvam Hindi audio generate karo.
+ * <Play> se instant bajega — Vobiz ke slow/kharab <Speak> TTS ki jagah.
+ * Files: vobiz-{callId}-greeting.wav etc. (concurrent calls safe).
+ */
+export async function prepareVobizCallAudio(
+  callId: string,
+  c: DtmfCallContent
+): Promise<VobizCallAudioUrls> {
+  const { synthesizeAgentResponse } = await import('@/lib/voice-agent')
+  const safeId = callId.replace(/[^a-zA-Z0-9-]/g, '').slice(0, 32) || 'x'
+  const [greeting, opt1, opt2, opt3] = await Promise.all([
+    synthesizeAgentResponse(buildDtmfGreetingText(c)),
+    synthesizeAgentResponse(buildDtmfOpt1Text(c)),
+    synthesizeAgentResponse(buildDtmfOpt2Text(c)),
+    synthesizeAgentResponse(buildDtmfOpt3Text(c)),
+  ])
+  const [uGreeting, uOpt1, uOpt2, uOpt3] = await Promise.all([
+    uploadDynamic(`vobiz-${safeId}-greeting.wav`, greeting),
+    uploadDynamic(`vobiz-${safeId}-opt1.wav`, opt1),
+    uploadDynamic(`vobiz-${safeId}-opt2.wav`, opt2),
+    uploadDynamic(`vobiz-${safeId}-opt3.wav`, opt3),
+  ])
+  const urls = { greeting: uGreeting, opt1: uOpt1, opt2: uOpt2, opt3: uOpt3 }
+  logger.info('Vobiz call audio prepared', { callId: safeId })
+  return urls
+}
+
 export async function prepareDtmfCallAudio(c: DtmfCallContent): Promise<Record<string, string>> {
   const [greeting, opt1, opt2, opt3] = await Promise.all([
     synthesizeAgentResponse(buildDtmfGreetingText(c)),
