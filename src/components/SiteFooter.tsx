@@ -31,7 +31,7 @@ export default function SiteFooter() {
           <div>
             <div className="flex items-center gap-2.5 mb-4">
               <img
-                src="/ugaahi-icon.png"
+                src="/logo-premium.png"
                 alt="Ugaahi logo"
                 className="w-9 h-9 rounded-xl shadow-lg object-cover"
               />

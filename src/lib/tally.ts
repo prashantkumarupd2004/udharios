@@ -465,7 +465,7 @@ export async function syncBillsFromTallyBulk(
       where: { merchantId, name: { in: partyNames } },
       select: { id: true, name: true },
     })
-    const customerByName = new Map<string, string>(existingCustomers.map(c => [c.name.toLowerCase(), c.id] as [string, string]))
+    const customerByName = new Map<string, string>(existingCustomers.map((c: any) => [c.name.toLowerCase(), c.id] as [string, string]))
     result.customersMatched = existingCustomers.length
 
     // Missing customers banao
@@ -496,7 +496,7 @@ export async function syncBillsFromTallyBulk(
       where: { merchantId, billRef: { in: billRefs } },
       select: { id: true, billRef: true },
     })
-    const billIdByRef = new Map<string, string>(existingBills.map(b => [b.billRef, b.id] as [string, string]))
+    const billIdByRef = new Map<string, string>(existingBills.map((b: any) => [b.billRef, b.id] as [string, string]))
 
     const billsToCreate: any[] = []
     const billsToUpdate: { id: string; data: any }[] = []
@@ -542,7 +542,7 @@ export async function syncBillsFromTallyBulk(
     for (let i = 0; i < billsToUpdate.length; i += 50) {
       const batch = billsToUpdate.slice(i, i + 50)
       await Promise.all(batch.map(({ id, data }) =>
-        prisma.bill.update({ where: { id }, data }).catch(e => errors.push(`Bill update ${id}: ${e.message}`))
+        prisma.bill.update({ where: { id }, data }).catch((e: any) => errors.push(`Bill update ${id}: ${e.message}`))
       ))
       result.billsUpserted += batch.length
     }
@@ -553,13 +553,13 @@ export async function syncBillsFromTallyBulk(
       where: { merchantId, billRef: { in: billRefs } },
       select: { id: true, billRef: true, customerId: true, pendingAmount: true, dueDate: true, partyName: true },
     })
-    const billByRef = new Map(allBills.map(b => [b.billRef, b]))
+    const billByRef = new Map(allBills.map((b: any) => [b.billRef, b]))
 
     const existingOs = await prisma.outstanding.findMany({
       where: { merchantId, invoiceNo: { in: billRefs } },
       select: { id: true, invoiceNo: true },
     })
-    const osIdByRef = new Map<string, string>(existingOs.map(o => [o.invoiceNo, o.id] as [string, string]))
+    const osIdByRef = new Map<string, string>(existingOs.map((o: any) => [o.invoiceNo, o.id] as [string, string]))
 
     const osToCreate: any[] = []
     const osToUpdate: { id: string; data: any }[] = []
@@ -601,7 +601,7 @@ export async function syncBillsFromTallyBulk(
     for (let i = 0; i < osToUpdate.length; i += 50) {
       const batch = osToUpdate.slice(i, i + 50)
       await Promise.all(batch.map(({ id, data }) =>
-        prisma.outstanding.update({ where: { id }, data }).catch(e => errors.push(`OS update ${id}: ${e.message}`))
+        prisma.outstanding.update({ where: { id }, data }).catch((e: any) => errors.push(`OS update ${id}: ${e.message}`))
       ))
       result.outstandingsUpserted += batch.length
     }

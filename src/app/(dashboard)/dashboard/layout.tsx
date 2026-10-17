@@ -30,7 +30,7 @@ function BrandMark({ light = false }: { light?: boolean }) {
   return (
     <div className="flex items-center gap-2.5">
       <img
-        src="/ugaahi-icon.png"
+        src="/logo-premium.png"
         alt="Ugaahi logo"
         className="w-9 h-9 rounded-xl shadow-lg shadow-green-900/30 object-cover ring-1 ring-white/10"
       />

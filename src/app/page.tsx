@@ -106,7 +106,7 @@ function Logo({ size = 'md' }: { size?: 'md' | 'lg' }) {
   return (
     <div className="flex items-center gap-2.5">
       <img
-        src="/ugaahi-icon.png"
+        src="/logo-premium.png"
         alt="Ugaahi logo"
         className={`${box} rounded-xl shadow-lg shadow-green-500/20 object-cover`}
       />

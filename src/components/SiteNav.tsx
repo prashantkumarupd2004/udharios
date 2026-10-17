@@ -9,7 +9,7 @@ export function Logo() {
   return (
     <div className="flex items-center gap-2.5">
       <img
-        src="/ugaahi-icon.png"
+        src="/logo-premium.png"
         alt="Ugaahi logo"
         className="w-9 h-9 rounded-xl shadow-lg shadow-green-500/20 object-cover"
       />

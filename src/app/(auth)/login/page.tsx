@@ -120,7 +120,7 @@ export default function LoginPage() {
       <div className="relative w-full max-w-md">
         <div className="text-center mb-8">
           <img
-            src="/ugaahi-icon.png"
+            src="/logo-premium.png"
             alt="Ugaahi logo"
             className="w-16 h-16 mx-auto rounded-2xl shadow-xl shadow-green-500/30 mb-4 object-cover"
           />
