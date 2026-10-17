@@ -424,20 +424,23 @@ export default function IntegrationsPage() {
 
           <div className="mt-3">
             <label className="text-xs text-slate-500 block mb-1">
-              {hi ? 'Ledger XML ho to customer chunein:' : 'If ledger XML, select customer:'}
+              {hi ? 'Ledger XML ho to customer ka naam:' : 'If ledger XML, customer name:'}
             </label>
-            <select
+            <input
+              type="text"
+              list="ledger-customer-list"
               value={ledgerCustomerName}
               onChange={(e) => setLedgerCustomerName(e.target.value)}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white"
-            >
-              <option value="">{hi ? '-- Customer chunein (optional) --' : '-- Select customer (optional) --'}</option>
+              placeholder={hi ? 'Customer ka naam likho ya chuno' : 'Type or select customer name'}
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+            />
+            <datalist id="ledger-customer-list">
               {customerList.map((c) => (
-                <option key={c.id} value={c.name}>{c.name}</option>
+                <option key={c.id} value={c.name} />
               ))}
-            </select>
+            </datalist>
             <p className="text-[11px] text-slate-400 mt-1">
-              {hi ? 'Tally ke ledger XML me customer ka naam nahi hota — isliye yahan select karna padta hai' : "Tally's ledger XML doesn't include customer name — that's why you select it here"}
+              {hi ? 'Tally ke ledger XML me customer ka naam nahi hota — isliye yahan likhna padta hai' : "Tally's ledger XML doesn't include customer name — that's why you enter it here"}
             </p>
           </div>
 
