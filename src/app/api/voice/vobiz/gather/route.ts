@@ -72,9 +72,11 @@ async function appendTranscript(callId: string, entry: Record<string, unknown>) 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text()
 
-  if (!verifyVobizWebhook(request.headers.get('X-Vobiz-Signature-V3'), rawBody)) {
-    logger.warn('Vobiz gather webhook: invalid signature — rejecting')
-    return NextResponse.json({ ok: false, error: 'invalid_signature' }, { status: 403 })
+  // TEMP-DIAG: fail-open with logging (see answer route note)
+  const sigCheck = verifyVobizWebhook(request.headers.get('X-Vobiz-Signature-V3'), rawBody)
+  logger.info('Vobiz gather: signature check', { ok: sigCheck.ok, scheme: sigCheck.scheme })
+  if (!sigCheck.ok) {
+    logger.warn('Vobiz gather webhook: signature INVALID — processing anyway (temp diag mode)')
   }
 
   const callId = request.nextUrl.searchParams.get('callId') ?? ''

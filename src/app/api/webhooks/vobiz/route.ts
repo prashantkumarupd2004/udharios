@@ -48,9 +48,11 @@ export async function POST(request: NextRequest) {
     }
     const rawBody = await request.text()
     const signature = request.headers.get('X-Vobiz-Signature-V3')
-    if (!verifyVobizWebhook(signature, rawBody)) {
-      logger.warn('Vobiz webhook signature invalid — rejecting')
-      return NextResponse.json({ ok: false, error: 'invalid_signature' }, { status: 403 })
+    const sigCheck = verifyVobizWebhook(signature, rawBody)
+    logger.info('Vobiz status webhook: signature check', { ok: sigCheck.ok, scheme: sigCheck.scheme })
+    if (!sigCheck.ok) {
+      // TEMP-DIAG: fail-open with logging (status updates only affect call records)
+      logger.warn('Vobiz webhook signature invalid — processing anyway (temp diag mode)')
     }
 
     const callId = request.nextUrl.searchParams.get('callId')

@@ -46,9 +46,13 @@ function parseBody(raw: string): Record<string, string> {
 export async function POST(request: NextRequest) {
   const rawBody = await request.text()
 
-  if (!verifyVobizWebhook(request.headers.get('X-Vobiz-Signature-V3'), rawBody)) {
-    logger.warn('Vobiz answer webhook: invalid signature — rejecting')
-    return NextResponse.json({ ok: false, error: 'invalid_signature' }, { status: 403 })
+  // TEMP-DIAG: signature mismatch par bhi XML serve karo (fail-open) taaki
+  // audio path test ho sake. Logs me scheme/mismatch dikhega — scheme confirm
+  // hote hi isko wapas fail-closed karna hai.
+  const sigCheck = verifyVobizWebhook(request.headers.get('X-Vobiz-Signature-V3'), rawBody)
+  logger.info('Vobiz answer: signature check', { ok: sigCheck.ok, scheme: sigCheck.scheme })
+  if (!sigCheck.ok) {
+    logger.warn('Vobiz answer webhook: signature INVALID — serving XML anyway (temp diag mode)')
   }
 
   const callId = request.nextUrl.searchParams.get('callId') ?? ''

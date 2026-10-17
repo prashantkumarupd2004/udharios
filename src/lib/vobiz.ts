@@ -101,7 +101,7 @@ export async function placeCall(input: PlaceCallInput): Promise<VobizCallRespons
     throw new Error('Vobiz API response me request_uuid nahi mila')
   }
 
-  logger.info('Vobiz call placed', { callId, to })
+  logger.info('Vobiz call placed', { callId, to, answerUrl })
   return { callId, raw: data }
 }
 
@@ -117,24 +117,46 @@ export function normalizePhoneForVobiz(phone: string): string {
 }
 
 /**
- * Verify a Vobiz webhook signature (fail closed).
+ * Verify a Vobiz webhook signature.
  *
  * Header: X-Vobiz-Signature-V3.
  * ASSUMPTION (Vobiz ka exact signing scheme publicly documented nahi mila):
- * HMAC-SHA256 of the RAW request body, keyed with VOBIZ_AUTH_TOKEN,
- * hex-encoded. Agar Vobiz ka actual scheme alag nikle to ye function
- * update karna hoga — mismatch pe 403 aayega aur logs me dikhega.
+ * Hum multiple common schemes try karte hain — jo match kare wo accept.
+ * Har attempt log hota hai taaki actual scheme diagnose ho sake.
+ *
+ * Returns: { ok, scheme } — scheme batata hai kaunsa match hua (ya 'none').
  */
-export function verifyVobizWebhook(signature: string | null, rawBody: string): boolean {
+export function verifyVobizWebhook(signature: string | null, rawBody: string): { ok: boolean; scheme: string } {
   const secret = process.env.VOBIZ_AUTH_TOKEN
-  if (!secret || !signature) return false
-
-  const expected = createHmac('sha256', secret).update(rawBody, 'utf8').digest('hex')
-  try {
-    const a = Buffer.from(expected, 'utf8')
-    const b = Buffer.from(signature.trim(), 'utf8')
-    return a.length === b.length && timingSafeEqual(a, b)
-  } catch {
-    return false
+  const sig = (signature ?? '').trim()
+  if (!secret || !sig) {
+    logger.warn('Vobiz webhook: signature header missing', { hasSecret: !!secret, bodyLen: rawBody.length })
+    return { ok: false, scheme: 'missing' }
   }
+
+  const schemes: Array<{ name: string; expected: string }> = [
+    { name: 'hmac-sha256-hex', expected: createHmac('sha256', secret).update(rawBody, 'utf8').digest('hex') },
+    { name: 'hmac-sha256-b64', expected: createHmac('sha256', secret).update(rawBody, 'utf8').digest('base64') },
+    { name: 'hmac-sha1-hex', expected: createHmac('sha1', secret).update(rawBody, 'utf8').digest('hex') },
+  ]
+  for (const s of schemes) {
+    try {
+      const a = Buffer.from(s.expected, 'utf8')
+      const b = Buffer.from(sig, 'utf8')
+      if (a.length === b.length && timingSafeEqual(a, b)) {
+        return { ok: true, scheme: s.name }
+      }
+    } catch { /* continue */ }
+  }
+  logger.warn('Vobiz webhook: signature mismatch (all schemes)', {
+    receivedPrefix: sig.slice(0, 12),
+    bodyLen: rawBody.length,
+    bodyPrefix: rawBody.slice(0, 80),
+  })
+  return { ok: false, scheme: 'none' }
+}
+
+/** Legacy boolean wrapper — strict check. */
+export function isVobizWebhookValid(signature: string | null, rawBody: string): boolean {
+  return verifyVobizWebhook(signature, rawBody).ok
 }
