@@ -79,6 +79,17 @@ export function buildDtmfOpt3Text(c: DtmfCallContent): string {
   )
 }
 
+/** Promise reminder call ka greeting — "aapne vaada kiya tha" */
+export function buildPromiseReminderText(c: DtmfCallContent): string {
+  return (
+    `Namaste ${c.customerName}! Main ${c.merchantName} ki taraf se bol rahi hoon. ` +
+    `Aapne vaada kiya tha ki aap ${c.amountINR} ka payment karenge. ` +
+    `Kripya aaj payment kar dein. ` +
+    `Agar aapne payment kar diya hai, to 1 dabayein. ` +
+    `Agar aap aaj payment karenge, to 2 dabayein.`
+  )
+}
+
 export interface VobizCallAudioUrls {
   greeting: string
   opt1: string
@@ -88,12 +99,15 @@ export interface VobizCallAudioUrls {
 
 export async function prepareVobizCallAudio(
   callId: string,
-  c: DtmfCallContent
+  c: DtmfCallContent,
+  isPromiseReminder = false
 ): Promise<VobizCallAudioUrls> {
   const { synthesizeAgentResponse } = await import('@/lib/voice-agent')
   const safeId = callId.replace(/[^a-zA-Z0-9-]/g, '').slice(0, 32) || 'x'
+  // Promise reminder ho to alag greeting (vaada yaad dilao)
+  const greetingText = isPromiseReminder ? buildPromiseReminderText(c) : buildDtmfGreetingText(c)
   const [greeting, opt1, opt2, opt3] = await Promise.all([
-    synthesizeAgentResponse(buildDtmfGreetingText(c)),
+    synthesizeAgentResponse(greetingText),
     synthesizeAgentResponse(buildDtmfOpt1Text(c)),
     synthesizeAgentResponse(buildDtmfOpt2Text(c)),
     synthesizeAgentResponse(buildDtmfOpt3Text(c)),

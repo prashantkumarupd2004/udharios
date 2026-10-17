@@ -52,10 +52,13 @@ export async function placeCall(input: VobizPlaceCallInput): Promise<VobizCallRe
   // callRecordId nikalo (answer_url me embed karne ke liye)
   let callRecordId = ''
   const cf = (input.customField ?? '').trim()
+  let isPromiseReminder = false
   if (cf) {
     if (cf.startsWith('{')) {
       try {
-        callRecordId = JSON.parse(cf).callId ?? ''
+        const parsed = JSON.parse(cf)
+        callRecordId = parsed.callId ?? ''
+        isPromiseReminder = Boolean(parsed.promiseReminder)
       } catch {
         /* ignore */
       }
@@ -72,7 +75,8 @@ export async function placeCall(input: VobizPlaceCallInput): Promise<VobizCallRe
       `&a2=${encodeURIComponent(input.vobizAudioUrls.opt2)}` +
       `&a3=${encodeURIComponent(input.vobizAudioUrls.opt3)}`
     : ''
-  const answerUrl = `${APP_URL}/api/voice/vobiz/answer${q}${audioQ}`
+  const prQ = isPromiseReminder ? '&pr=1' : ''
+  const answerUrl = `${APP_URL}/api/voice/vobiz/answer${q}${audioQ}${prQ}`
   // callbackUrl (status webhook) caller de to wahi, warna hamara vobiz webhook
   const hangupUrl = input.callbackUrl || `${APP_URL}/api/webhooks/vobiz${q}`
 

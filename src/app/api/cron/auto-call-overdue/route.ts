@@ -36,6 +36,99 @@ export async function GET(request: NextRequest) {
   graceDate.setDate(graceDate.getDate() - MIN_OVERDUE_DAYS)
 
   try {
+    // === PROMISE FOLLOW-UP ===
+    // 1. Expired promises (promisedDate < aaj, abhi bhi open): broken mark karo,
+    //    outstanding wapas 'overdue' → normal calls resume honge
+    const expiredPromises = await prisma.promise.findMany({
+      where: {
+        promisedDate: { lt: today },
+        status: 'open',
+        outstanding: { status: 'promised' },
+      },
+      select: { id: true, outstandingId: true },
+    })
+    for (const p of expiredPromises) {
+      await Promise.all([
+        prisma.promise.update({ where: { id: p.id }, data: { status: 'broken' } }),
+        prisma.outstanding.update({ where: { id: p.outstandingId }, data: { status: 'overdue' } }),
+      ]).catch((err) => logger.error('Promise expiry failed', { promiseId: p.id, error: String(err) }))
+    }
+    if (expiredPromises.length > 0) {
+      logger.info('Expired promises → overdue', { count: expiredPromises.length })
+    }
+
+    // 2. Due promises (promisedDate = aaj): reminder call lagao
+    //    (yeh alag se handle hoga — neeche duePromises section me)
+    const duePromises = await prisma.outstanding.findMany({
+      where: {
+        status: 'promised',
+        remindersPaused: false,
+        promises: { some: { promisedDate: today, status: 'open' } },
+        merchant: { isKillSwitched: false, isApproved: true },
+        customer: {
+          optedOut: false,
+          consent: true,
+          phone: { not: { startsWith: 'tally-' } },
+        },
+      },
+      include: {
+        merchant: {
+          select: { id: true, businessName: true, quietStart: true, quietEnd: true },
+        },
+        customer: {
+          select: { id: true, name: true, phone: true },
+        },
+      },
+      take: 20, // promise reminders ka alag budget
+    })
+
+    let promiseCalled = 0
+    for (const o of duePromises) {
+      // Double-dial guard
+      const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+      const alreadyCalled = await prisma.call.findFirst({
+        where: { outstandingId: o.id, createdAt: { gte: dayAgo } },
+      })
+      if (alreadyCalled) continue
+      if (!isWithinSendingWindow(o.merchant.quietStart, o.merchant.quietEnd)) continue
+      if (!/^\+91\d{10}$/.test(o.customer.phone)) continue
+
+      try {
+        const callRecord = await prisma.call.create({
+          data: {
+            merchantId: o.merchantId,
+            outstandingId: o.id,
+            customerId: o.customerId,
+            exotelSid: `promise-${Date.now()}-${o.id.slice(0, 8)}`,
+            status: 'initiated',
+          },
+        })
+
+        // Vobiz ya Exotel — merchant ke voice provider se
+        const { placeVoiceCall } = await import('@/lib/voice-provider')
+        await placeVoiceCall(o.merchantId, {
+          to: o.customer.phone,
+          callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/exotel?callId=${callRecord.id}`,
+          record: true,
+          customField: JSON.stringify({
+            callId: callRecord.id,
+            outstandingId: o.id,
+            merchantId: o.merchantId,
+            customerId: o.customerId,
+            merchantName: o.merchant.businessName,
+            customerName: o.customer.name,
+            amountINR: o.amount.toString(),
+            promiseReminder: true, // <-- promise reminder flag
+            autoCall: true,
+          }),
+        })
+        promiseCalled++
+        logger.info('Promise reminder call placed', { outstandingId: o.id, customer: o.customer.name })
+      } catch (err) {
+        logger.error('Promise reminder call failed', { outstandingId: o.id, error: String(err) })
+      }
+    }
+
     // Overdue outstandings nikalo
     const overdues = await prisma.outstanding.findMany({
       where: {
@@ -160,6 +253,8 @@ export async function GET(request: NextRequest) {
       checked: overdues.length,
       called,
       skipped,
+      expiredPromises: expiredPromises.length,
+      promiseReminders: promiseCalled,
       details,
     })
   } catch (err) {

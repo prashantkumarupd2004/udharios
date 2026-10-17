@@ -13,7 +13,7 @@ import { prisma } from '@/lib/prisma'
 import { formatINR, overdueDays } from '@/lib/date-utils'
 import { logger } from '@/lib/logger'
 import { verifyVobizWebhook } from '@/lib/vobiz'
-import { buildDtmfGreetingText, type DtmfCallContent } from '@/lib/voice-dtmf'
+import { buildDtmfGreetingText, buildPromiseReminderText, type DtmfCallContent } from '@/lib/voice-dtmf'
 import { resolveVoiceCtx } from '@/lib/voice-ctx'
 
 export const dynamic = 'force-dynamic'
@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
 
   const sp = request.nextUrl.searchParams
   const callId = sp.get('callId') ?? ''
+  const isPromiseReminder = sp.get('pr') === '1'
   const params = parseBody(rawBody)
   const callUuid = params.CallUUID ?? params.call_uuid ?? params.request_uuid ?? ''
   logger.info('Vobiz answer webhook', { callId, callUuid, from: params.From })
@@ -75,6 +76,7 @@ export async function POST(request: NextRequest) {
 
   const gatherActionRaw =
     `${APP_URL}/api/voice/vobiz/gather?callId=${encodeURIComponent(callId)}` +
+    (isPromiseReminder ? '&pr=1' : '') +
     (qpAudio?.greeting
       ? `&ag=${encodeURIComponent(qpAudio.greeting)}&a1=${encodeURIComponent(qpAudio.opt1)}` +
         `&a2=${encodeURIComponent(qpAudio.opt2)}&a3=${encodeURIComponent(qpAudio.opt3)}`
@@ -138,7 +140,9 @@ export async function POST(request: NextRequest) {
     daysOverdue: overdueDays(o.dueDate),
     billRef: o.invoiceNo ?? '',
   }
-  const greeting = xmlEscape(buildDtmfGreetingText(content))
+  const greeting = xmlEscape(
+    isPromiseReminder ? buildPromiseReminderText(content) : buildDtmfGreetingText(content)
+  )
 
   logger.info('Vobiz answer: serving DTMF gather (speak fallback)', { callId })
   return voiceXml(

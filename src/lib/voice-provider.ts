@@ -97,7 +97,8 @@ async function prepareVobizAudio(input: PlaceCallInput): Promise<VobizCallAudioU
     daysOverdue: overdueDays(outstanding.dueDate),
     billRef: outstanding.invoiceNo ?? '',
   }
-  const urls = await prepareVobizCallAudio(callId, content)
+  const isPromiseReminder = Boolean(cf.promiseReminder)
+  const urls = await prepareVobizCallAudio(callId, content, isPromiseReminder)
 
   // Existing ctx ke saath merge karo (overwrite nahi)
   const existing = await resolveVoiceCtx(callId).catch(() => null)

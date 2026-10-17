@@ -91,6 +91,7 @@ export async function POST(request: NextRequest) {
 
   // Audio URLs query params me (tez) — DB se nahi nikalne padte
   const sp2 = request.nextUrl.searchParams
+  const isPromiseReminder = sp2.get('pr') === '1'
   const qpAudio = sp2.get('ag')
     ? { greeting: sp2.get('ag')!, opt1: sp2.get('a1') ?? '', opt2: sp2.get('a2') ?? '', opt3: sp2.get('a3') ?? '' }
     : null
@@ -168,6 +169,37 @@ export async function POST(request: NextRequest) {
       }).catch((err) => logger.error('Vobiz gather: outcome update failed', { error: String(err) })),
     ])
     logger.info('Vobiz gather: promise saved', { callId, digitLabel, promisedDate: promisedDate.toISOString().slice(0, 10) })
+  }
+
+  // --- PROMISE REMINDER digits: 1=paid, 2=aaj kar dunga ---
+  if (isPromiseReminder) {
+    if (digits === '1') {
+      // "Payment kar diya" — open promise ko kept mark karo
+      await prisma.promise.updateMany({
+        where: { outstandingId: o.id, status: 'open' },
+        data: { status: 'kept' },
+      }).catch(() => {})
+      appendTranscript(callId, {
+        customerSpeech: '[DTMF 1 — payment kar diya (promise reminder)]',
+        agentResponse: 'Dhanyavaad! Payment ki pushti ho jayegi.',
+        outcome: 'promised_kept',
+      }).catch(() => {})
+      return voiceXml(`  <Speak>${xmlEscape('Dhanyavaad! Payment milne par update ho jayega.')}</Speak>\n  <Hangup/>`)
+    }
+    if (digits === '2') {
+      // "Aaj kar dunga" — promise aaj tak extend karo
+      await savePromise(0, 'promise-reminder-aaj').catch((err) =>
+        logger.error('Vobiz gather: promise extend failed', { callId, error: String(err) })
+      )
+      appendTranscript(callId, {
+        customerSpeech: '[DTMF 2 — aaj kar dunga (promise reminder)]',
+        agentResponse: buildDtmfOpt1Text(content),
+        outcome: 'promised',
+      }).catch(() => {})
+      return voiceXml(`  ${speakOrPlay('opt1', buildDtmfOpt1Text(content))}\n  <Hangup/>`)
+    }
+    // Galat digit — hangup
+    return voiceXml(`  <Hangup/>`)
   }
 
   // --- Digit 1: "aaj kar dunga" — promise TODAY, dhanyavaad, hangup ---
