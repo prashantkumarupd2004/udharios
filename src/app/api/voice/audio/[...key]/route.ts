@@ -18,13 +18,27 @@ export async function GET(
   const { key } = await params
   const filename = key.join('/')
 
-  // Strict validation: only flat WAV filenames from the voice-audio bucket
-  if (!/^[a-zA-Z0-9_-]+\.wav$/.test(filename)) {
+  // Strict validation: flat WAV filenames, optionally under dynamic/ prefix.
+  // (dynamic/ zaroori hai — Vobiz/Exotel ke pre-generated Sarvam audios yahin hote hain)
+  if (!/^(dynamic\/)?[a-zA-Z0-9_-]+\.wav$/.test(filename)) {
     return NextResponse.json({ error: 'Invalid audio key' }, { status: 400 })
   }
 
   const upstream = `${SUPABASE_URL}/storage/v1/object/public/voice-audio/${filename}`
-  const res = await fetch(upstream, { signal: AbortSignal.timeout(15000) })
+  let res = await fetch(upstream, { signal: AbortSignal.timeout(15000) })
+
+  // Bucket public na ho to service-role key se retry karo
+  if (!res.ok) {
+    const svcKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (svcKey) {
+      const authed = upstream.replace('/object/public/', '/object/')
+      res = await fetch(authed, {
+        signal: AbortSignal.timeout(15000),
+        headers: { apikey: svcKey, Authorization: `Bearer ${svcKey}` },
+      })
+    }
+  }
+
   if (!res.ok || !res.body) {
     return NextResponse.json({ error: 'Audio not found' }, { status: 404 })
   }
