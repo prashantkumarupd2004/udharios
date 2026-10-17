@@ -115,15 +115,20 @@ export async function POST(request: NextRequest) {
     daysOverdue: overdueDays(o.dueDate),
     billRef: o.invoiceNo ?? '',
   }
-  const gatherAction = (retry: boolean) =>
-    `${APP_URL}/api/voice/vobiz/gather?callId=${encodeURIComponent(callId)}${retry ? '&retried=1' : ''}`
-
   // Pre-generated Sarvam audio (<Play>) — query params me aata hai (tez, DB nahi).
   // Fallback: voice ctx se.
   const sp2 = request.nextUrl.searchParams
   const vobizAudio = sp2.get('ag')
     ? { greeting: sp2.get('ag')!, opt1: sp2.get('a1') ?? '', opt2: sp2.get('a2') ?? '', opt3: sp2.get('a3') ?? '' }
     : (await resolveVoiceCtx(callId).catch(() => null))?.vobizAudio
+  const gatherActionRaw = (retry: boolean) =>
+    `${APP_URL}/api/voice/vobiz/gather?callId=${encodeURIComponent(callId)}${retry ? '&retried=1' : ''}` +
+    (vobizAudio?.greeting
+      ? `&ag=${encodeURIComponent(vobizAudio.greeting)}&a1=${encodeURIComponent(vobizAudio.opt1)}` +
+        `&a2=${encodeURIComponent(vobizAudio.opt2)}&a3=${encodeURIComponent(vobizAudio.opt3)}`
+      : '')
+  // XML attribute me & → &amp; zaroori (warna Vobiz parser fail → call cut)
+  const gatherAction = (retry: boolean) => xmlEscape(gatherActionRaw(retry))
   const speakOrPlay = (key: 'opt1' | 'opt2' | 'opt3', text: string) =>
     vobizAudio?.[key]
       ? `<Play>${xmlEscape(vobizAudio[key])}</Play>`

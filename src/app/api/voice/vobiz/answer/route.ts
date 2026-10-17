@@ -73,12 +73,14 @@ export async function POST(request: NextRequest) {
     ? { greeting: sp.get('ag')!, opt1: sp.get('a1') ?? '', opt2: sp.get('a2') ?? '', opt3: sp.get('a3') ?? '' }
     : (await resolveVoiceCtx(callId).catch(() => null))?.vobizAudio
 
-  const gatherAction =
+  const gatherActionRaw =
     `${APP_URL}/api/voice/vobiz/gather?callId=${encodeURIComponent(callId)}` +
     (qpAudio?.greeting
       ? `&ag=${encodeURIComponent(qpAudio.greeting)}&a1=${encodeURIComponent(qpAudio.opt1)}` +
         `&a2=${encodeURIComponent(qpAudio.opt2)}&a3=${encodeURIComponent(qpAudio.opt3)}`
       : '')
+  // XML attribute me & ko &amp; karna ZAROORI hai — warna Vobiz ka XML parser fail → call cut!
+  const gatherAction = xmlEscape(gatherActionRaw)
 
   const repeatPrompt = xmlEscape(
     'Maaf kijiye, koi vikalp nahi chuna gaya. Kripya 1, 2 ya 3 dabayein.'
