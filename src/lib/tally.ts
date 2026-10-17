@@ -498,7 +498,7 @@ export async function syncBillsFromTallyBulk(
     })
     const billIdByRef = new Map<string, string>(existingBills.map(b => [b.billRef, b.id] as [string, string]))
 
-    const billsToCreate: Parameters<typeof prisma.bill.createMany>[0]['data'] = []
+    const billsToCreate: any[] = []
     const billsToUpdate: { id: string; data: any }[] = []
 
     for (const b of uniqueBills) {
@@ -561,7 +561,7 @@ export async function syncBillsFromTallyBulk(
     })
     const osIdByRef = new Map<string, string>(existingOs.map(o => [o.invoiceNo, o.id] as [string, string]))
 
-    const osToCreate: Parameters<typeof prisma.outstanding.createMany>[0]['data'] = []
+    const osToCreate: any[] = []
     const osToUpdate: { id: string; data: any }[] = []
 
     for (const b of uniqueBills) {
