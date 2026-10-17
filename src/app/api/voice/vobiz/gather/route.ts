@@ -18,7 +18,6 @@ import {
   buildDtmfOpt1Text,
   buildDtmfOpt2Text,
   buildDtmfOpt3Text,
-  buildDtmfOpt4Text,
   type DtmfCallContent,
 } from '@/lib/voice-dtmf'
 import { createDispute, createPromise } from '@/lib/voice-agent'
@@ -121,7 +120,7 @@ export async function POST(request: NextRequest) {
 
   // Pre-generated Sarvam audio (<Play>) — <Speak> TTS slow + kharab tha.
   const vobizAudio = (await resolveVoiceCtx(callId).catch(() => null))?.vobizAudio
-  const speakOrPlay = (key: 'opt1' | 'opt2' | 'opt3' | 'opt4', text: string) =>
+  const speakOrPlay = (key: 'opt1' | 'opt2' | 'opt3', text: string) =>
     vobizAudio?.[key]
       ? `<Play>${xmlEscape(vobizAudio[key])}</Play>`
       : `<Speak>${xmlEscape(text)}</Speak>`
@@ -222,23 +221,12 @@ export async function POST(request: NextRequest) {
     })
     return voiceXml(`  ${speakOrPlay('opt3', buildDtmfOpt3Text(content))}\n  <Hangup/>`)
   }
-
-  // --- Digit 4: baad me baat karenge ---
-  if (digits === '4') {
-    await appendTranscript(callId, {
-      customerSpeech: '[DTMF 4]',
-      agentResponse: buildDtmfOpt4Text(content),
-      outcome: 'callback_later',
-    })
-    return voiceXml(`  ${speakOrPlay('opt4', buildDtmfOpt4Text(content))}\n  <Hangup/>`)
-  }
-
   // --- Galat / koi digit nahi: ek baar dobara puchho, phir hangup ---
   if (!retried) {
     const greeting = xmlEscape(buildDtmfGreetingText(content))
     return voiceXml(
       `  <Gather numDigits="1" timeout="10" action="${gatherAction(true)}" method="POST">\n` +
-      `    <Speak>${xmlEscape('Maaf kijiye, samajh nahi aaya. Kripya 1, 2, 3 ya 4 dabayein.')}</Speak>\n` +
+      `    <Speak>${xmlEscape('Maaf kijiye, samajh nahi aaya. Kripya 1, 2 ya 3 dabayein.')}</Speak>\n` +
       `  </Gather>\n` +
       `  <Speak>${greeting}</Speak>\n` +
       `  <Hangup/>`

@@ -53,8 +53,7 @@ export function buildDtmfGreetingText(c: DtmfCallContent): string {
     `Kripya dhyaan dein. ` +
     `Agar aap aaj payment karenge, to 1 dabayein. ` +
     `Agar aap kal payment karenge, to 2 dabayein. ` +
-    `Agar bill me koi vivaad hai, to 3 dabayein. ` +
-    `Agar aap baad me baat karna chahte hain, to 4 dabayein.`
+    `Agar bill me koi vivaad hai, to 3 dabayein.`
   )
 }
 
@@ -82,69 +81,51 @@ export function buildDtmfOpt3Text(c: DtmfCallContent): string {
   )
 }
 
-export function buildDtmfOpt4Text(c: DtmfCallContent): string {
-  return (
-    `Theek hai ${c.customerName}. Hum aapse baad me sampark karenge. ` +
-    `Kripya dhyaan rahe ki aapka ${c.amountINR} rupaye ka bill ${c.daysOverdue} din se pending hai. ` +
-    `Jald payment karne ki kripya karein. Dhanyavaad, namaste!`
-  )
-}
-
-/**
- * Generate all 4 audio files for a DTMF collection call.
- * Returns the static URLs (same every call, content overwritten).
- */
 export interface VobizCallAudioUrls {
   greeting: string
   opt1: string
   opt2: string
   opt3: string
-  opt4: string
 }
 
-/**
- * Vobiz ke liye per-call unique Sarvam Hindi audio generate karo.
- * <Play> se instant bajega — Vobiz ke slow/kharab <Speak> TTS ki jagah.
- * Files: vobiz-{callId}-greeting.wav etc. (concurrent calls safe).
- */
 export async function prepareVobizCallAudio(
   callId: string,
   c: DtmfCallContent
 ): Promise<VobizCallAudioUrls> {
   const { synthesizeAgentResponse } = await import('@/lib/voice-agent')
   const safeId = callId.replace(/[^a-zA-Z0-9-]/g, '').slice(0, 32) || 'x'
-  const [greeting, opt1, opt2, opt3, opt4] = await Promise.all([
+  const [greeting, opt1, opt2, opt3] = await Promise.all([
     synthesizeAgentResponse(buildDtmfGreetingText(c)),
     synthesizeAgentResponse(buildDtmfOpt1Text(c)),
     synthesizeAgentResponse(buildDtmfOpt2Text(c)),
     synthesizeAgentResponse(buildDtmfOpt3Text(c)),
-    synthesizeAgentResponse(buildDtmfOpt4Text(c)),
+    
   ])
   const names = [
     `vobiz-${safeId}-greeting.wav`,
     `vobiz-${safeId}-opt1.wav`,
     `vobiz-${safeId}-opt2.wav`,
     `vobiz-${safeId}-opt3.wav`,
-    `vobiz-${safeId}-opt4.wav`,
+    
   ]
-  const audios = [greeting, opt1, opt2, opt3, opt4]
+  const audios = [greeting, opt1, opt2, opt3]
   // Upload to Supabase (proxy URL ignore karo — direct public URL use karenge)
   await Promise.all(names.map((n, i) => uploadDynamic(n, audios[i])))
   // DIRECT Supabase public URL — hamare proxy ka Vercel cold start skip hota hai (~2-4s bachat).
   // Bucket public hona chahiye.
   const direct = (n: string) => `${SUPABASE_URL}/storage/v1/object/public/voice-audio/dynamic/${n}`
-  const urls = { greeting: direct(names[0]), opt1: direct(names[1]), opt2: direct(names[2]), opt3: direct(names[3]), opt4: direct(names[4]) }
+  const urls = { greeting: direct(names[0]), opt1: direct(names[1]), opt2: direct(names[2]), opt3: direct(names[3]) }
   logger.info('Vobiz call audio prepared (direct URLs)', { callId: safeId })
   return urls
 }
 
 export async function prepareDtmfCallAudio(c: DtmfCallContent): Promise<Record<string, string>> {
-  const [greeting, opt1, opt2, opt3, opt4] = await Promise.all([
+  const [greeting, opt1, opt2, opt3] = await Promise.all([
     synthesizeAgentResponse(buildDtmfGreetingText(c)),
     synthesizeAgentResponse(buildDtmfOpt1Text(c)),
     synthesizeAgentResponse(buildDtmfOpt2Text(c)),
     synthesizeAgentResponse(buildDtmfOpt3Text(c)),
-    synthesizeAgentResponse(buildDtmfOpt4Text(c)),
+    
   ])
 
   const urls: Record<string, string> = {}
@@ -153,13 +134,11 @@ export async function prepareDtmfCallAudio(c: DtmfCallContent): Promise<Record<s
     uploadDynamic('opt1.wav', opt1),
     uploadDynamic('opt2.wav', opt2),
     uploadDynamic('opt3.wav', opt3),
-    uploadDynamic('opt4.wav', opt4),
   ])
   urls.greeting = uploads[0]
   urls.opt1 = uploads[1]
   urls.opt2 = uploads[2]
   urls.opt3 = uploads[3]
-  urls.opt4 = uploads[4]
 
   logger.info('DTMF call audio prepared', { urls })
   return urls

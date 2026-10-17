@@ -36,7 +36,7 @@ export interface VoiceAgentContext {
   paymentLinkUrl?: string
   billRef?: string
   greetingUrl?: string // Pre-synthesized turn-0 greeting (fast answer path)
-  vobizAudio?: { greeting: string; opt1: string; opt2: string; opt3: string; opt4: string } // Vobiz <Play> URLs (Sarvam Hindi)
+  vobizAudio?: { greeting: string; opt1: string; opt2: string; opt3: string } // Vobiz <Play> URLs (Sarvam Hindi)
 }
 
 export interface VoiceAgentTurn {
