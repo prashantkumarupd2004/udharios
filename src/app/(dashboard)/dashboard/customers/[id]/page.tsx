@@ -420,7 +420,14 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
             <span className="text-xs font-bold bg-slate-900 text-white px-3 py-1 rounded-full">{customer.bills.length}</span>
           </div>
           <div className="bg-white rounded-2xl border border-slate-200/70 divide-y divide-stone-100 shadow-sm overflow-hidden">
-            {customer.bills.map(b => (
+            {customer.bills.map(b => {
+              const total = Number(b.amount)
+              const pending = Number(b.pendingAmount)
+              const paid = Math.max(0, Math.round((total - pending) * 100) / 100)
+              const paidPct = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0
+              const isPaid = pending <= 0
+              const fmt = (n: number) => `₹${n.toLocaleString('en-IN')}`
+              return (
               <div key={b.id} className="flex items-center justify-between px-5 py-4 hover:bg-slate-50/50 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
@@ -431,18 +438,28 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                     <p className="text-slate-400 text-xs mt-0.5">{new Date(b.billDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-extrabold text-slate-900 text-sm">₹{Number(b.amount).toLocaleString('en-IN')}</p>
-                  {Number(b.pendingAmount) > 0 ? (
-                    <p className="text-red-600 text-xs font-bold mt-0.5">₹{Number(b.pendingAmount).toLocaleString('en-IN')} pending</p>
-                  ) : (
+                <div className="text-right shrink-0">
+                  <p className="font-extrabold text-slate-900 text-sm">{fmt(total)}</p>
+                  {isPaid ? (
                     <p className="text-emerald-600 text-xs font-bold flex items-center gap-1 justify-end mt-0.5">
-                      <CheckCircle2 className="w-3 h-3" /> Paid
+                      <CheckCircle2 className="w-3 h-3" /> {lang === 'hi' ? 'Poora paid' : 'Fully paid'}
                     </p>
+                  ) : (
+                    <>
+                      <p className="text-xs mt-0.5">
+                        <span className="text-emerald-600 font-bold">{fmt(paid)} {lang === 'hi' ? 'mil gaya' : 'paid'}</span>
+                        <span className="text-slate-300 mx-1">•</span>
+                        <span className="text-red-600 font-bold">{fmt(pending)} {lang === 'hi' ? 'baki' : 'due'}</span>
+                      </p>
+                      <div className="w-28 h-1 bg-slate-100 rounded-full mt-1.5 ml-auto overflow-hidden" title={`${paidPct}% paid`}>
+                        <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${paidPct}%` }} />
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
-            ))}
+              )
+            })}
           </div>
         </section>
       )}
