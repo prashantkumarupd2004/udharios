@@ -73,6 +73,19 @@ export default function IntegrationsPage() {
 
   // upload
   const [file, setFile] = useState<File | null>(null)
+  const [ledgerCustomerName, setLedgerCustomerName] = useState('')
+  const [customerList, setCustomerList] = useState<{ id: string; name: string }[]>([])
+
+  const loadCustomers = async () => {
+    try {
+      const res = await fetch('/api/customers?limit=200')
+      if (res.ok) {
+        const data = await res.json()
+        setCustomerList((data.customers || []).map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })))
+      }
+    } catch { /* ignore */ }
+  }
+  useEffect(() => { loadCustomers() }, [])
   const [uploading, setUploading] = useState(false)
   const [uploadResult, setUploadResult] = useState<string>('')
   const [uploadError, setUploadError] = useState('')
@@ -140,8 +153,13 @@ export default function IntegrationsPage() {
       const form = new FormData()
       form.append('file', file)
       if (status?.companyName) form.append('companyName', status.companyName)
+      if (ledgerCustomerName.trim()) form.append('ledgerCustomerName', ledgerCustomerName.trim())
       const res = await fetch('/api/integrations/tally/upload', { method: 'POST', body: form })
       const data = await res.json()
+      if (data.error === 'LEDGER_CUSTOMER_REQUIRED') {
+        setUploadError(hi ? 'Ye ledger XML hai — customer ka naam likho (neeche wala box)' : 'This is a ledger XML — enter customer name below')
+        return
+      }
       if (res.ok) {
         const master = data.customersFromMaster
         const masterMsg = master && (master.created + master.matched) > 0
@@ -402,6 +420,25 @@ export default function IntegrationsPage() {
               />
             </label>
             <p className="text-xs text-slate-400 mt-2">XML / CSV • max 10MB</p>
+          </div>
+
+          <div className="mt-3">
+            <label className="text-xs text-slate-500 block mb-1">
+              {hi ? 'Ledger XML ho to customer chunein:' : 'If ledger XML, select customer:'}
+            </label>
+            <select
+              value={ledgerCustomerName}
+              onChange={(e) => setLedgerCustomerName(e.target.value)}
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white"
+            >
+              <option value="">{hi ? '-- Customer chunein (optional) --' : '-- Select customer (optional) --'}</option>
+              {customerList.map((c) => (
+                <option key={c.id} value={c.name}>{c.name}</option>
+              ))}
+            </select>
+            <p className="text-[11px] text-slate-400 mt-1">
+              {hi ? 'Tally ke ledger XML me customer ka naam nahi hota — isliye yahan select karna padta hai' : "Tally's ledger XML doesn't include customer name — that's why you select it here"}
+            </p>
           </div>
 
           <div className="mt-4 bg-blue-50 border border-blue-100 rounded-2xl p-4 text-sm text-blue-900">

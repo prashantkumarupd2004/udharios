@@ -421,3 +421,119 @@ export function parseTallyReceipts(xml: string, tallyCompany?: string): {
 
   return { receipts, warnings }
 }
+
+// ---------------------------------------------------------------------------
+// Tally LEDGER XML (transaction-wise, single customer)
+// Format: <ENVELOPE><DSPVCHDATE>..<DSPVCHLEDACCOUNT>..<DSPVCHTYPE>Sale/Rcpt..
+//         <DSPVCHDRAMT>..<DSPVCHCRAMT>..<DSPEXPLVCHNUMBER>(No. :XXX)..
+// Ye bill-wise nahi hai — har voucher ek transaction hai.
+// Sale = bill, Rcpt = receipt (payment)
+// ---------------------------------------------------------------------------
+
+export interface TallyLedgerEntry {
+  date: string
+  vchType: string       // Sale, Rcpt, etc.
+  vchNumber: string     // SF-0170, 13, etc. (brackets se nikala)
+  debit: number
+  credit: number
+  account: string       // opposite ledger account
+}
+
+/** "(No. :SF-0170)" se "SF-0170" nikalo */
+function extractVchNumber(s: string): string {
+  const m = s.match(/\(No\.\s*:([^)]+)\)/)
+  if (m) return m[1].trim()
+  return s.trim()
+}
+
+export function parseTallyLedgerXml(
+  xml: string,
+  customerName: string,
+  tallyCompany?: string
+): { bills: TallyBillInput[]; receipts: TallyReceiptInput[]; warnings: string[] } {
+  const warnings: string[] = []
+  const parser = new XMLParser({ ignoreAttributes: false, trimValues: true })
+  let parsed: unknown
+  try {
+    parsed = parser.parse(xml)
+  } catch {
+    return { bills: [], receipts: [], warnings: ['XML parse nahi ho paya'] }
+  }
+
+  // DSPVCH entries nikalo — ye flat list me hain, index-wise parallel
+  const getAll = (obj: unknown, tag: string): string[] => {
+    const out: string[] = []
+    const walk = (n: unknown) => {
+      if (Array.isArray(n)) { n.forEach(walk); return }
+      if (n && typeof n === 'object') {
+        for (const [k, v] of Object.entries(n as Record<string, unknown>)) {
+          if (k.toLowerCase() === tag.toLowerCase()) {
+            if (Array.isArray(v)) v.forEach(x => out.push(str(x)))
+            else out.push(str(v))
+          } else walk(v)
+        }
+      }
+    }
+    walk(obj)
+    return out
+  }
+
+  const dates = getAll(parsed, 'dspvchdate')
+  const types = getAll(parsed, 'dspvchtype')
+  const drs = getAll(parsed, 'dspvchdramt')
+  const crs = getAll(parsed, 'dspvchcramt')
+  const nums = getAll(parsed, 'dspexplvchnumber')
+  const accts = getAll(parsed, 'dspvchledaccount')
+
+  const count = dates.length
+  if (count === 0) {
+    return { bills: [], receipts: [], warnings: ['Koi ledger entry nahi mili'] }
+  }
+
+  const bills: TallyBillInput[] = []
+  const receipts: TallyReceiptInput[] = []
+
+  for (let i = 0; i < count; i++) {
+    const vchType = (types[i] || '').toLowerCase()
+    const vchNumber = extractVchNumber(nums[i] || '')
+    const debit = Math.abs(num(drs[i] || ''))
+    const credit = Math.abs(num(crs[i] || ''))
+    const amount = debit || credit
+    if (amount <= 0 || !vchNumber) continue
+
+    const date = normalizeTallyDate(dates[i] || '') || new Date().toISOString().slice(0, 10)
+
+    if (vchType.includes('sale')) {
+      // Sale = bill (customer owes money)
+      bills.push({
+        billRef: vchNumber,
+        partyName: customerName,
+        amount,
+        pendingAmount: amount,
+        billDate: date,
+        dueDate: date,
+        voucherType: 'Sale',
+        tallyCompany,
+      })
+    } else if (vchType.includes('rcpt') || vchType.includes('receipt') || vchType.includes('payment')) {
+      // Receipt/Payment = paisa aaya (outstanding kam hoga)
+      receipts.push({
+        receiptRef: vchNumber,
+        partyName: customerName,
+        amount,
+        receiptDate: date,
+        voucherType: 'Receipt',
+        tallyCompany,
+      })
+    }
+    // Baaki voucher types (Journal, etc.) skip
+  }
+
+  return { bills, receipts, warnings }
+}
+
+/** Kya ye ledger XML hai (bill-wise nahi)? */
+export function isTallyLedgerXml(xml: string): boolean {
+  const lower = xml.toLowerCase()
+  return lower.includes('dspvchdate') && !lower.includes('billfixed')
+}

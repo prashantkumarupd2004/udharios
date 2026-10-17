@@ -9,7 +9,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
 import { syncBillsFromTally, syncCustomersFromTally, applyTallyReceipts } from '@/lib/tally'
-import { parseTallyXml, parseTallyCsv, parseTallyLedgers, parseTallyReceipts } from '@/lib/tally-parse'
+import type { TallyBillInput } from '@/lib/tally'
+import { parseTallyXml, parseTallyCsv, parseTallyLedgers, parseTallyReceipts, parseTallyLedgerXml, isTallyLedgerXml } from '@/lib/tally-parse'
+import type { TallyReceiptInput } from '@/lib/tally-parse'
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
 import { logger } from '@/lib/logger'
 
@@ -41,6 +43,7 @@ export async function POST(request: NextRequest) {
     const form = await request.formData()
     const file = form.get('file') as File | null
     const companyName = (form.get('companyName') as string | null)?.trim() || undefined
+    const ledgerCustomerName = (form.get('ledgerCustomerName') as string | null)?.trim() || undefined
 
     if (!file) {
       return NextResponse.json({ error: 'File chahiye' }, { status: 400 })
@@ -53,9 +56,31 @@ export async function POST(request: NextRequest) {
     const name = file.name.toLowerCase()
     const isCsv = name.endsWith('.csv')
 
-    const { bills, warnings } = isCsv
-      ? parseTallyCsv(text, companyName)
-      : parseTallyXml(text, companyName)
+    // Ledger XML (single customer, transaction-wise) vs Bill-wise XML
+    let bills: TallyBillInput[] = []
+    let warnings: string[] = []
+    let ledgerReceipts: TallyReceiptInput[] = []
+    let isLedger = false
+
+    if (!isCsv && isTallyLedgerXml(text)) {
+      isLedger = true
+      if (!ledgerCustomerName) {
+        return NextResponse.json(
+          { error: 'LEDGER_CUSTOMER_REQUIRED', message: 'Ye ledger XML hai (single customer). Customer ka naam chahiye.' },
+          { status: 400 }
+        )
+      }
+      const parsed = parseTallyLedgerXml(text, ledgerCustomerName, companyName)
+      bills = parsed.bills
+      warnings = parsed.warnings
+      ledgerReceipts = parsed.receipts
+    } else {
+      const parsed = isCsv
+        ? parseTallyCsv(text, companyName)
+        : parseTallyXml(text, companyName)
+      bills = parsed.bills
+      warnings = parsed.warnings
+    }
 
     // Customer master: Tally XML me ledger rows bhi ho sakte hain —
     // jitne Sundry Debtors milenge, sab auto-add honge (bill ho ya na ho)
@@ -81,7 +106,10 @@ export async function POST(request: NextRequest) {
     // Receipts / Credit Notes / Debit Notes — pending amount adjust karo
     // (Tally me payment entry hote hi outstanding auto-update!)
     let receiptsResult = { receiptsApplied: 0, billsPaidOff: 0 }
-    if (!isCsv) {
+    if (isLedger && ledgerReceipts.length > 0) {
+      // Ledger XML ke receipts (payments) — bills ke baad apply karo
+      receiptsResult = await applyTallyReceipts(session.merchantId, ledgerReceipts)
+    } else if (!isCsv) {
       const { receipts } = parseTallyReceipts(text, companyName)
       if (receipts.length > 0) {
         receiptsResult = await applyTallyReceipts(session.merchantId, receipts)
