@@ -48,7 +48,7 @@ export interface DtmfCallContent {
 
 export function buildDtmfGreetingText(c: DtmfCallContent): string {
   return (
-    `Namaste ${c.customerName}! Main ${c.merchantName} ki taraf se Udhari OS se bol rahi hoon. ` +
+    `Namaste ${c.customerName}! Main ${c.merchantName} ki taraf se bol rahi hoon. ` +
     `Aapka bill number ${c.billRef}, ${c.amountINR} rupaye, ${c.daysOverdue} din se pending hai. ` +
     `Kripya dhyaan dein. ` +
     `Agar aap aaj payment karna chahte hain, to 1 dabayein. ` +
@@ -109,14 +109,20 @@ export async function prepareVobizCallAudio(
     synthesizeAgentResponse(buildDtmfOpt2Text(c)),
     synthesizeAgentResponse(buildDtmfOpt3Text(c)),
   ])
-  const [uGreeting, uOpt1, uOpt2, uOpt3] = await Promise.all([
-    uploadDynamic(`vobiz-${safeId}-greeting.wav`, greeting),
-    uploadDynamic(`vobiz-${safeId}-opt1.wav`, opt1),
-    uploadDynamic(`vobiz-${safeId}-opt2.wav`, opt2),
-    uploadDynamic(`vobiz-${safeId}-opt3.wav`, opt3),
-  ])
-  const urls = { greeting: uGreeting, opt1: uOpt1, opt2: uOpt2, opt3: uOpt3 }
-  logger.info('Vobiz call audio prepared', { callId: safeId })
+  const names = [
+    `vobiz-${safeId}-greeting.wav`,
+    `vobiz-${safeId}-opt1.wav`,
+    `vobiz-${safeId}-opt2.wav`,
+    `vobiz-${safeId}-opt3.wav`,
+  ]
+  const audios = [greeting, opt1, opt2, opt3]
+  // Upload to Supabase (proxy URL ignore karo — direct public URL use karenge)
+  await Promise.all(names.map((n, i) => uploadDynamic(n, audios[i])))
+  // DIRECT Supabase public URL — hamare proxy ka Vercel cold start skip hota hai (~2-4s bachat).
+  // Bucket public hona chahiye.
+  const direct = (n: string) => `${SUPABASE_URL}/storage/v1/object/public/voice-audio/dynamic/${n}`
+  const urls = { greeting: direct(names[0]), opt1: direct(names[1]), opt2: direct(names[2]), opt3: direct(names[3]) }
+  logger.info('Vobiz call audio prepared (direct URLs)', { callId: safeId })
   return urls
 }
 
