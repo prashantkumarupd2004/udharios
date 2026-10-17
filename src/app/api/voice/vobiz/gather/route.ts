@@ -89,18 +89,29 @@ export async function POST(request: NextRequest) {
     return voiceXml(`  <Hangup/>`)
   }
 
-  const call = await prisma.call.findUnique({
-    where: { id: callId },
-    include: {
-      outstanding: {
-        include: {
-          merchant: { select: { businessName: true } },
-          customer: { select: { name: true, phone: true } },
-          paymentLink: { select: { id: true } },
+  // Audio URLs query params me (tez) — DB se nahi nikalne padte
+  const sp2 = request.nextUrl.searchParams
+  const qpAudio = sp2.get('ag')
+    ? { greeting: sp2.get('ag')!, opt1: sp2.get('a1') ?? '', opt2: sp2.get('a2') ?? '', opt3: sp2.get('a3') ?? '' }
+    : null
+
+  // DB queries PARALLEL me — sequential nahi (tez)
+  const [call, ctxAudio] = await Promise.all([
+    prisma.call.findUnique({
+      where: { id: callId },
+      include: {
+        outstanding: {
+          include: {
+            merchant: { select: { businessName: true } },
+            customer: { select: { name: true, phone: true } },
+            paymentLink: { select: { id: true } },
+          },
         },
       },
-    },
-  })
+    }),
+    qpAudio ? Promise.resolve(null) : resolveVoiceCtx(callId).catch(() => null),
+  ])
+  const vobizAudio = qpAudio ?? ctxAudio?.vobizAudio ?? null
 
   if (!call?.outstanding) {
     logger.error('Vobiz gather: call/outstanding not found', { callId })
@@ -115,12 +126,6 @@ export async function POST(request: NextRequest) {
     daysOverdue: overdueDays(o.dueDate),
     billRef: o.invoiceNo ?? '',
   }
-  // Pre-generated Sarvam audio (<Play>) — query params me aata hai (tez, DB nahi).
-  // Fallback: voice ctx se.
-  const sp2 = request.nextUrl.searchParams
-  const vobizAudio = sp2.get('ag')
-    ? { greeting: sp2.get('ag')!, opt1: sp2.get('a1') ?? '', opt2: sp2.get('a2') ?? '', opt3: sp2.get('a3') ?? '' }
-    : (await resolveVoiceCtx(callId).catch(() => null))?.vobizAudio
   const gatherActionRaw = (retry: boolean) =>
     `${APP_URL}/api/voice/vobiz/gather?callId=${encodeURIComponent(callId)}${retry ? '&retried=1' : ''}` +
     (vobizAudio?.greeting
@@ -165,12 +170,13 @@ export async function POST(request: NextRequest) {
     await savePromise(0, '1-aaj').catch((err) =>
       logger.error('Vobiz gather: promise save failed', { callId, error: String(err) })
     )
-    await appendTranscript(callId, {
+    // Logs background me — XML turant wapas (tez jawab)
+    appendTranscript(callId, {
       customerSpeech: '[DTMF 1 — aaj kar dunga]',
       agentResponse: buildDtmfOpt1Text(content),
       outcome: 'promised',
-    })
-    await appendAuditLog({
+    }).catch(() => {})
+    appendAuditLog({
       merchantId: call.merchantId,
       actor: 'webhook:vobiz',
       action: AUDIT_ACTIONS.CALL_COMPLETED,
@@ -186,12 +192,13 @@ export async function POST(request: NextRequest) {
     await savePromise(1, '2-kal').catch((err) =>
       logger.error('Vobiz gather: promise save failed', { callId, error: String(err) })
     )
-    await appendTranscript(callId, {
+    // Logs background me — XML turant wapas (tez jawab)
+    appendTranscript(callId, {
       customerSpeech: '[DTMF 2 — kal kar dunga]',
       agentResponse: buildDtmfOpt2Text(content),
       outcome: 'promised',
-    })
-    await appendAuditLog({
+    }).catch(() => {})
+    appendAuditLog({
       merchantId: call.merchantId,
       actor: 'webhook:vobiz',
       action: AUDIT_ACTIONS.CALL_COMPLETED,

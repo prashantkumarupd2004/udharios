@@ -60,14 +60,14 @@ export function buildDtmfGreetingText(c: DtmfCallContent): string {
 export function buildDtmfOpt1Text(c: DtmfCallContent): string {
   return (
     `Dhanyavaad ${c.customerName}! ` +
-    `Aaj aapke ${c.amountINR} ke payment ka intezaar rahega. Namaste!`
+    `Aaj aapke ${c.amountINR} ke payment ka intezaar rahega.`
   )
 }
 
 export function buildDtmfOpt2Text(c: DtmfCallContent): string {
   return (
     `Dhanyavaad ${c.customerName}! ` +
-    `Kal aapke ${c.amountINR} ke payment ka intezaar rahega. Namaste!`
+    `Kal aapke ${c.amountINR} ke payment ka intezaar rahega.`
   )
 }
 
@@ -107,13 +107,12 @@ export async function prepareVobizCallAudio(
     
   ]
   const audios = [greeting, opt1, opt2, opt3]
-  // Hamare proxy se serve karo — bucket private ho sakta hai, proxy me
-  // service-role fallback hai (direct Supabase URL se Vobiz ko 404 milta tha).
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://udharios.vercel.app').replace(/\/+$/, '')
-  const proxy = (n: string) => `${appUrl}/api/voice/audio/dynamic/${n}`
   await Promise.all(names.map((n, i) => uploadDynamic(n, audios[i])))
-  const urls = { greeting: proxy(names[0]), opt1: proxy(names[1]), opt2: proxy(names[2]), opt3: proxy(names[3]) }
-  logger.info('Vobiz call audio prepared (proxy URLs)', { callId: safeId })
+  // DIRECT Supabase public URL — proxy ka cold start (~3-4s) bachta hai.
+  // ZAROORI: 'voice-audio' bucket PUBLIC hona chahiye (SQL user ko diya gaya hai).
+  const direct = (n: string) => `${SUPABASE_URL}/storage/v1/object/public/voice-audio/dynamic/${n}`
+  const urls = { greeting: direct(names[0]), opt1: direct(names[1]), opt2: direct(names[2]), opt3: direct(names[3]) }
+  logger.info('Vobiz call audio prepared (direct URLs)', { callId: safeId })
   return urls
 }
 
