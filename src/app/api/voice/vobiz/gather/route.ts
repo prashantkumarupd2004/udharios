@@ -18,10 +18,10 @@ import {
   buildDtmfOpt1Text,
   buildDtmfOpt2Text,
   buildDtmfOpt3Text,
+  buildDtmfOpt4Text,
   type DtmfCallContent,
 } from '@/lib/voice-dtmf'
-import { createDispute } from '@/lib/voice-agent'
-import { getWhatsAppProvider, buildT2WithLink } from '@/lib/providers/WhatsappProvider'
+import { createDispute, createPromise } from '@/lib/voice-agent'
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
 import { resolveVoiceCtx } from '@/lib/voice-ctx'
 
@@ -121,42 +121,46 @@ export async function POST(request: NextRequest) {
 
   // Pre-generated Sarvam audio (<Play>) — <Speak> TTS slow + kharab tha.
   const vobizAudio = (await resolveVoiceCtx(callId).catch(() => null))?.vobizAudio
-  const speakOrPlay = (key: 'opt1' | 'opt2' | 'opt3', text: string) =>
+  const speakOrPlay = (key: 'opt1' | 'opt2' | 'opt3' | 'opt4', text: string) =>
     vobizAudio?.[key]
       ? `<Play>${xmlEscape(vobizAudio[key])}</Play>`
       : `<Speak>${xmlEscape(text)}</Speak>`
 
-  // --- Digit 1: aaj payment — WhatsApp par payment link bhejo ---
-  if (digits === '1') {
-    const paymentLinkUrl = o.paymentLink
-      ? `${APP_URL}/p/${o.paymentLink.id}`
-      : undefined
-    if (paymentLinkUrl) {
-      try {
-        const wa = getWhatsAppProvider()
-        await wa.sendTemplate({
-          to: o.customer.phone,
-          templateName: process.env.WA_TEMPLATE_ID_T2 ?? 't2_with_link',
-          components: buildT2WithLink(
-            o.customer.name,
-            formatINR(o.amount.toNumber()),
-            o.id,
-            paymentLinkUrl
-          ),
-        })
-        logger.info('Vobiz gather: payment link sent on digit 1', { callId })
-      } catch (err) {
-        logger.error('Vobiz gather: payment link send failed', { callId, error: String(err) })
-      }
-    }
+  // Promise helper — digit 1 (aaj) / 2 (kal): promise save + dhanyavaad + hangup
+  const savePromise = async (daysFromNow: number, digitLabel: string) => {
+    const promisedDate = new Date()
+    promisedDate.setDate(promisedDate.getDate() + daysFromNow)
+    promisedDate.setHours(0, 0, 0, 0)
+    await createPromise(
+      {
+        callId,
+        outstandingId: o.id,
+        merchantId: call.merchantId,
+        customerId: call.customerId,
+        merchantName: o.merchant.businessName,
+        customerName: o.customer.name,
+        amountINR: formatINR(o.amount.toNumber()),
+        daysOverdue: overdueDays(o.dueDate),
+        billRef: o.invoiceNo ?? undefined,
+      },
+      promisedDate
+    )
     await prisma.call.update({
       where: { id: callId },
-      data: { outcome: 'paid_already' },
+      data: { outcome: 'promised' },
     }).catch((err) => logger.error('Vobiz gather: outcome update failed', { error: String(err) }))
+    logger.info('Vobiz gather: promise saved', { callId, digitLabel, promisedDate: promisedDate.toISOString().slice(0, 10) })
+  }
+
+  // --- Digit 1: "aaj kar dunga" — promise TODAY, dhanyavaad, hangup ---
+  if (digits === '1') {
+    await savePromise(0, '1-aaj').catch((err) =>
+      logger.error('Vobiz gather: promise save failed', { callId, error: String(err) })
+    )
     await appendTranscript(callId, {
-      customerSpeech: '[DTMF 1]',
+      customerSpeech: '[DTMF 1 — aaj kar dunga]',
       agentResponse: buildDtmfOpt1Text(content),
-      outcome: 'paid_already',
+      outcome: 'promised',
     })
     await appendAuditLog({
       merchantId: call.merchantId,
@@ -164,13 +168,35 @@ export async function POST(request: NextRequest) {
       action: AUDIT_ACTIONS.CALL_COMPLETED,
       entity: 'call',
       entityId: callId,
-      payload: { digit: '1', outcome: 'paid_already' },
+      payload: { digit: '1', outcome: 'promised', promise: 'today' },
     }).catch(() => {})
     return voiceXml(`  ${speakOrPlay('opt1', buildDtmfOpt1Text(content))}\n  <Hangup/>`)
   }
 
-  // --- Digit 2: vivaad — dispute create karo ---
+  // --- Digit 2: "kal kar dunga" — promise TOMORROW, dhanyavaad, hangup ---
   if (digits === '2') {
+    await savePromise(1, '2-kal').catch((err) =>
+      logger.error('Vobiz gather: promise save failed', { callId, error: String(err) })
+    )
+    await appendTranscript(callId, {
+      customerSpeech: '[DTMF 2 — kal kar dunga]',
+      agentResponse: buildDtmfOpt2Text(content),
+      outcome: 'promised',
+    })
+    await appendAuditLog({
+      merchantId: call.merchantId,
+      actor: 'webhook:vobiz',
+      action: AUDIT_ACTIONS.CALL_COMPLETED,
+      entity: 'call',
+      entityId: callId,
+      payload: { digit: '2', outcome: 'promised', promise: 'tomorrow' },
+    }).catch(() => {})
+    return voiceXml(`  ${speakOrPlay('opt2', buildDtmfOpt2Text(content))}\n  <Hangup/>`)
+  }
+
+
+  // --- Digit 3: vivaad — dispute create karo ---
+  if (digits === '3') {
     await createDispute(
       {
         callId,
@@ -183,28 +209,28 @@ export async function POST(request: NextRequest) {
         daysOverdue: overdueDays(o.dueDate),
         billRef: o.invoiceNo ?? undefined,
       },
-      'DTMF 2 — bill me vivaad (Vobiz call)'
+      'DTMF 3 — bill me vivaad (Vobiz call)'
     )
     await prisma.call.update({
       where: { id: callId },
       data: { outcome: 'disputed' },
     }).catch((err) => logger.error('Vobiz gather: outcome update failed', { error: String(err) }))
     await appendTranscript(callId, {
-      customerSpeech: '[DTMF 2]',
-      agentResponse: buildDtmfOpt2Text(content),
-      outcome: 'disputed',
-    })
-    return voiceXml(`  ${speakOrPlay('opt2', buildDtmfOpt2Text(content))}\n  <Hangup/>`)
-  }
-
-  // --- Digit 3: baad me baat karenge ---
-  if (digits === '3') {
-    await appendTranscript(callId, {
       customerSpeech: '[DTMF 3]',
       agentResponse: buildDtmfOpt3Text(content),
-      outcome: 'callback_later',
+      outcome: 'disputed',
     })
     return voiceXml(`  ${speakOrPlay('opt3', buildDtmfOpt3Text(content))}\n  <Hangup/>`)
+  }
+
+  // --- Digit 4: baad me baat karenge ---
+  if (digits === '4') {
+    await appendTranscript(callId, {
+      customerSpeech: '[DTMF 4]',
+      agentResponse: buildDtmfOpt4Text(content),
+      outcome: 'callback_later',
+    })
+    return voiceXml(`  ${speakOrPlay('opt4', buildDtmfOpt4Text(content))}\n  <Hangup/>`)
   }
 
   // --- Galat / koi digit nahi: ek baar dobara puchho, phir hangup ---
@@ -212,7 +238,7 @@ export async function POST(request: NextRequest) {
     const greeting = xmlEscape(buildDtmfGreetingText(content))
     return voiceXml(
       `  <Gather numDigits="1" timeout="10" action="${gatherAction(true)}" method="POST">\n` +
-      `    <Speak>${xmlEscape('Maaf kijiye, samajh nahi aaya. Kripya 1, 2 ya 3 dabayein.')}</Speak>\n` +
+      `    <Speak>${xmlEscape('Maaf kijiye, samajh nahi aaya. Kripya 1, 2, 3 ya 4 dabayein.')}</Speak>\n` +
       `  </Gather>\n` +
       `  <Speak>${greeting}</Speak>\n` +
       `  <Hangup/>`
