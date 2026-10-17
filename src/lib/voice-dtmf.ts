@@ -41,39 +41,56 @@ export interface DtmfCallContent {
   billRef: string
 }
 
-/**
- * Generate all 4 audio files for a DTMF collection call.
- * Returns the static URLs (same every call, content overwritten).
- */
-export async function prepareDtmfCallAudio(c: DtmfCallContent): Promise<Record<string, string>> {
-  const greetingText =
+// ---------------------------------------------------------------------------
+// Hindi script text builders — Exotel (pre-synthesized audio) aur Vobiz
+// (<Speak> text) dono yahi text use karte hain. Sirf transport alag hai.
+// ---------------------------------------------------------------------------
+
+export function buildDtmfGreetingText(c: DtmfCallContent): string {
+  return (
     `Namaste ${c.customerName}! Main ${c.merchantName} ki taraf se Udhari OS se bol rahi hoon. ` +
     `Aapka bill number ${c.billRef}, ${c.amountINR} rupaye, ${c.daysOverdue} din se pending hai. ` +
     `Kripya dhyaan dein. ` +
     `Agar aap aaj payment karna chahte hain, to 1 dabayein. ` +
     `Agar bill me koi vivaad hai, to 2 dabayein. ` +
     `Agar aap baad me baat karna chahte hain, to 3 dabayein.`
+  )
+}
 
-  const opt1Text =
+export function buildDtmfOpt1Text(c: DtmfCallContent): string {
+  return (
     `Dhanyavaad ${c.customerName}! ` +
     `Aapke ${c.amountINR} rupaye ke payment ke liye aapko turant ek UPI payment link bheja jayega. ` +
     `Kripya link par click karke payment poora karein. ${c.merchantName} aapke sahyog ke liye aabhaari hai. Namaste!`
+  )
+}
 
-  const opt2Text =
+export function buildDtmfOpt2Text(c: DtmfCallContent): string {
+  return (
     `${c.customerName}, aapka vivaad darj kar liya gaya hai. ` +
     `Hamari team jald hi aapse sampark karegi aur bill number ${c.billRef} ki jaanch karegi. ` +
     `Asuvidha ke liye khed hai. Dhanyavaad!`
+  )
+}
 
-  const opt3Text =
+export function buildDtmfOpt3Text(c: DtmfCallContent): string {
+  return (
     `Theek hai ${c.customerName}. Hum aapse baad me sampark karenge. ` +
     `Kripya dhyaan rahe ki aapka ${c.amountINR} rupaye ka bill ${c.daysOverdue} din se pending hai. ` +
     `Jald payment karne ki kripya karein. Dhanyavaad, namaste!`
+  )
+}
 
+/**
+ * Generate all 4 audio files for a DTMF collection call.
+ * Returns the static URLs (same every call, content overwritten).
+ */
+export async function prepareDtmfCallAudio(c: DtmfCallContent): Promise<Record<string, string>> {
   const [greeting, opt1, opt2, opt3] = await Promise.all([
-    synthesizeAgentResponse(greetingText),
-    synthesizeAgentResponse(opt1Text),
-    synthesizeAgentResponse(opt2Text),
-    synthesizeAgentResponse(opt3Text),
+    synthesizeAgentResponse(buildDtmfGreetingText(c)),
+    synthesizeAgentResponse(buildDtmfOpt1Text(c)),
+    synthesizeAgentResponse(buildDtmfOpt2Text(c)),
+    synthesizeAgentResponse(buildDtmfOpt3Text(c)),
   ])
 
   const urls: Record<string, string> = {}

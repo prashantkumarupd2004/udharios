@@ -139,7 +139,8 @@ model Merchant {
   quietEnd       String       @default("09:00") @map("quiet_end")
   isKillSwitched Boolean      @default(false) @map("is_kill_switched")
   isApproved     Boolean      @default(false) @map("is_approved")
-  email          String?      @unique @map("email")
+  // Voice call provider: 'exotel' (default) ya 'vobiz'. Merchant settings se toggle hota hai.
+  voiceProvider  String       @default("exotel") @map("voice_provider")  email          String?      @unique @map("email")
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
 

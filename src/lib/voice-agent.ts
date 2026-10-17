@@ -301,7 +301,7 @@ async function createPromise(ctx: VoiceAgentContext, promisedDate: Date): Promis
   }
 }
 
-async function createDispute(ctx: VoiceAgentContext, reason: string): Promise<void> {
+export async function createDispute(ctx: VoiceAgentContext, reason: string): Promise<void> {
   try {
     await prisma.dispute.create({
       data: {

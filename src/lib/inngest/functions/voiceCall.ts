@@ -8,7 +8,7 @@
 
 import { inngest } from '@/lib/inngest/client'
 import { prisma } from '@/lib/prisma'
-import { placeCall } from '@/lib/exotel'
+import { placeVoiceCall } from '@/lib/voice-provider'
 import { isWithinSendingWindow, msUntilSendingWindow } from '@/lib/date-utils'
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
 import { logger } from '@/lib/logger'
@@ -115,15 +115,16 @@ export const triggerVoiceCall = inngest.createFunction(
       })
     })
 
-    // Exotel se call place karo
+    // Active voice provider (Vobiz primary / Exotel backup) se call place karo
     const sid = await step.run('place-call', async () => {
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://udharios.vercel.app'
-      const res = await placeCall({
+      const res = await placeVoiceCall(merchantId, {
         to: outstanding.customer.phone,
         callbackUrl: `${baseUrl}/api/webhooks/exotel?callId=${callRecord.id}`,
         record: true,
         // New TTS flow: Exotel's recommended approach (dynamic TTS via flow-script).
         // Personalized name+amount spoken reliably — no voicebot tool issues.
+        // (Vobiz is flow me <Speak> se Hindi script bolta hai — provider lib khud handle karta hai.)
         useTtsFlow: true,
         customField: JSON.stringify({
           callId: callRecord.id,
@@ -139,9 +140,9 @@ export const triggerVoiceCall = inngest.createFunction(
       })
       await prisma.call.update({
         where: { id: callRecord.id },
-        data: { exotelSid: res.Call.Sid },
+        data: { exotelSid: res.providerCallId },
       })
-      return res.Call.Sid
+      return res.providerCallId
     })
 
     await step.run('audit-log', async () => {
@@ -151,7 +152,7 @@ export const triggerVoiceCall = inngest.createFunction(
         action: AUDIT_ACTIONS.CALL_PLACED,
         entity: 'outstanding',
         entityId: outstandingId,
-        payload: { callId: callRecord.id, exotelSid: sid, retryCount: retryCount ?? 0 },
+        payload: { callId: callRecord.id, providerCallId: sid, retryCount: retryCount ?? 0 },
       }).catch(() => {})
     })
 
@@ -169,6 +170,6 @@ export const triggerVoiceCall = inngest.createFunction(
     }
 
     logger.info('Inngest voice call placed', { outstandingId, callId: callRecord.id, sid })
-    return { called: true, callId: callRecord.id, exotelSid: sid }
+    return { called: true, callId: callRecord.id, providerCallId: sid }
   }
 )

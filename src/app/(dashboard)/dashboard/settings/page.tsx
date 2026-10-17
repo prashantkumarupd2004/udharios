@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import {
   Settings as SettingsIcon, Store, MoonStar, Languages, LogOut, Crown,
-  CreditCard, Landmark, Bell, User, Check, Smartphone,
+  CreditCard, Landmark, Bell, User, Check, Smartphone, Phone,
 } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
 import PaymentGatewaySettings from './PaymentGatewaySettings'
@@ -266,6 +266,9 @@ export default function SettingsPage() {
           </div>
 
           <SaveBar saving={saving} saved={saved} onSave={handleSave} lang={lang} />
+
+          {/* Voice call provider toggle (Vobiz primary / Exotel backup) */}
+          <VoiceProviderCard lang={lang} />
         </div>
       )}
 
@@ -350,6 +353,123 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+      )}
+    </div>
+  )
+}
+
+function VoiceProviderCard({ lang }: { lang: string }) {
+  const [provider, setProvider] = useState<'vobiz' | 'exotel' | null>(null)
+  const [vobizConfigured, setVobizConfigured] = useState(true)
+  const [switching, setSwitching] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    fetch('/api/merchant/voice-provider')
+      .then(r => r.json())
+      .then(d => {
+        if (d.provider) setProvider(d.provider)
+        setVobizConfigured(d.vobizConfigured !== false)
+      })
+      .catch(() => {})
+  }, [])
+
+  const switchTo = async (p: 'vobiz' | 'exotel') => {
+    if (p === provider || switching) return
+    setSwitching(true)
+    setError('')
+    try {
+      const res = await fetch('/api/merchant/voice-provider', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: p }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setProvider(data.provider)
+      } else {
+        setError(data.error ?? (lang === 'hi' ? 'Switch nahi ho paya' : 'Switch failed'))
+      }
+    } catch {
+      setError(lang === 'hi' ? 'Network error' : 'Network error')
+    } finally {
+      setSwitching(false)
+    }
+  }
+
+  const options: { id: 'vobiz' | 'exotel'; name: string; tag: string; desc: string }[] = [
+    {
+      id: 'vobiz',
+      name: 'Vobiz',
+      tag: lang === 'hi' ? 'Primary' : 'Primary',
+      desc: lang === 'hi' ? '~₹0.38/min • sasta' : '~₹0.38/min • cheaper',
+    },
+    {
+      id: 'exotel',
+      name: 'Exotel',
+      tag: lang === 'hi' ? 'Backup' : 'Backup',
+      desc: lang === 'hi' ? 'Pehle se chal raha' : 'Currently running',
+    },
+  ]
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
+      <div className="flex items-center gap-2 pb-3 border-b border-slate-100 mb-4">
+        <Phone className="w-5 h-5 text-green-600" />
+        <h2 className="font-extrabold text-slate-900">
+          {lang === 'hi' ? 'Voice Call Provider' : 'Voice Call Provider'}
+        </h2>
+      </div>
+      <p className="text-xs text-slate-500 mb-4">
+        {lang === 'hi'
+          ? 'Kaun si company se AI voice calls jayengi — ek click me badlo'
+          : 'Which company places the AI voice calls — switch in one click'}
+      </p>
+
+      <div className="grid grid-cols-2 gap-3">
+        {options.map(o => {
+          const active = provider === o.id
+          const disabled = o.id === 'vobiz' && !vobizConfigured
+          return (
+            <button
+              key={o.id}
+              onClick={() => switchTo(o.id)}
+              disabled={disabled || switching || provider === null}
+              className={`relative p-4 rounded-xl border-2 text-left transition-all ${
+                active
+                  ? 'border-green-500 bg-green-50/60 shadow-sm'
+                  : 'border-slate-200 bg-white hover:border-slate-300'
+              } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            >
+              {active && (
+                <span className="absolute -top-2 right-3 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <Check className="w-3 h-3" /> {lang === 'hi' ? 'Active' : 'Active'}
+                </span>
+              )}
+              <p className="font-extrabold text-slate-900">{o.name}</p>
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mt-0.5">{o.tag}</p>
+              <p className="text-xs text-slate-500 mt-1">{o.desc}</p>
+            </button>
+          )
+        })}
+      </div>
+
+      {!vobizConfigured && (
+        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 mt-3 font-medium">
+          {lang === 'hi'
+            ? 'Vobiz credentials setup nahi hain — pehle VOBIZ_AUTH_ID, VOBIZ_AUTH_TOKEN, VOBIZ_FROM_NUMBER env vars add karo, phir switch kar paoge.'
+            : 'Vobiz credentials are not set up — add VOBIZ_AUTH_ID, VOBIZ_AUTH_TOKEN, VOBIZ_FROM_NUMBER env vars first, then you can switch.'}
+        </p>
+      )}
+      {error && (
+        <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 mt-3 font-medium">
+          {error}
+        </p>
+      )}
+      {switching && (
+        <p className="text-xs text-slate-500 mt-3 font-medium">
+          {lang === 'hi' ? 'Switch ho raha hai...' : 'Switching...'}
+        </p>
       )}
     </div>
   )

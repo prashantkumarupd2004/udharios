@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
 import { triggerCallSchema } from '@/validations'
-import { placeCall, normalizePhoneForExotel } from '@/lib/exotel'
+import { placeVoiceCall } from '@/lib/voice-provider'
 import { isWithinSendingWindow } from '@/lib/date-utils'
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
 import { logger } from '@/lib/logger'
@@ -76,12 +76,13 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Place the call via Exotel — dashboard flow URL (stable).
-    // Custom voiceUrl Exotel allow nahi karta (call drop). Dynamic ke liye
-    // dashboard agent me variables use karne honge.
-    let exotelResponse
+    // Place the call via the active voice provider (Vobiz primary / Exotel backup).
+    // Exotel: dashboard flow URL (stable). Custom voiceUrl Exotel allow nahi karta
+    // (call drop). Dynamic ke liye dashboard agent me variables use karne honge.
+    // Vobiz: answer_url par Hindi DTMF script (<Speak>/<Gather>) serve hota hai.
+    let providerResponse
     try {
-      exotelResponse = await placeCall({
+      providerResponse = await placeVoiceCall(merchantId, {
         to: outstanding.customer.phone,
         callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/exotel?callId=${callRecord.id}`,
         record: true,
@@ -98,26 +99,29 @@ export async function POST(request: NextRequest) {
         }),
       })
 
-      // Update with real Exotel SID
+      // Update with real provider call ID
       await prisma.call.update({
         where: { id: callRecord.id },
-        data: { exotelSid: exotelResponse.Call.Sid },
+        data: { exotelSid: providerResponse.providerCallId },
       })
 
       // Pre-generate premium TTS audio NOW (background) so it's ready
       // when Exotel's flow hits /api/exotel/flow-script seconds later.
       // Without this, flow-script takes 6-7s to generate → Exotel timeout → no audio.
-      pregenerateGreetingAudio({
-        customerName: outstanding.customer.name,
-        merchantName: outstanding.merchant.businessName,
-        amountINR: outstanding.amount.toString(),
-      })
+      // (Sirf Exotel ke liye — Vobiz <Speak> se seedha bolta hai.)
+      if (providerResponse.provider === 'exotel') {
+        pregenerateGreetingAudio({
+          customerName: outstanding.customer.name,
+          merchantName: outstanding.merchant.businessName,
+          amountINR: outstanding.amount.toString(),
+        })
+      }
     } catch (callErr) {
       await prisma.call.update({
         where: { id: callRecord.id },
         data: { status: 'failed' },
       })
-      logger.error('Exotel call placement failed', { error: String(callErr) })
+      logger.error('Voice call placement failed', { error: String(callErr) })
       return NextResponse.json({ error: 'Call placement failed' }, { status: 502 })
     }
 
@@ -129,7 +133,8 @@ export async function POST(request: NextRequest) {
       entityId: outstandingId,
       payload: {
         callId: callRecord.id,
-        exotelSid: exotelResponse?.Call.Sid,
+        provider: providerResponse?.provider,
+        providerCallId: providerResponse?.providerCallId,
         customerPhone: outstanding.customer.phone,
       },
     })
