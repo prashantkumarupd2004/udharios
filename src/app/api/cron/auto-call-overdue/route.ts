@@ -167,19 +167,36 @@ export async function GET(request: NextRequest) {
     for (const o of overdues) {
       if (called >= MAX_CALLS_PER_RUN) break
 
-      // Double-dial guard — pichle 24 ghante me is outstanding par koi call
-      // hui? (Inngest reminder engine ki voice call bhi count hoti hai,
-      // taaki engine aur cron dono ek hi din me call na karein)
-      const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
-      const alreadyCalled = await prisma.call.findFirst({
-        where: {
-          outstandingId: o.id,
-          createdAt: { gte: dayAgo },
-        },
+      // === ESCALATION: din ke hisaab se call limit ===
+      // Day 1: 2 calls, Day 2: 4 calls, Day 3: 6 calls... (max 8/day cap)
+      const daysOverdue = Math.max(1, Math.ceil((today.getTime() - new Date(o.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
+      const maxCallsToday = Math.min(2 * daysOverdue, 8)
+
+      const startOfDay = new Date(today)
+      const callsToday = await prisma.call.count({
+        where: { outstandingId: o.id, createdAt: { gte: startOfDay } },
       })
-      if (alreadyCalled) {
+      if (callsToday >= maxCallsToday) {
         skipped++
         continue
+      }
+
+      // Last call ka status check — retry logic
+      const lastCall = await prisma.call.findFirst({
+        where: { outstandingId: o.id },
+        orderBy: { createdAt: 'desc' },
+        select: { status: true, createdAt: true, durationSec: true },
+      })
+      if (lastCall) {
+        const minsSinceLastCall = (Date.now() - new Date(lastCall.createdAt).getTime()) / (1000 * 60)
+        const lastFailed = ['failed', 'busy', 'no-answer', 'canceled'].includes(lastCall.status)
+        const cutShort = lastCall.status === 'completed' && (lastCall.durationSec ?? 0) < 10
+        // Failed/busy/cut → 1 ghante baad retry; successful → 2 ghante gap
+        const minGapMins = (lastFailed || cutShort) ? 60 : 120
+        if (minsSinceLastCall < minGapMins) {
+          skipped++
+          continue
+        }
       }
 
       // Sending window check (9 AM – 9 PM)
