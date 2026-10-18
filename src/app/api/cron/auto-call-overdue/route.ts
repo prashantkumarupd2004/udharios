@@ -14,7 +14,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { placeCall } from '@/lib/exotel'
+import { placeVoiceCall } from '@/lib/voice-provider'
 import { isWithinSendingWindow } from '@/lib/date-utils'
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
 import { logger } from '@/lib/logger'
@@ -222,7 +222,7 @@ export async function GET(request: NextRequest) {
           },
         })
 
-        const exotelResponse = await placeCall({
+        const voiceResult = await placeVoiceCall(o.merchantId, {
           to: o.customer.phone,
           callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/exotel?callId=${callRecord.id}`,
           record: true,
@@ -240,7 +240,7 @@ export async function GET(request: NextRequest) {
 
         await prisma.call.update({
           where: { id: callRecord.id },
-          data: { exotelSid: exotelResponse.Call.Sid },
+          data: { exotelSid: voiceResult.providerCallId },
         })
 
         await appendAuditLog({
