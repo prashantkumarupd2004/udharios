@@ -320,6 +320,132 @@ function extractLedgerParty(text: string): string {
 }
 
 export function parseLedgerPdfText(text: string): { bills: ParsedBill[]; warnings: string[] } {
+  // Naya multi-line format check karo (TallyPrime: date, Dr/Cr, amount alag lines me)
+  // e.g. "1-Apr-26 Cr\nOpening Balance\n44,939.00"
+  const multiLine = parseLedgerPdfMultiLine(text)
+  if (multiLine.bills.length > 0) {
+    return multiLine
+  }
+  // Purana single-line format (fallback)
+  return parseLedgerPdfSingleLine(text)
+}
+
+/**
+ * TallyPrime multi-line ledger format:
+ * Har transaction 3-5 lines me hoti hai:
+ *   "3-Apr-26 Dr The Kalupur Co Op Bank( CC / AC )"  (date + Dr/Cr + particulars)
+ *   "Receipt"                                        (voucher type)
+ *   "13"                                             (voucher no)
+ *   "44,939.00"                                      (amount)
+ */
+function parseLedgerPdfMultiLine(text: string): { bills: ParsedBill[]; warnings: string[] } {
+  const warnings: string[] = []
+  const bills: ParsedBill[] = []
+  const partyName = extractLedgerParty(text) || 'Unknown'
+
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0)
+
+  // Step 1: Transactions (date lines, in order)
+  const dateRe = /^(\d{1,2}-[A-Za-z]{3}-\d{2,4})\s*(Dr|Cr)?\s*(.*)$/
+  const txns: { date: string; drCr: string; particulars: string }[] = []
+  for (const line of lines) {
+    const m = line.match(dateRe)
+    if (m) {
+      if (/to\s+\d{1,2}-[A-Za-z]{3}/.test(line)) continue // header skip
+      const dateStr = parseLedgerDate(m[1]) || parseDashedDate(m[1])
+      if (dateStr) txns.push({ date: dateStr, drCr: m[2] || '', particulars: m[3].trim() })
+    }
+  }
+
+  // Step 2: Voucher types aur numbers (in order)
+  const vchTypeRe = /^(Receipt|Sales|Payment|Journal|Purchase|Contra|Credit\s*Note|Debit\s*Note)$/i
+  const vchTypes: string[] = []
+  const vchNos: string[] = []
+  for (const line of lines) {
+    const tm = line.match(vchTypeRe)
+    if (tm) {
+      vchTypes.push(tm[1])
+    } else if (/^[A-Za-z0-9\-\/]+$/.test(line) && line.length < 20 && !/^[\d,]+\.\d{2}$/.test(line)) {
+      if (!dateRe.test(line) && !/^(Page|Particulars|Date|Vch|Debit|Credit|Dr|Cr|Opening|Closing)/i.test(line)) {
+        vchNos.push(line)
+      }
+    }
+  }
+
+  // Step 3: Amounts ("Debit" ke baad se, "Dr"/"Closing" tak)
+  const amountRe = /^([\d,]+\.\d{2})$/
+  const amounts: number[] = []
+  let inAmountSection = false
+  for (const line of lines) {
+    if (/^Debit$/i.test(line)) { inAmountSection = true; continue }
+    if (inAmountSection) {
+      if (/^(Dr|Credit|Closing Balance)$/i.test(line)) break
+      const am = line.match(amountRe)
+      if (am) amounts.push(parseMoney(am[1]))
+    }
+  }
+
+  // Step 4: Zip karo
+  let txnIdx = 0, amtIdx = 0, typeIdx = 0, noIdx = 0
+
+  // Opening balance (pehla txn)
+  if (txns.length > 0 && amounts.length > 0) {
+    const hasOpening = lines.some((l, idx) => /opening\s+balance/i.test(l) && idx < 25)
+    if (hasOpening) {
+      const amt = amounts[0]
+      const isCr = txns[0].drCr.toLowerCase() === 'cr'
+      bills.push({
+        kind: isCr ? 'credit_note' : 'invoice',
+        billRef: 'OPENING-BALANCE',
+        partyName,
+        amount: Math.round(amt * 100) / 100,
+        pendingAmount: Math.round(amt * 100) / 100,
+        billDate: txns[0].date,
+      })
+      txnIdx = 1; amtIdx = 1
+      warnings.push(`Opening Balance \u20B9${amt.toLocaleString('en-IN')} add kiya gaya`)
+    }
+  }
+
+  for (; txnIdx < txns.length; txnIdx++) {
+    const txn = txns[txnIdx]
+    const vchType = vchTypes[typeIdx++] || ''
+    const vchNo = vchNos[noIdx++] || ''
+    const amount = amounts[amtIdx++] || 0
+    if (amount <= 0) continue
+    let kind: DocumentKind
+    const vt = vchType.toLowerCase()
+    if (vt === 'sales') kind = 'invoice'
+    else if (vt === 'receipt') kind = 'receipt'
+    else if (vt.includes('credit')) kind = 'credit_note'
+    else if (vt.includes('debit')) kind = 'debit_note'
+    else kind = txn.drCr.toLowerCase() === 'dr' ? 'debit_note' : 'receipt'
+    bills.push({
+      kind,
+      billRef: vchNo || `LEDGER-${txn.date.replace(/-/g, '')}-${txnIdx}`,
+      partyName,
+      amount: Math.round(amount * 100) / 100,
+      pendingAmount: Math.round(amount * 100) / 100,
+      billDate: txn.date,
+    })
+  }
+
+  if (bills.length === 0) warnings.push('Ledger me koi transaction nahi mili')
+  return { bills, warnings }
+}
+
+function parseDashedDate(raw: string): string | null {
+  const m = raw.trim().match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2,4})$/)
+  if (!m) return null
+  const day = parseInt(m[1], 10)
+  const mon = MONTHS[m[2].toLowerCase()]
+  if (!mon || day < 1 || day > 31) return null
+  let year = parseInt(m[3], 10)
+  if (year < 100) year = year < 50 ? 2000 + year : 1900 + year
+  return `${year}-${mon}-${String(day).padStart(2, '0')}`
+}
+
+function parseLedgerPdfSingleLine(text: string): { bills: ParsedBill[]; warnings: string[] } {
   const warnings: string[] = []
   const bills: ParsedBill[] = []
   const partyName = extractLedgerParty(text)
