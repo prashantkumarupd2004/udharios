@@ -25,16 +25,23 @@ export interface VoiceCallResult {
   provider: VoiceProviderName
 }
 
-/** Merchant ka active voice provider. Kuch gadbad ho to safe default 'exotel'. */
+/** Merchant ka active voice provider. Vobiz configured hai to usko prefer karo. */
 export async function getVoiceProvider(merchantId: string): Promise<VoiceProviderName> {
   try {
     const rows = await prisma.$queryRaw<{ voice_provider: string | null }[]>`
       SELECT "voice_provider" FROM "merchants" WHERE "id" = ${merchantId}::uuid LIMIT 1
     `
-    return rows[0]?.voice_provider === 'vobiz' ? 'vobiz' : 'exotel'
-  } catch (err) {
-    logger.error('getVoiceProvider failed — defaulting to exotel', { merchantId, error: String(err) })
+    const saved = rows[0]?.voice_provider
+    // Explicitly Vobiz select kiya to Vobiz
+    if (saved === 'vobiz') return 'vobiz'
+    // Explicitly Exotel select kiya to Exotel
+    if (saved === 'exotel') return 'exotel'
+    // Koi selection nahi (null/default) → Vobiz configured hai to Vobiz, warna Exotel
+    if (isVobizConfigured()) return 'vobiz'
     return 'exotel'
+  } catch (err) {
+    logger.error('getVoiceProvider failed — defaulting to vobiz if configured', { merchantId, error: String(err) })
+    return isVobizConfigured() ? 'vobiz' : 'exotel'
   }
 }
 
