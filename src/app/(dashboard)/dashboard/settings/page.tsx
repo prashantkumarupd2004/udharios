@@ -231,36 +231,26 @@ export default function SettingsPage() {
             <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
               <MoonStar className="w-5 h-5 text-indigo-500" />
               <h2 className="font-extrabold text-slate-900">
-                {lang === 'hi' ? 'Quiet Hours' : 'Quiet Hours'}
+                {lang === 'hi' ? 'Call Timing' : 'Call Timing'}
               </h2>
-              <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                {lang === 'hi' ? 'koi reminder nahi' : 'no reminders'}
+              <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                {lang === 'hi' ? 'fixed' : 'fixed'}
               </span>
             </div>
             <p className="text-xs text-slate-500 -mt-2">
               {lang === 'hi'
-                ? 'In ghanton mein koi WhatsApp message ya call nahi jayega'
-                : 'No WhatsApp messages or calls will be sent during these hours'}
+                ? 'Calls sirf subah 9 baje se shaam 7 baje tak jayenge (fixed timing)'
+                : 'Calls go only from 9 AM to 7 PM (fixed timing)'}
             </p>
             <div className="flex gap-4 items-center">
               <div className="flex-1">
                 <label className="field-label">{lang === 'hi' ? 'Shuru' : 'Start'}</label>
-                <input
-                  type="time"
-                  value={form.quietStart}
-                  onChange={e => setForm(p => ({ ...p, quietStart: e.target.value }))}
-                  className="field"
-                />
+                <div className="field bg-slate-50 text-slate-700 font-semibold">09:00</div>
               </div>
               <div className="text-slate-400 font-bold mt-6">→</div>
               <div className="flex-1">
                 <label className="field-label">{lang === 'hi' ? 'Khatam' : 'End'}</label>
-                <input
-                  type="time"
-                  value={form.quietEnd}
-                  onChange={e => setForm(p => ({ ...p, quietEnd: e.target.value }))}
-                  className="field"
-                />
+                <div className="field bg-slate-50 text-slate-700 font-semibold">19:00</div>
               </div>
             </div>
           </div>
