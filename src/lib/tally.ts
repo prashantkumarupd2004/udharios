@@ -127,31 +127,6 @@ export async function syncBillsFromTally(
   // Hamesha bulk fast path use karo (chhoti files ke liye bhi tez hai)
   // Pehle 100+ pe tha, lekin 29 bills bhi sequential me slow the → timeout!
   return syncBillsFromTallyBulk(merchantId, bills, source)
-
-  const result: SyncResult = {
-    billsUpserted: 0,
-    billsPaid: 0,
-    customersMatched: 0,
-    customersCreated: 0,
-    outstandingsUpserted: 0,
-  }
-  const errors: string[] = []
-
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  for (const b of bills) {
-    try {
-      await syncOneBill(merchantId, b, source, today, result)
-    } catch (err) {
-      const msg = `Bill ${b.billRef || '?'} (${b.partyName || '?'}) fail: ${err instanceof Error ? err.message : String(err)}`
-      logger.error('Tally bill sync failed for one bill', { merchantId, billRef: b.billRef, error: String(err) })
-      errors.push(msg)
-    }
-  }
-
-  logger.info('Tally bill sync complete', { merchantId, source, ...result, errors: errors.length })
-  return { ...result, errors }
 }
 
 async function syncOneBill(
