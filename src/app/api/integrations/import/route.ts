@@ -34,6 +34,33 @@ export const runtime = 'nodejs'
 
 const MAX_SIZE = 10 * 1024 * 1024
 
+/**
+ * Toote PDF se raw text nikalo (XRef kharab ho tab bhi).
+ * PDF me text "(...)" ya "<...>" me hota hai — usko extract karo.
+ */
+function extractRawPdfText(buf: Buffer): string {
+  try {
+    // Latin1 me decode karo (binary safe)
+    const raw = buf.toString('latin1')
+    const texts: string[] = []
+    // "(text)" pattern — PDF text objects
+    const parenRe = /\((?:[^()\\]|\\.)*\)/g
+    let m: RegExpExecArray | null
+    while ((m = parenRe.exec(raw)) !== null) {
+      let t = m[0].slice(1, -1) // brackets hatao
+      // Escape sequences handle karo
+      t = t.replace(/\\n/g, '\n').replace(/\\r/g, '\n').replace(/\\\(/g, '(').replace(/\\\)/g, ')').replace(/\\\\/g, '\\')
+      // Sirf meaningful text rakho (2+ chars, alphanumeric)
+      if (t.length >= 2 && /[a-zA-Z0-9]/.test(t)) {
+        texts.push(t)
+      }
+    }
+    return texts.join('\n')
+  } catch {
+    return ''
+  }
+}
+
 interface PreviewResult {
   bills: ParsedBill[]
   fileKind: string
@@ -58,17 +85,27 @@ async function parseUploadedFile(file: File): Promise<PreviewResult> {
       data = await pdfParse(buf)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      // pdf.js ka "Command token too long" — kharab/corrupt PDF
-      if (msg.includes('Command token too long') || msg.includes('FormatError')) {
-        return {
-          bills: [],
-          fileKind: 'pdf',
-          warnings: [
-            'Ye PDF kharab hai ya Tally se sahi export nahi hua. Tally me: Gateway → Display → Ledger → Export → PDF (phir se export karke try karein). Ya Excel me export karke upload karein.',
-          ],
+      // pdf.js errors — TallyPrime ke toote PDFs (bad XRef, Command token too long, FormatError)
+      // Pehle raw text fallback try karo — kai baar text nikal aata hai!
+      if (msg.includes('Command token too long') || msg.includes('FormatError') || msg.includes('bad XRef') || msg.includes('XRef')) {
+        const rawText = extractRawPdfText(buf)
+        if (rawText && rawText.length > 100) {
+          // Raw text mil gaya — usi se kaam chalao!
+          data = { text: rawText }
+        } else {
+          return {
+            bills: [],
+            fileKind: 'pdf',
+            warnings: [
+              'Tally se export kiya PDF technical roop se toota hai (PDF viewer khol leta hai lekin data nikaalna mushkil hai).',
+              'Solution: Tally se XML me export karein (Gateway → Display → Ledger → Export → XML) — wo 100% kaam karega!',
+              'Ya Excel me export karke upload karein.',
+            ],
+          }
         }
+      } else {
+        throw err
       }
-      throw err
     }
     const text = data.text?.trim() ?? ''
     if (!text) {
