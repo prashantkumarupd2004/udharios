@@ -36,23 +36,53 @@ const MAX_SIZE = 10 * 1024 * 1024
 
 /**
  * Toote PDF se raw text nikalo (XRef kharab ho tab bhi).
- * PDF me text "(...)" ya "<...>" me hota hai — usko extract karo.
+ * Streams ko manually decompress karke TJ/Tj operators se text nikalo.
  */
 function extractRawPdfText(buf: Buffer): string {
   try {
-    // Latin1 me decode karo (binary safe)
+    const zlib = require('zlib')
     const raw = buf.toString('latin1')
     const texts: string[] = []
-    // "(text)" pattern — PDF text objects
-    const parenRe = /\((?:[^()\\]|\\.)*\)/g
+
+    // Saare stream objects dhoondo
+    const streamRe = /stream\r?\n/g
     let m: RegExpExecArray | null
-    while ((m = parenRe.exec(raw)) !== null) {
-      let t = m[0].slice(1, -1) // brackets hatao
-      // Escape sequences handle karo
-      t = t.replace(/\\n/g, '\n').replace(/\\r/g, '\n').replace(/\\\(/g, '(').replace(/\\\)/g, ')').replace(/\\\\/g, '\\')
-      // Sirf meaningful text rakho (2+ chars, alphanumeric)
-      if (t.length >= 2 && /[a-zA-Z0-9]/.test(t)) {
-        texts.push(t)
+    while ((m = streamRe.exec(raw)) !== null) {
+      const start = m.index + m[0].length
+      // /Length se size nikalo (peeche dhoondo)
+      const before = raw.slice(Math.max(0, start - 500), start)
+      const lenM = before.match(/\/Length\s+(\d+)/)
+      if (!lenM) continue
+      const len = parseInt(lenM[1], 10)
+      if (len <= 0 || len > 10_000_000) continue
+
+      const streamData = buf.slice(start, start + len)
+      try {
+        const decompressed = zlib.inflateSync(streamData)
+        const t = decompressed.toString('latin1')
+        // [(text)]TJ aur (text)Tj dono
+        const tjRe = /\[((?:[^\[\]]|\[[^\]]*\])*)\]\s*TJ/g
+        let tjm: RegExpExecArray | null
+        while ((tjm = tjRe.exec(t)) !== null) {
+          // Array ke andar ke (...) strings
+          const inner = tjm[1]
+          const strRe = /\((?:[^()\\]|\\.)*\)/g
+          let sm: RegExpExecArray | null
+          while ((sm = strRe.exec(inner)) !== null) {
+            let s = sm[0].slice(1, -1)
+            s = s.replace(/\\n/g, ' ').replace(/\\\(/g, '(').replace(/\\\)/g, ')').replace(/\\\\/g, '\\')
+            if (s.length >= 1) texts.push(s)
+          }
+        }
+        // Plain (text)Tj
+        const tj2Re = /\((?:[^()\\]|\\.)*\)\s*Tj/g
+        while ((tjm = tj2Re.exec(t)) !== null) {
+          let s = tjm[0].replace(/\s*Tj$/, '').slice(1, -1)
+          s = s.replace(/\\n/g, ' ').replace(/\\\(/g, '(').replace(/\\\)/g, ')').replace(/\\\\/g, '\\')
+          if (s.length >= 1) texts.push(s)
+        }
+      } catch {
+        // Decompress fail — skip
       }
     }
     return texts.join('\n')
