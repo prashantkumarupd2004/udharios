@@ -185,6 +185,29 @@ export async function GET(request: NextRequest) {
         continue
       }
 
+      // === BLOCKED NUMBER DETECTION ===
+      // Lagatar 5+ fail (busy/failed/no-answer) = number block ho sakta hai → calls pause
+      const recentCalls = await prisma.call.findMany({
+        where: { customerId: o.customerId },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        select: { status: true },
+      })
+      if (recentCalls.length >= 5) {
+        const allFailed = recentCalls.every(c =>
+          ['failed', 'busy', 'no-answer', 'canceled'].includes(c.status)
+        )
+        if (allFailed) {
+          // Blocked — auto calls pause, manual allowed
+          logger.info('Skipping possibly blocked number', {
+            customerId: o.customerId,
+            customerName: o.customer.name,
+          })
+          skipped++
+          continue
+        }
+      }
+
       // Last call ka status check — retry logic
       const lastCall = await prisma.call.findFirst({
         where: { outstandingId: o.id },
