@@ -103,19 +103,17 @@ export const importCustomerRowSchema = z.object({
 // ---------------------------------------------------------------------------
 
 export const createOutstandingSchema = z.object({
-  customerId: z.string().uuid('Invalid customer ID'),
+  customerId: z.string().uuid('Customer select karo'),
   invoiceNo: z.string().max(50).optional(),
-  amount: z
+  amount: z.coerce
     .number()
-    .positive('Amount must be positive')
-    .max(10_000_000, 'Amount too large'),
+    .positive('Amount 0 se zyada hona chahiye')
+    .max(10_000_000, 'Amount bahut zyada hai'),
   dueDate: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD format')
-    .refine(
-      d => new Date(d) >= new Date(new Date().toDateString()),
-      'Due date cannot be in the past'
-    ),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date YYYY-MM-DD format me dalo'),
+    // Past date allowed hai — purana bakaya add karne ke liye
+    // (status auto 'overdue' ho jayega)
   items: z
     .array(
       z.object({

@@ -44,7 +44,7 @@ function AddOutstandingModal({
   const [form, setForm] = useState({
     customerId: '',
     amount: '',
-    dueDate: '',
+    dueDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
     invoiceNo: '',
     notes: '',
   })

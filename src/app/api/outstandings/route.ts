@@ -136,7 +136,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ outstanding }, { status: 201 })
   } catch (err: unknown) {
     if (err instanceof Error && err.name === 'ZodError') {
-      return NextResponse.json({ error: 'Validation failed', details: (err as {errors?: unknown}).errors }, { status: 400 })
+      const zodErr = err as { errors?: Array<{ path?: string[]; message?: string }> }
+      const details = zodErr.errors?.map(e => `${e.path?.join('.')}: ${e.message}`).join(', ')
+      return NextResponse.json({ error: details || 'Validation failed' }, { status: 400 })
     }
     logger.error('POST /api/outstandings error', { error: String(err) })
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
