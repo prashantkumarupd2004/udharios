@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   ArrowLeft, Phone, Loader2, IndianRupee, FileText, CalendarCheck,
   Clock, CheckCircle2, AlertTriangle, Wallet,
-  TrendingUp, Receipt, Pencil, X, History,
+  TrendingUp, Receipt, Pencil, X, History, Trash2,
 } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
 
@@ -68,6 +68,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const [editingPhone, setEditingPhone] = useState(false)
   const [phoneInput, setPhoneInput] = useState('')
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [phoneError, setPhoneError] = useState('')
   const [calling, setCalling] = useState<string | null>(null)
   const [callMsg, setCallMsg] = useState('')
@@ -116,6 +117,23 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
 
   const [markingPaid, setMarkingPaid] = useState<string | null>(null)
   const [pausing, setPausing] = useState<string | null>(null)
+
+  const handleDelete = async () => {
+    const msg = lang === 'hi'
+      ? `"${customer?.name}" ko DELETE karna hai?\n\nSARA data hat jayega:\n• Bills aur outstandings\n• Calls aur reminders\n• Promises aur disputes\n\nYe wapas nahi aayega!`
+      : `Delete "${customer?.name}"?\n\nALL data will be removed:\n• Bills and outstandings\n• Calls and reminders\n• Promises and disputes\n\nThis cannot be undone!`
+    if (!window.confirm(msg)) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/customers/${id}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Delete failed')
+      window.location.href = '/dashboard/customers'
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Delete nahi ho paya')
+      setDeleting(false)
+    }
+  }
 
   const togglePause = async (o: Outstanding) => {
     const willPause = !o.remindersPaused
@@ -284,6 +302,14 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
               <p className="text-green-200/50 text-[10px] font-medium mt-0.5">
                 {pending.length} pending • {customer.bills.length} bills
               </p>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-red-300/80 hover:text-red-200 hover:bg-red-500/10 px-2 py-1 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                {lang === 'hi' ? 'Delete customer' : 'Delete customer'}
+              </button>
             </div>
           </div>
         </div>

@@ -125,3 +125,67 @@ export async function PATCH(
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
 }
+
+/**
+ * DELETE /api/customers/[id] — Customer aur uska SARA data delete karo.
+ * Bills, outstandings, calls, promises, disputes, reminder logs, verifications — sab!
+ * Calls bhi band ho jayenge (customer hi nahi rahega to cron skip karega).
+ */
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getSession()
+    if (!session?.merchantId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const { id } = await params
+
+    // Customer merchant ka hai ya nahi — verify karo
+    const customer = await prisma.customer.findFirst({
+      where: { id, merchantId: session.merchantId },
+      select: { id: true, name: true },
+    })
+    if (!customer) {
+      return NextResponse.json({ error: 'Customer nahi mila' }, { status: 404 })
+    }
+
+    // Transaction me sab delete karo (order matters — pehle child records)
+    await prisma.$transaction(async (tx) => {
+      // Promises (outstanding se linked hain, pehle inko)
+      const outstandings = await tx.outstanding.findMany({
+        where: { customerId: id },
+        select: { id: true },
+      })
+      const outstandingIds = outstandings.map((o) => o.id)
+      if (outstandingIds.length > 0) {
+        await tx.promise.deleteMany({ where: { outstandingId: { in: outstandingIds } } })
+      }
+      // Disputes
+      await tx.dispute.deleteMany({ where: { customerId: id } })
+      // Reminder logs
+      await tx.reminderLog.deleteMany({ where: { customerId: id } })
+      // Calls
+      await tx.call.deleteMany({ where: { customerId: id } })
+      // Verifications
+      await tx.verification.deleteMany({ where: { customerId: id } })
+      // Outstandings
+      await tx.outstanding.deleteMany({ where: { customerId: id } })
+      // Bills
+      await tx.bill.deleteMany({ where: { customerId: id } })
+      // Customer
+      await tx.customer.delete({ where: { id } })
+    })
+
+    logger.info('Customer deleted with all records', {
+      merchantId: session.merchantId,
+      customerId: id,
+      customerName: customer.name,
+    })
+    return NextResponse.json({ success: true, deleted: customer.name })
+  } catch (err) {
+    logger.error('DELETE /api/customers/[id] error', { error: String(err) })
+    return NextResponse.json({ error: 'Delete nahi ho paya' }, { status: 500 })
+  }
+}
