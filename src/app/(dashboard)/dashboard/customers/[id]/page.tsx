@@ -72,6 +72,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const [deleting, setDeleting] = useState(false)
   const [maxCalls, setMaxCalls] = useState<string>('')
   const [savingCalls, setSavingCalls] = useState(false)
+  const [possiblyBlocked, setPossiblyBlocked] = useState(false)
   const [phoneError, setPhoneError] = useState('')
   const [calling, setCalling] = useState<string | null>(null)
   const [callMsg, setCallMsg] = useState('')
@@ -88,6 +89,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
           setCustomer(data.customer)
           setTotalPending(Number(data.totalPending ?? 0))
           setMaxCalls(data.customer.maxCallsPerDay != null ? String(data.customer.maxCallsPerDay) : '')
+          setPossiblyBlocked(!!data.possiblyBlocked)
         }
         setLoading(false)
       })
@@ -303,6 +305,11 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                 )}
                 {!customer.consent && (
                   <span className="text-[10px] font-bold bg-red-500/20 text-red-300 border border-red-400/30 px-2 py-0.5 rounded-full">No Consent</span>
+                )}
+                {possiblyBlocked && (
+                  <span className="text-[10px] font-bold bg-orange-500/20 text-orange-300 border border-orange-400/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    ⚠️ {lang === 'hi' ? 'Number block ho sakta hai' : 'Number may be blocked'}
+                  </span>
                 )}
               </div>
               <div className="flex items-center gap-1.5 mt-0.5">

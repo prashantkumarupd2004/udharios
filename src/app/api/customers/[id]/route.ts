@@ -54,7 +54,17 @@ export async function GET(
       .filter(o => !['paid', 'written_off'].includes(o.status))
       .reduce((sum, o) => sum + Number(o.amount), 0)
 
-    return NextResponse.json({ customer, totalPending })
+    // Blocked number check: last 5 calls lagatar fail?
+    const recentCalls = await prisma.call.findMany({
+      where: { customerId: id },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      select: { status: true },
+    })
+    const possiblyBlocked = recentCalls.length >= 5 &&
+      recentCalls.every(c => ['failed', 'busy', 'no-answer', 'canceled'].includes(c.status))
+
+    return NextResponse.json({ customer, totalPending, possiblyBlocked })
   } catch (err) {
     logger.error('GET /api/customers/[id] error', { error: String(err) })
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
