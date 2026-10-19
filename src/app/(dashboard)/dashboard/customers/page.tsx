@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
-import { Search, Plus, Upload, X, Users, IndianRupee, CheckCircle2, AlertTriangle, Phone } from 'lucide-react'
+import { Search, Plus, Upload, X, Users, IndianRupee, CheckCircle2, AlertTriangle, Phone, Trash2 } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
 
 interface Customer {
@@ -144,6 +144,8 @@ export default function CustomersPage() {
   const [showAdd, setShowAdd] = useState(false)
   const [filter, setFilter] = useState<'all' | 'pending' | 'overdue' | 'clear'>('all')
   const [importing, setImporting] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [bulkDeleting, setBulkDeleting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const fetchCustomers = useCallback(async () => {
@@ -153,6 +155,49 @@ export default function CustomersPage() {
     setCustomers(data.customers ?? [])
     setLoading(false)
   }, [search])
+
+  // Bulk delete handlers
+  const toggleSelect = (id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = (ids: string[]) => {
+    setSelected(prev => {
+      const allSelected = ids.every(id => prev.has(id))
+      if (allSelected) return new Set()
+      return new Set(ids)
+    })
+  }
+
+  const handleBulkDelete = async () => {
+    if (selected.size === 0) return
+    const ok = window.confirm(
+      `${selected.size} customers DELETE karne hain?\n\nSARA data hat jayega (bills, calls, promises sab)!\nYe wapas nahi aayega!`
+    )
+    if (!ok) return
+    setBulkDeleting(true)
+    try {
+      const res = await fetch('/api/customers/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [...selected] }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Delete failed')
+      alert(`${data.deleted} customers delete ho gaye!`)
+      setSelected(new Set())
+      fetchCustomers()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Bulk delete nahi ho paya')
+    } finally {
+      setBulkDeleting(false)
+    }
+  }
 
   // CSV import — file browser me parse karo, phir POST /api/customers/import (JSON) pe bhejo.
   // API ko { rows, columnMap: { name, phone, notes? } } chahiye.
@@ -263,6 +308,16 @@ export default function CustomersPage() {
           <button onClick={() => setShowAdd(true)} className="btn-primary px-4 py-2.5 text-sm" id="open-add-customer-btn">
             <Plus className="w-4 h-4" strokeWidth={2.5} /> {lang === 'hi' ? 'Naya Customer' : 'Add Customer'}
           </button>
+          {selected.size > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+              className="px-4 py-2.5 text-sm font-semibold rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              {bulkDeleting ? 'Deleting...' : `Delete (${selected.size})`}
+            </button>
+          )}
         </div>
       </div>
 
@@ -359,15 +414,42 @@ export default function CustomersPage() {
         </div>
       ) : (
         <div className="bg-white border border-slate-200/80 rounded-2xl divide-y divide-slate-100 overflow-hidden">
+          {filtered.length > 0 && (
+            <div className="flex items-center gap-3 px-4 sm:px-5 py-2.5 bg-slate-50/80 border-b border-slate-100">
+              <input
+                type="checkbox"
+                checked={filtered.length > 0 && filtered.every(c => selected.has(c.id))}
+                onChange={() => toggleSelectAll(filtered.map(c => c.id))}
+                className="w-4 h-4 rounded border-slate-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                aria-label="Select all"
+              />
+              <span className="text-xs font-medium text-slate-500">
+                {selected.size > 0
+                  ? `${selected.size} selected`
+                  : (lang === 'hi' ? 'Sab select karo' : 'Select all')}
+              </span>
+            </div>
+          )}
           {filtered.map(c => {
             const hasPending = c._count.outstandings > 0
             const isOverdue = c.overdueCount > 0
             return (
-              <Link
+              <div
                 key={c.id}
-                href={`/dashboard/customers/${c.id}`}
                 className="flex items-center gap-4 px-4 sm:px-5 py-4 hover:bg-slate-50 transition-colors"
               >
+                <input
+                  type="checkbox"
+                  checked={selected.has(c.id)}
+                  onChange={() => toggleSelect(c.id)}
+                  onClick={e => e.stopPropagation()}
+                  className="w-4 h-4 rounded border-slate-300 text-green-600 focus:ring-green-500 flex-shrink-0 cursor-pointer"
+                  aria-label={`Select ${c.name}`}
+                />
+                <Link
+                  href={`/dashboard/customers/${c.id}`}
+                  className="flex items-center gap-4 flex-1 min-w-0"
+                >
                 <div className={`w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-sm font-bold flex-shrink-0 ${c.optedOut ? 'opacity-50' : ''}`}>
                   {c.name.charAt(0).toUpperCase()}
                 </div>
@@ -399,7 +481,8 @@ export default function CustomersPage() {
                     </span>
                   )}
                 </div>
-              </Link>
+                </Link>
+              </div>
             )
           })}
         </div>
