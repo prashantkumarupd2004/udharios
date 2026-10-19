@@ -468,26 +468,37 @@ export async function syncBillsFromTallyBulk(
     const customerByName = new Map<string, string>(existingCustomers.map((c: any) => [c.name.toLowerCase(), c.id] as [string, string]))
     result.customersMatched = existingCustomers.length
 
-    // Missing customers banao
+    // Missing customers banao — BULK (createMany + re-fetch IDs)
     const missingNames = partyNames.filter(n => !customerByName.has(n.toLowerCase()))
     if (missingNames.length > 0) {
-      // createMany ke baad IDs chahiye — ek-ek karke banao (ye kam hain)
-      for (const name of missingNames) {
+      const now = new Date()
+      const toCreate = missingNames.map((name) => {
         const bill = uniqueBills.find(b => b.partyName.trim() === name)
-        const created = await prisma.customer.create({
-          data: {
-            merchantId,
-            name,
-            phone: bill?.partyPhone?.trim() || `tally-${bill?.billRef || Date.now()}`,
-            consent: true,
-            consentAt: new Date(),
-            notes: 'Auto-created from Tally bulk import',
-          },
-          select: { id: true },
+        return {
+          merchantId,
+          name,
+          phone: bill?.partyPhone?.trim() || `tally-${bill?.billRef || Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          consent: true,
+          consentAt: now,
+          notes: 'Auto-created from Tally bulk import',
+        }
+      })
+      // Batches me createMany (500 ek saath)
+      for (let i = 0; i < toCreate.length; i += 500) {
+        await prisma.customer.createMany({
+          data: toCreate.slice(i, i + 500),
+          skipDuplicates: true,
         })
-        customerByName.set(name.toLowerCase(), created.id)
-        result.customersCreated++
       }
+      // IDs wapas lao
+      const created = await prisma.customer.findMany({
+        where: { merchantId, name: { in: missingNames } },
+        select: { id: true, name: true },
+      })
+      for (const c of created) {
+        customerByName.set((c as any).name.toLowerCase(), (c as any).id)
+      }
+      result.customersCreated = created.length
     }
 
     // --- STEP 2: Bills (bulk upsert) ---
