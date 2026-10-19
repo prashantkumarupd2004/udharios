@@ -195,8 +195,13 @@ export async function GET(request: NextRequest) {
         const minsSinceLastCall = (Date.now() - new Date(lastCall.createdAt).getTime()) / (1000 * 60)
         const lastFailed = ['failed', 'busy', 'no-answer', 'canceled'].includes(lastCall.status)
         const cutShort = lastCall.status === 'completed' && (lastCall.durationSec ?? 0) < 10
-        // Failed/busy/cut → 1 ghante baad retry; successful → 2 ghante gap
-        const minGapMins = (lastFailed || cutShort) ? 60 : 120
+        // Gap: daily limit ke hisaab se adjust karo
+        // 10-hour window (9 AM - 7 PM) me maxCallsToday calls → gap = 600 / maxCallsToday
+        // Manual limit set hai to aggressive calling allowed
+        const windowMins = 10 * 60 // 9 AM - 7 PM
+        const dynamicGap = Math.max(15, Math.floor(windowMins / Math.max(1, maxCallsToday)))
+        // Failed/busy/cut → half gap; successful → full gap
+        const minGapMins = (lastFailed || cutShort) ? Math.max(10, Math.floor(dynamicGap / 2)) : dynamicGap
         if (minsSinceLastCall < minGapMins) {
           skipped++
           continue
