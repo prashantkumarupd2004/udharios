@@ -43,6 +43,7 @@ interface Customer {
   consent: boolean
   optedOut: boolean
   notes: string | null
+  maxCallsPerDay: number | null
   outstandings: Outstanding[]
   bills: Bill[]
   promises: PromiseItem[]
@@ -69,6 +70,8 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const [phoneInput, setPhoneInput] = useState('')
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [maxCalls, setMaxCalls] = useState<string>('')
+  const [savingCalls, setSavingCalls] = useState(false)
   const [phoneError, setPhoneError] = useState('')
   const [calling, setCalling] = useState<string | null>(null)
   const [callMsg, setCallMsg] = useState('')
@@ -84,6 +87,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
         if (data?.customer) {
           setCustomer(data.customer)
           setTotalPending(Number(data.totalPending ?? 0))
+          setMaxCalls(data.customer.maxCallsPerDay != null ? String(data.customer.maxCallsPerDay) : '')
         }
         setLoading(false)
       })
@@ -117,6 +121,26 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
 
   const [markingPaid, setMarkingPaid] = useState<string | null>(null)
   const [pausing, setPausing] = useState<string | null>(null)
+
+  const handleSaveMaxCalls = async () => {
+    setSavingCalls(true)
+    try {
+      const val = maxCalls.trim() === '' ? null : Math.max(0, Math.min(20, parseInt(maxCalls, 10) || 0))
+      const res = await fetch(`/api/customers/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ maxCallsPerDay: val }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Save failed')
+      setCustomer(c => c ? { ...c, maxCallsPerDay: val } : c)
+      setMaxCalls(val != null ? String(val) : '')
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Save nahi ho paya')
+    } finally {
+      setSavingCalls(false)
+    }
+  }
 
   const handleDelete = async () => {
     const msg = lang === 'hi'
@@ -302,10 +326,36 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
               <p className="text-green-200/50 text-[10px] font-medium mt-0.5">
                 {pending.length} pending • {customer.bills.length} bills
               </p>
+              {/* Daily call limit */}
+              <div className="mt-2 flex items-center gap-1.5 justify-end">
+                <Phone className="w-3 h-3 text-green-300/70" />
+                <input
+                  type="number"
+                  min="0"
+                  max="20"
+                  value={maxCalls}
+                  onChange={e => setMaxCalls(e.target.value)}
+                  placeholder="Auto"
+                  title={lang === 'hi' ? 'Din me kitne calls (khali = auto)' : 'Calls per day (empty = auto)'}
+                  className="w-14 px-1.5 py-0.5 text-[11px] rounded-md bg-white/10 border border-white/20 text-white placeholder:text-green-200/40 focus:outline-none focus:border-green-400/50"
+                />
+                <button
+                  onClick={handleSaveMaxCalls}
+                  disabled={savingCalls}
+                  className="text-[11px] font-semibold text-green-300/80 hover:text-green-200 hover:bg-white/10 px-2 py-0.5 rounded-md transition-colors disabled:opacity-50"
+                >
+                  {savingCalls ? '...' : (lang === 'hi' ? 'Set' : 'Set')}
+                </button>
+              </div>
+              <p className="text-green-200/40 text-[9px] mt-0.5">
+                {customer.maxCallsPerDay != null
+                  ? `${customer.maxCallsPerDay}/din calls`
+                  : (lang === 'hi' ? 'Auto (din ke hisaab se)' : 'Auto (by overdue days)')}
+              </p>
               <button
                 onClick={handleDelete}
                 disabled={deleting}
-                className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-red-300/80 hover:text-red-200 hover:bg-red-500/10 px-2 py-1 rounded-lg transition-colors disabled:opacity-50"
+                className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-red-300/80 hover:text-red-200 hover:bg-red-500/10 px-2 py-1 rounded-lg transition-colors disabled:opacity-50"
               >
                 {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
                 {lang === 'hi' ? 'Delete customer' : 'Delete customer'}

@@ -112,6 +112,12 @@ export async function PATCH(
       data.consent = body.consent
       data.consentAt = body.consent ? new Date() : null
     }
+    // maxCallsPerDay: number (0-20) ya null (auto)
+    if (body.maxCallsPerDay === null || body.maxCallsPerDay === '') {
+      ;(data as any).maxCallsPerDay = null
+    } else if (typeof body.maxCallsPerDay === 'number' && body.maxCallsPerDay >= 0 && body.maxCallsPerDay <= 20) {
+      ;(data as any).maxCallsPerDay = Math.floor(body.maxCallsPerDay)
+    }
 
     const customer = await prisma.customer.update({
       where: { id },

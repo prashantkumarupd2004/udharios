@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
           select: { id: true, businessName: true, quietStart: true, quietEnd: true },
         },
         customer: {
-          select: { id: true, name: true, phone: true },
+          select: { id: true, name: true, phone: true, maxCallsPerDay: true },
         },
       },
       take: 20, // promise reminders ka alag budget
@@ -153,7 +153,7 @@ export async function GET(request: NextRequest) {
           },
         },
         customer: {
-          select: { id: true, name: true, phone: true },
+          select: { id: true, name: true, phone: true, maxCallsPerDay: true },
         },
       },
       orderBy: { dueDate: 'asc' },
@@ -167,10 +167,14 @@ export async function GET(request: NextRequest) {
     for (const o of overdues) {
       if (called >= MAX_CALLS_PER_RUN) break
 
-      // === ESCALATION: din ke hisaab se call limit ===
-      // Day 1: 2 calls, Day 2: 4 calls, Day 3: 6 calls... (max 8/day cap)
+      // === CALL LIMIT: merchant manual setting ya auto escalation ===
+      // Merchant ne customer ke liye maxCallsPerDay set kiya to wahi use hoga.
+      // Nahi to auto: Day 1: 2 calls, Day 2: 4 calls... (max 8/day cap)
       const daysOverdue = Math.max(1, Math.ceil((today.getTime() - new Date(o.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
-      const maxCallsToday = Math.min(2 * daysOverdue, 8)
+      const autoMax = Math.min(2 * daysOverdue, 8)
+      // o.customer me maxCallsPerDay include karna hoga (query me select karo)
+      const manualMax = (o.customer as any)?.maxCallsPerDay
+      const maxCallsToday = manualMax != null && manualMax >= 0 ? manualMax : autoMax
 
       const startOfDay = new Date(today)
       const callsToday = await prisma.call.count({
