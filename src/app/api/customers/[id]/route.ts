@@ -153,15 +153,16 @@ export async function DELETE(
 
     // Transaction me sab delete karo (order matters — pehle child records)
     await prisma.$transaction(async (tx) => {
-      // Promises (outstanding se linked hain, pehle inko)
+      // Promises — outstandingId AUR customerId dono se (koi miss na ho)
       const outstandings = await tx.outstanding.findMany({
         where: { customerId: id },
         select: { id: true },
       })
-      const outstandingIds = outstandings.map((o) => o.id)
+      const outstandingIds = outstandings.map((o: any) => o.id)
       if (outstandingIds.length > 0) {
         await tx.promise.deleteMany({ where: { outstandingId: { in: outstandingIds } } })
       }
+      await tx.promise.deleteMany({ where: { customerId: id } })
       // Disputes
       await tx.dispute.deleteMany({ where: { customerId: id } })
       // Reminder logs
@@ -185,7 +186,8 @@ export async function DELETE(
     })
     return NextResponse.json({ success: true, deleted: customer.name })
   } catch (err) {
-    logger.error('DELETE /api/customers/[id] error', { error: String(err) })
-    return NextResponse.json({ error: 'Delete nahi ho paya' }, { status: 500 })
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.error('DELETE /api/customers/[id] error', { error: msg })
+    return NextResponse.json({ error: `Delete nahi ho paya: ${msg}` }, { status: 500 })
   }
 }
