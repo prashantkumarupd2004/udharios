@@ -72,6 +72,7 @@ function AddOutstandingModal({
         setError(data.error ?? 'Error occurred')
         return
       }
+      // Success — filter reset karo taaki naya entry dikhe, phir refresh
       onSuccess()
       onClose()
     } catch {
@@ -171,8 +172,9 @@ export default function OutstandingsPage() {
   const [creatingLink, setCreatingLink] = useState<string | null>(null)
   const [pausing, setPausing] = useState<string | null>(null)
 
-  const fetch_ = useCallback(async () => {
-    const params = filter !== 'active' ? `?status=${filter}` : '?status=active'
+  const fetch_ = useCallback(async (forceFilter?: string) => {
+    const f = forceFilter ?? filter
+    const params = f !== 'active' ? `?status=${f}` : '?status=active'
     const res = await fetch(`/api/outstandings${params}`)
     const data = await res.json()
     setOutstandings(data.outstandings ?? [])
@@ -482,7 +484,7 @@ export default function OutstandingsPage() {
       )}
 
       {showAdd && (
-        <AddOutstandingModal lang={lang} onClose={() => setShowAdd(false)} onSuccess={fetch_} />
+        <AddOutstandingModal lang={lang} onClose={() => setShowAdd(false)} onSuccess={() => { setFilter('active'); fetch_('active') }} />
       )}
     </div>
   )
