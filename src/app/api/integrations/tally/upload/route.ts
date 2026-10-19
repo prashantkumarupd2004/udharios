@@ -84,8 +84,9 @@ export async function POST(request: NextRequest) {
 
     // Customer master: Tally XML me ledger rows bhi ho sakte hain —
     // jitne Sundry Debtors milenge, sab auto-add honge (bill ho ya na ho)
+    // Ledger XML (single customer) ke liye skip — wahan customer pehle se pata hai
     let masterSynced = { matched: 0, created: 0 }
-    if (!isCsv) {
+    if (!isCsv && !isLedger) {
       const { customers } = parseTallyLedgers(text)
       if (customers.length > 0) {
         masterSynced = await syncCustomersFromTally(session.merchantId, customers)

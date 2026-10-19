@@ -124,10 +124,9 @@ export async function syncBillsFromTally(
   bills: TallyBillInput[],
   source: BillSource
 ): Promise<SyncResult> {
-  // 100+ bills → bulk fast path (4000 bills: ~20,000 queries → ~50 queries)
-  if (bills.length > 100) {
-    return syncBillsFromTallyBulk(merchantId, bills, source)
-  }
+  // Hamesha bulk fast path use karo (chhoti files ke liye bhi tez hai)
+  // Pehle 100+ pe tha, lekin 29 bills bhi sequential me slow the → timeout!
+  return syncBillsFromTallyBulk(merchantId, bills, source)
 
   const result: SyncResult = {
     billsUpserted: 0,
