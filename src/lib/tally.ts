@@ -297,6 +297,40 @@ export async function applyTallyReceipts(
   const result: ReceiptSyncResult = { receiptsApplied: 0, billsPaidOff: 0 }
   const errors: string[] = []
 
+  // Party-wise group karo — alag parties parallel, same party sequential (waterfall sahi rahe)
+  const byParty = new Map<string, TallyReceiptInput[]>()
+  for (const r of receipts) {
+    const key = r.partyName.trim().toLowerCase()
+    if (!byParty.has(key)) byParty.set(key, [])
+    byParty.get(key)!.push(r)
+  }
+
+  const groups = [...byParty.values()]
+  // 5 groups ek saath parallel
+  for (let i = 0; i < groups.length; i += 5) {
+    const batch = groups.slice(i, i + 5)
+    const results = await Promise.all(
+      batch.map((group) => applyReceiptGroup(merchantId, group))
+    )
+    for (const r of results) {
+      result.receiptsApplied += r.receiptsApplied
+      result.billsPaidOff += r.billsPaidOff
+      errors.push(...r.errors)
+    }
+  }
+
+  logger.info('Tally receipts applied', { merchantId, ...result, errors: errors.length })
+  return { ...result, errors }
+}
+
+/** Ek party ke receipts sequential apply karo (waterfall correctness ke liye) */
+async function applyReceiptGroup(
+  merchantId: string,
+  receipts: TallyReceiptInput[]
+): Promise<ReceiptSyncResult & { errors: string[] }> {
+  const result: ReceiptSyncResult = { receiptsApplied: 0, billsPaidOff: 0 }
+  const errors: string[] = []
+
   for (const r of receipts) {
     try {
       const partyName = r.partyName.trim()
@@ -404,7 +438,6 @@ export async function applyTallyReceipts(
     }
   }
 
-  logger.info('Tally receipts applied', { merchantId, ...result, errors: errors.length })
   return { ...result, errors }
 }
 
