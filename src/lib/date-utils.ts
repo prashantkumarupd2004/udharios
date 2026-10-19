@@ -57,12 +57,21 @@ export function currentHourIST(): number {
  * quietStart and quietEnd are "HH:MM" strings (e.g. "21:00", "09:00")
  */
 export function isWithinSendingWindow(quietStart: string, quietEnd: string): boolean {
-  const [qStartH, qStartM] = quietStart.split(':').map(Number)
-  const [qEndH, qEndM] = quietEnd.split(':').map(Number)
-
   const now = nowIST()
   const istDate = new Date(now.getTime() + IST_OFFSET_MINUTES * 60 * 1000)
   const currentMinutes = istDate.getUTCHours() * 60 + istDate.getUTCMinutes()
+
+  // === STRICT SYSTEM LIMIT: 9 AM - 7 PM IST (koi call iske bahar nahi!) ===
+  // User ne bola: 8 baje call aa gaya tha — ab se hard limit.
+  const SYSTEM_START = 9 * 60   // 09:00
+  const SYSTEM_END = 19 * 60    // 19:00
+  if (currentMinutes < SYSTEM_START || currentMinutes >= SYSTEM_END) {
+    return false
+  }
+
+  // Merchant ki quiet hours (is window ke andar aur narrow kar sakti hain)
+  const [qStartH, qStartM] = quietStart.split(':').map(Number)
+  const [qEndH, qEndM] = quietEnd.split(':').map(Number)
 
   const startMinutes = qStartH * 60 + qStartM // quiet period starts (e.g. 21:00 = 1260)
   const endMinutes = qEndH * 60 + qEndM       // quiet period ends   (e.g. 09:00 = 540)

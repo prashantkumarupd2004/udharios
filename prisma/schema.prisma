@@ -135,7 +135,7 @@ model Merchant {
   logoUrl        String?      @map("logo_url")
   plan           MerchantPlan @default(trial)
   trialEndsAt    DateTime?    @map("trial_ends_at")
-  quietStart     String       @default("21:00") @map("quiet_start")
+  quietStart     String       @default("19:00") @map("quiet_start")
   quietEnd       String       @default("09:00") @map("quiet_end")
   isKillSwitched Boolean      @default(false) @map("is_kill_switched")
   isApproved     Boolean      @default(false) @map("is_approved")
