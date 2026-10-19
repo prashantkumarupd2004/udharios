@@ -121,8 +121,9 @@ export async function POST(request: NextRequest) {
         where: { id: callRecord.id },
         data: { status: 'failed' },
       })
-      logger.error('Voice call placement failed', { error: String(callErr) })
-      return NextResponse.json({ error: 'Call placement failed' }, { status: 502 })
+      const errMsg = callErr instanceof Error ? callErr.message : String(callErr)
+      logger.error('Voice call placement failed', { error: errMsg })
+      return NextResponse.json({ error: `Call placement failed: ${errMsg}` }, { status: 502 })
     }
 
     await appendAuditLog({
