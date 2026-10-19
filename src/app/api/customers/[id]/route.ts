@@ -163,6 +163,11 @@ export async function DELETE(
         await tx.promise.deleteMany({ where: { outstandingId: { in: outstandingIds } } })
       }
       await tx.promise.deleteMany({ where: { customerId: id } })
+      // Payments (outstanding se linked — pehle inko delete karo)
+      if (outstandingIds.length > 0) {
+        await tx.payment.deleteMany({ where: { outstandingId: { in: outstandingIds } } })
+        await tx.paymentLink.deleteMany({ where: { outstandingId: { in: outstandingIds } } })
+      }
       // Disputes
       await tx.dispute.deleteMany({ where: { customerId: id } })
       // Reminder logs
