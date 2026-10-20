@@ -6,8 +6,8 @@
  * - Sirf real phone number ho (tally-xxx nahi)
  * - consent=true, optedOut=false
  * - Merchant kill-switch OFF ho
- * - Ek outstanding ko din me max 1 call
- * - Sirf 3+ din overdue ho (grace period)
+ * - Escalation: due date din 2 calls, phir roz +2 (max 8/day); manual limit set ho to wahi
+ * - Due date wale din se hi calls (koi grace period nahi)
  *
  * Auth: CRON_SECRET bearer token (Vercel Cron automatic)
  */
@@ -19,7 +19,6 @@ import { isWithinSendingWindow } from '@/lib/date-utils'
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
 import { logger } from '@/lib/logger'
 
-const MIN_OVERDUE_DAYS = 3
 const MAX_CALLS_PER_RUN = 50 // ek run me max 50 calls (cost control)
 
 export async function GET(request: NextRequest) {
@@ -32,8 +31,9 @@ export async function GET(request: NextRequest) {
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const graceDate = new Date(today)
-  graceDate.setDate(graceDate.getDate() - MIN_OVERDUE_DAYS)
+  // Due date aaj ya pehle hai to call ke liye eligible (grace period NAHI hai)
+  const endOfToday = new Date(today)
+  endOfToday.setHours(23, 59, 59, 999)
 
   try {
     // === PROMISE FOLLOW-UP ===
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
     // Overdue outstandings nikalo
     const overdues = await prisma.outstanding.findMany({
       where: {
-        dueDate: { lt: graceDate },
+        dueDate: { lte: endOfToday },
         status: { in: ['overdue', 'upcoming'] },
         remindersPaused: false,
         merchant: {
@@ -170,7 +170,10 @@ export async function GET(request: NextRequest) {
       // === CALL LIMIT: merchant manual setting ya auto escalation ===
       // Merchant ne customer ke liye maxCallsPerDay set kiya to wahi use hoga.
       // Nahi to auto: Day 1: 2 calls, Day 2: 4 calls... (max 8/day cap)
-      const daysOverdue = Math.max(1, Math.ceil((today.getTime() - new Date(o.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
+      // Day count: due date wala din = Day 1 (2 calls), agla din Day 2 (4 calls), phir 6, 8 (cap)
+      const dueDay = new Date(o.dueDate)
+      dueDay.setHours(0, 0, 0, 0)
+      const daysOverdue = Math.max(1, Math.round((today.getTime() - dueDay.getTime()) / (1000 * 60 * 60 * 24)) + 1)
       const autoMax = Math.min(2 * daysOverdue, 8)
       // o.customer me maxCallsPerDay include karna hoga (query me select karo)
       const manualMax = (o.customer as any)?.maxCallsPerDay
