@@ -102,20 +102,14 @@ function CountUp({ to, suffix = '', duration = 1400 }: { to: number; suffix?: st
 
 /* ── Brand logo ────────────────────────────────────────────────────── */
 function Logo({ size = 'md' }: { size?: 'md' | 'lg' }) {
-  const box = size === 'lg' ? 'w-11 h-11' : 'w-9 h-9'
+  const box = size === 'lg' ? 'h-12' : 'h-10'
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex items-center">
       <img
-        src="/logo-premium.png"
+        src="/logo-wordmark.png"
         alt="Ugaahi logo"
-        className={`${box} rounded-xl shadow-lg shadow-green-500/20 object-cover`}
+        className={`${box} w-auto`}
       />
-      <div className="leading-none">
-        <span className="font-display font-extrabold text-xl tracking-tight text-slate-900">
-          Ugaahi
-        </span>
-        <p className="text-[10px] font-semibold tracking-[0.22em] text-green-700/80 mt-0.5">उगाही</p>
-      </div>
     </div>
   )
 }

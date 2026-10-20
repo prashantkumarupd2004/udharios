@@ -7,18 +7,12 @@ import { useLanguage } from '@/hooks/useLanguage'
 
 export function Logo() {
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex items-center">
       <img
-        src="/logo-premium.png"
+        src="/logo-wordmark.png"
         alt="Ugaahi logo"
-        className="w-9 h-9 rounded-xl shadow-lg shadow-green-500/20 object-cover"
+        className="h-10 w-auto"
       />
-      <div className="leading-none">
-        <span className="font-extrabold text-xl tracking-tight text-stone-900">
-          Ugaahi
-        </span>
-        <p className="text-[10px] font-semibold tracking-[0.22em] text-green-700/80 mt-0.5">उगाही</p>
-      </div>
     </div>
   )
 }
