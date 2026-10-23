@@ -215,80 +215,63 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Overdue outstandings nikalo
-    const overdues = await prisma.outstanding.findMany({
-      where: {
-        dueDate: { lte: endOfToday },
-        status: { in: ['overdue', 'upcoming'] },
-        remindersPaused: false,
-        merchant: {
-          isKillSwitched: false,
-          isApproved: true,
-        },
-        customer: {
-          optedOut: false,
-          consent: true,
-          phone: { not: { startsWith: 'tally-' } },
-        },
-      },
-      include: {
-        merchant: {
-          select: {
-            id: true, businessName: true,
-            quietStart: true, quietEnd: true,
-          },
-        },
-        customer: {
-          select: { id: true, name: true, phone: true, maxCallsPerDay: true },
-        },
-      },
-      orderBy: { dueDate: 'asc' },
-      take: 300, // rotation ke liye bada pool — sort neeche hota hai
-    })
+    // === FAIR ROTATION (DB-level) ===
+    // Sirf "300 sabse purane due-date" fetch karna scale pe starvation hai:
+    // hazaaron overdues me 300 ke aage wale pool me kabhi aate hi nahi the,
+    // unhe call ja hi nahi sakti thi. Ab rotation khud DB karta hai —
+    // aaj sabse KAM calls wale pehle, phir jiska last call sabse purana —
+    // aur har invocation wahi sahi 300 uthata hai.
+    interface RotationRow { id: string; calls_today: number }
+    const rotationRows = (await prisma.$queryRaw`
+      SELECT o.id AS id,
+        (SELECT COUNT(*)::int FROM calls cl
+          WHERE cl.outstanding_id = o.id AND cl.created_at >= ${startOfDay}) AS calls_today,
+        (SELECT MAX(cl2.created_at) FROM calls cl2
+          WHERE cl2.outstanding_id = o.id) AS last_call_at
+      FROM outstandings o
+      JOIN merchants m ON m.id = o.merchant_id
+      JOIN customers c ON c.id = o.customer_id
+      WHERE o.due_date <= ${endOfToday}
+        AND o.status IN ('overdue', 'upcoming')
+        AND o.reminders_paused = false
+        AND m.is_kill_switched = false
+        AND m.is_approved = true
+        AND c.opted_out = false
+        AND c.consent = true
+        AND c.phone NOT LIKE 'tally-%'
+      ORDER BY calls_today ASC, last_call_at ASC NULLS FIRST, o.due_date ASC
+      LIMIT 300
+    `) as unknown as RotationRow[]
 
-    // === FAIR ROTATION ===
-    // Pehle sirf dueDate order tha — naye overdue (recent due date) hamesha
-    // line ke aakhir me rehte the, pehli call 11 baje tak atakti thi.
-    // Ab: aaj sabse KAM calls wale pehle, phir jiska last call sabse purana.
-    interface OverdueSortRow { id: string; dueDate: Date | string }
-    interface CallCountRow { outstandingId: string; _count: { _all: number } }
-    interface LastCallRow { outstandingId: string; _max: { createdAt: Date | string | null } }
-    const sortPool = overdues as unknown as OverdueSortRow[]
-    const overdueIds: string[] = sortPool.map((o) => o.id)
-    const countRows = (overdueIds.length
-      ? await prisma.call.groupBy({
-          by: ['outstandingId'],
-          where: { outstandingId: { in: overdueIds }, createdAt: { gte: startOfDay } },
-          _count: { _all: true },
-        })
-      : []) as unknown as CallCountRow[]
     const callsTodayMap = new Map<string, number>()
-    for (const r of countRows) {
-      callsTodayMap.set(r.outstandingId, r._count._all)
-    }
-    const lastRows = (overdueIds.length
-      ? await prisma.call.groupBy({
-          by: ['outstandingId'],
-          where: { outstandingId: { in: overdueIds } },
-          _max: { createdAt: true },
-        })
-      : []) as unknown as LastCallRow[]
-    const lastCallMap = new Map<string, number>()
-    for (const r of lastRows) {
-      lastCallMap.set(
-        r.outstandingId,
-        r._max?.createdAt ? new Date(r._max.createdAt).getTime() : 0
-      )
-    }
-    sortPool.sort((a, b) => {
-      const ca = callsTodayMap.get(a.id) ?? 0
-      const cb = callsTodayMap.get(b.id) ?? 0
-      if (ca !== cb) return ca - cb
-      const la = lastCallMap.get(a.id) ?? 0
-      const lb = lastCallMap.get(b.id) ?? 0
-      if (la !== lb) return la - lb
-      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+    const rotationIndex = new Map<string, number>()
+    rotationRows.forEach((r, i) => {
+      callsTodayMap.set(r.id, r.calls_today)
+      rotationIndex.set(r.id, i)
     })
+    const overdueIds = rotationRows.map((r) => r.id)
+
+    // Overdues ka full data (merchant/customer ke saath), rotation order me
+    const overduesFetched = overdueIds.length
+      ? await prisma.outstanding.findMany({
+          where: { id: { in: overdueIds } },
+          include: {
+            merchant: {
+              select: {
+                id: true, businessName: true,
+                quietStart: true, quietEnd: true,
+              },
+            },
+            customer: {
+              select: { id: true, name: true, phone: true, maxCallsPerDay: true },
+            },
+          },
+        })
+      : []
+    type FetchedOverdue = (typeof overduesFetched)[number]
+    const overdues = overduesFetched
+      .slice()
+      .sort((a: FetchedOverdue, b: FetchedOverdue) => (rotationIndex.get(a.id) ?? 0) - (rotationIndex.get(b.id) ?? 0))
 
     // === PHASE A: saste checks (bina DB) — candidate list ===
     type Candidate = { o: (typeof overdues)[number]; maxCallsToday: number }
