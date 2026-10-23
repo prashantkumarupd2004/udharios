@@ -103,9 +103,11 @@ export function buildPaymentReminderEmail({
         : `Final Reminder: Invoice ${invoiceNo} — ₹${amountStr} pending`
 
   const statusText =
-    daysOverdue <= 0
-      ? 'due for payment today'
-      : `now overdue by ${daysOverdue} day${daysOverdue === 1 ? '' : 's'}`
+    daysOverdue < 0
+      ? 'due for payment tomorrow'
+      : daysOverdue === 0
+        ? 'due for payment today'
+        : `now overdue by ${daysOverdue} day${daysOverdue === 1 ? '' : 's'}`
 
   const intro =
     tier === 'gentle'

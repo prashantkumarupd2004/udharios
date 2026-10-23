@@ -487,14 +487,17 @@ export async function GET(request: NextRequest) {
       await placeForCandidate(cand)
     })
     // === EMAIL PASS (company customers) ===
-    // reminder_mode='email' walo ko professional email reminder:
-    // due din pe pehli mail, phir har 3 din me ek, per bill max 5.
+    // reminder_mode='email' walo ko professional email reminder.
+    // ESCALATION — CALLS wala hi pattern (user ki setting, Oct 23):
+    // due se 1 din pehle 1 mail, due din 2, phir roz +2 (4, 6, 8 cap),
+    // din bhar dynamic gap ke saath. (Purani 3-din/max-5 cadence hata di.)
     // Poora pass defensive hai — RESEND_API_KEY na ho ya DB migration
     // (email/reminder_mode columns) pending ho to chup-chaap skip;
     // call flow pe koi asar nahi padta.
     let emailsSent = 0
     if (isEmailConfigured() && timeLeft() > 5_000) {
       try {
+        const endOfTomorrow = new Date(endOfToday.getTime() + 86400000)
         interface EmailRow {
           id: string
           merchantId: string
@@ -508,7 +511,7 @@ export async function GET(request: NextRequest) {
         }
         const emailRows = (await (prisma.outstanding.findMany as any)({
           where: {
-            dueDate: { lte: endOfToday },
+            dueDate: { lte: endOfTomorrow },
             status: { in: ['overdue', 'upcoming'] },
             remindersPaused: false,
             merchant: { isKillSwitched: false, isApproved: true },
@@ -536,33 +539,49 @@ export async function GET(request: NextRequest) {
             select: { outstandingId: true, sentAt: true },
             orderBy: { sentAt: 'desc' },
           })) as LogRow[]
-          const logMap = new Map<string, { count: number; lastAt: number }>()
+          const logMap = new Map<string, { total: number; todayCount: number; lastAt: number }>()
           for (const l of logs) {
             const t = new Date(l.sentAt).getTime()
-            const cur = logMap.get(l.outstandingId)
-            if (cur) {
-              cur.count++
-              if (t > cur.lastAt) cur.lastAt = t
-            } else {
-              logMap.set(l.outstandingId, { count: 1, lastAt: t })
-            }
+            const cur = logMap.get(l.outstandingId) ?? { total: 0, todayCount: 0, lastAt: 0 }
+            cur.total++
+            if (t >= today.getTime()) cur.todayCount++
+            if (t > cur.lastAt) cur.lastAt = t
+            logMap.set(l.outstandingId, cur)
+          }
+
+          // Ek bill ke liye aaj kitni mails — calls wala escalation:
+          // due se 1 din pehle = 1, due din = 2, phir roz +2 (8 cap)
+          const maxEmailsFor = (r: EmailRow): number => {
+            const due = new Date(r.dueDate)
+            due.setHours(0, 0, 0, 0)
+            const diffDays = Math.round((due.getTime() - today.getTime()) / 86400000)
+            if (diffDays === 1) return 1 // due se ek din pehle
+            if (diffDays > 1) return 0
+            const dayIndex = 1 - diffDays // due din = 1, 1 din overdue = 2...
+            return Math.min(2 * dayIndex, 8)
           }
 
           const dueEmails = emailRows.filter((r) => {
+            const maxToday = maxEmailsFor(r)
+            if (maxToday <= 0) return false
             const info = logMap.get(r.id)
-            if (!info) return true // pehli mail — due din pe
-            if (info.count >= 5) return false // per-bill cap: max 5 mails
-            return Date.now() - info.lastAt >= 3 * 24 * 60 * 60 * 1000 // 3 din ka gap
+            if ((info?.todayCount ?? 0) >= maxToday) return false
+            if (info?.lastAt) {
+              // Din bhar ka gap — calls jaisa dynamic (600 min / max per day)
+              const gapMin = Math.max(15, Math.floor(600 / maxToday))
+              if (Date.now() - info.lastAt < gapMin * 60000) return false
+            }
+            return true
           })
 
           await runBatches(dueEmails, 5, async (r: EmailRow) => {
             if (timeLeft() <= 3_000) return
-            const reminderNumber = (logMap.get(r.id)?.count ?? 0) + 1
+            const reminderNumber = (logMap.get(r.id)?.total ?? 0) + 1
             const dueDayOnly = new Date(r.dueDate)
             dueDayOnly.setHours(0, 0, 0, 0)
-            const daysOverdue = Math.max(
-              0,
-              Math.round((today.getTime() - dueDayOnly.getTime()) / 86400000)
+            // Signed: -1 = kal due (pre-due mail), 0 = aaj due, +k = k din overdue
+            const daysOverdue = Math.round(
+              (today.getTime() - dueDayOnly.getTime()) / 86400000
             )
             const { subject, html } = buildPaymentReminderEmail({
               businessName: r.merchant.businessName,
