@@ -15,9 +15,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { placeVoiceCall } from '@/lib/voice-provider'
+import { fetchVobizCall } from '@/lib/vobiz'
 import { isWithinSendingWindow } from '@/lib/date-utils'
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
 import { logger } from '@/lib/logger'
+
+export const maxDuration = 60
 
 const MAX_CALLS_PER_RUN = 50 // ek run me max 50 calls (cost control)
 
@@ -55,6 +58,44 @@ export async function GET(request: NextRequest) {
     }
     if (expiredPromises.length > 0) {
       logger.info('Expired promises → overdue', { count: expiredPromises.length })
+    }
+
+    // === VOBIZ STATUS SYNC (webhook miss ka fallback) ===
+    // 'initiated'/'in-progress' pe atki recent calls ka asal status Vobiz API
+    // se kheecho. Isse neeche ki gap / retry / blocked logic ko sahi
+    // last-status milta hai (warna sab andha chalta hai).
+    try {
+      const stale = await prisma.call.findMany({
+        where: {
+          status: { in: ['initiated', 'in-progress', 'ringing'] },
+          createdAt: {
+            gte: new Date(Date.now() - 48 * 3600 * 1000),
+            lt: new Date(Date.now() - 10 * 60 * 1000),
+          },
+        },
+        select: { id: true, exotelSid: true },
+        orderBy: { createdAt: 'asc' },
+        take: 30,
+      })
+      const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      let synced = 0
+      for (const c of stale) {
+        if (!uuidRe.test(c.exotelSid)) continue // sirf Vobiz UUID wali calls
+        const info = await fetchVobizCall(c.exotelSid)
+        if (!info || !info.status || ['initiated', 'queued'].includes(info.status)) continue
+        await prisma.call.update({
+          where: { id: c.id },
+          data: {
+            status: info.status,
+            ...(info.durationSec != null ? { durationSec: info.durationSec } : {}),
+            ...(info.recordingUrl ? { recordingUrl: info.recordingUrl } : {}),
+          },
+        }).catch(() => {})
+        synced++
+      }
+      if (synced > 0) logger.info('Vobiz status sync: calls updated', { synced })
+    } catch (err) {
+      logger.error('Vobiz status sync failed', { error: String(err) })
     }
 
     // 2. Due promises (promisedDate = aaj): reminder call lagao
@@ -157,15 +198,67 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: { dueDate: 'asc' },
-      take: MAX_CALLS_PER_RUN * 2, // filter ke baad kaam aayenge
+      take: 300, // rotation ke liye bada pool — sort neeche hota hai
+    })
+
+    // === FAIR ROTATION (Oct 23 fix) ===
+    // Pehle sirf dueDate order tha — naye overdue (recent due date) hamesha
+    // line ke aakhir me rehte the, pehli call 11 baje tak atakti thi.
+    // Ab: aaj sabse KAM calls wale pehle, phir jiska last call sabse purana.
+    const startOfDay = new Date(today)
+    interface OverdueSortRow { id: string; dueDate: Date | string }
+    interface CallCountRow { outstandingId: string; _count: { _all: number } }
+    interface LastCallRow { outstandingId: string; _max: { createdAt: Date | string | null } }
+    const sortPool = overdues as unknown as OverdueSortRow[]
+    const overdueIds: string[] = sortPool.map((o) => o.id)
+    const countRows = (overdueIds.length
+      ? await prisma.call.groupBy({
+          by: ['outstandingId'],
+          where: { outstandingId: { in: overdueIds }, createdAt: { gte: startOfDay } },
+          _count: { _all: true },
+        })
+      : []) as unknown as CallCountRow[]
+    const callsTodayMap = new Map<string, number>()
+    for (const r of countRows) {
+      callsTodayMap.set(r.outstandingId, r._count._all)
+    }
+    const lastRows = (overdueIds.length
+      ? await prisma.call.groupBy({
+          by: ['outstandingId'],
+          where: { outstandingId: { in: overdueIds } },
+          _max: { createdAt: true },
+        })
+      : []) as unknown as LastCallRow[]
+    const lastCallMap = new Map<string, number>()
+    for (const r of lastRows) {
+      lastCallMap.set(
+        r.outstandingId,
+        r._max?.createdAt ? new Date(r._max.createdAt).getTime() : 0
+      )
+    }
+    sortPool.sort((a, b) => {
+      const ca = callsTodayMap.get(a.id) ?? 0
+      const cb = callsTodayMap.get(b.id) ?? 0
+      if (ca !== cb) return ca - cb
+      const la = lastCallMap.get(a.id) ?? 0
+      const lb = lastCallMap.get(b.id) ?? 0
+      if (la !== lb) return la - lb
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
     })
 
     let called = 0
     let skipped = 0
     const details: string[] = []
+    const loopStartedAt = Date.now()
 
     for (const o of overdues) {
       if (called >= MAX_CALLS_PER_RUN) break
+      // Time budget: function timeout se pehle saaf ruk jao — aadhi placement
+      // pe kill hone se 'initiated' record reh jata hai bina call gaye.
+      if (Date.now() - loopStartedAt > 50_000) {
+        logger.info('Auto-call run: time budget reached, baaki agle run me', { called, skipped })
+        break
+      }
 
       // === CALL LIMIT: merchant manual setting ya auto escalation ===
       // Merchant ne customer ke liye maxCallsPerDay set kiya to wahi use hoga.
@@ -179,10 +272,7 @@ export async function GET(request: NextRequest) {
       const manualMax = (o.customer as any)?.maxCallsPerDay
       const maxCallsToday = manualMax != null && manualMax >= 0 ? manualMax : autoMax
 
-      const startOfDay = new Date(today)
-      const callsToday = await prisma.call.count({
-        where: { outstandingId: o.id, createdAt: { gte: startOfDay } },
-      })
+      const callsToday = callsTodayMap.get(o.id) ?? 0
       if (callsToday >= maxCallsToday) {
         skipped++
         continue

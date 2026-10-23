@@ -77,8 +77,19 @@ export async function placeCall(input: VobizPlaceCallInput): Promise<VobizCallRe
     : ''
   const prQ = isPromiseReminder ? '&pr=1' : ''
   const answerUrl = `${APP_URL}/api/voice/vobiz/answer${q}${audioQ}${prQ}`
-  // callbackUrl (status webhook) caller de to wahi, warna hamara vobiz webhook
-  const hangupUrl = input.callbackUrl || `${APP_URL}/api/webhooks/vobiz${q}`
+  // === STATUS WEBHOOK FIX (Oct 23) ===
+  // Saare callers legacy callbackUrl me /api/webhooks/exotel bhejte hain
+  // (Exotel-era ka URL). Vobiz ka hangup/status callback wahan gaya to Exotel
+  // signature/field check pe mar gaya — isiliye har Vobiz call ka status
+  // hamesha 'initiated' atka raha aur /api/webhooks/vobiz pe kabhi kuch
+  // aaya hi nahi. Vobiz ke liye hangup_url HAMESHA apna vobiz webhook hoga.
+  let hangupCallId = callRecordId
+  if (!hangupCallId && input.callbackUrl) {
+    try {
+      hangupCallId = new URL(input.callbackUrl).searchParams.get('callId') ?? ''
+    } catch { /* ignore */ }
+  }
+  const hangupUrl = `${APP_URL}/api/webhooks/vobiz${hangupCallId ? `?callId=${encodeURIComponent(hangupCallId)}` : ''}`
 
   const url = `https://api.vobiz.ai/api/v1/Account/${VOBIZ_AUTH_ID}/Call/`
   const body = {
@@ -122,6 +133,55 @@ export async function placeCall(input: VobizPlaceCallInput): Promise<VobizCallRe
 
   logger.info('Vobiz call placed', { callId, to, answerUrl })
   return { callId, raw: data }
+}
+
+/** Vobiz status string → hamara normalized status (webhook + API sync dono ke liye). */
+export function normalizeVobizCallStatus(raw: string): string {
+  const s = (raw ?? '').toLowerCase().replace(/[_\s]+/g, '-')
+  if (['completed', 'answered', 'in-progress', 'ringing', 'queued', 'initiated'].includes(s)) return s
+  if (['no-answer', 'noanswer', 'unanswered', 'cancelled', 'canceled', 'cancel'].includes(s)) return 'no-answer'
+  if (['busy'].includes(s)) return 'busy'
+  if (['failed', 'error'].includes(s)) return 'failed'
+  return s
+}
+
+export interface VobizCallInfo {
+  status: string
+  durationSec: number | null
+  recordingUrl: string | null
+}
+
+/**
+ * Vobiz API se ek call ka current status/duration fetch karo.
+ * Webhook miss ho jaye to cron isse status sync karta hai (fallback).
+ * Fail ho to null — caller chup chaap skip kar de.
+ */
+export async function fetchVobizCall(callUuid: string): Promise<VobizCallInfo | null> {
+  if (!isVobizConfigured() || !callUuid) return null
+  try {
+    const res = await fetch(
+      `https://api.vobiz.ai/api/v1/Account/${VOBIZ_AUTH_ID}/Call/${encodeURIComponent(callUuid)}/`,
+      { headers: { 'X-Auth-ID': VOBIZ_AUTH_ID, 'X-Auth-Token': VOBIZ_AUTH_TOKEN } }
+    )
+    if (!res.ok) {
+      logger.warn('fetchVobizCall non-OK response', { status: res.status, callUuid })
+      return null
+    }
+    const data = (await res.json()) as Record<string, unknown>
+    const rawStatus = String(data.call_status ?? data.status ?? data.CallStatus ?? data.state ?? '')
+    const durRaw = data.duration ?? data.bill_duration ?? data.Duration ?? data.BillDuration ?? null
+    const dur = durRaw != null ? parseInt(String(durRaw), 10) : NaN
+    return {
+      status: normalizeVobizCallStatus(rawStatus),
+      durationSec: Number.isFinite(dur) ? dur : null,
+      recordingUrl:
+        (typeof data.recording_url === 'string' ? data.recording_url : null) ??
+        (typeof data.RecordingUrl === 'string' ? data.RecordingUrl : null),
+    }
+  } catch (err) {
+    logger.warn('fetchVobizCall failed', { callUuid, error: String(err) })
+    return null
+  }
 }
 
 /**

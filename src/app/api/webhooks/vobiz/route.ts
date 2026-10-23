@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
 import { logger } from '@/lib/logger'
-import { verifyVobizWebhook } from '@/lib/vobiz'
+import { verifyVobizWebhook, normalizeVobizCallStatus } from '@/lib/vobiz'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,15 +27,7 @@ function parseBody(raw: string): Record<string, string> {
   }
 }
 
-/** Vobiz status → hamara normalized status */
-function normalizeStatus(raw: string): string {
-  const s = raw.toLowerCase().replace(/[_\s]+/g, '-')
-  if (['completed', 'answered', 'in-progress', 'ringing'].includes(s)) return s
-  if (['no-answer', 'noanswer', 'unanswered', 'cancelled', 'canceled'].includes(s)) return 'no-answer'
-  if (['busy'].includes(s)) return 'busy'
-  if (['failed', 'error'].includes(s)) return 'failed'
-  return s
-}
+const TERMINAL_STATUSES = ['completed', 'failed', 'busy', 'no-answer']
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,39 +47,53 @@ export async function POST(request: NextRequest) {
       logger.warn('Vobiz webhook signature invalid — processing anyway (temp diag mode)')
     }
 
-    const callId = request.nextUrl.searchParams.get('callId')
+    const queryCallId = request.nextUrl.searchParams.get('callId')
     const body = parseBody(rawBody)
-    const callUuid = body.CallUUID ?? body.call_uuid ?? body.request_uuid ?? ''
-    const status = normalizeStatus(body.Status ?? body.status ?? body.CallStatus ?? '')
-    const duration = body.Duration ?? body.duration ?? body.billsec ?? null
+    const callUuid = body.CallUUID ?? body.call_uuid ?? body.request_uuid ?? body.CallSid ?? ''
+    const status = normalizeVobizCallStatus(body.Status ?? body.status ?? body.CallStatus ?? body.call_status ?? '')
+    const duration = body.Duration ?? body.BillDuration ?? body.duration ?? body.bill_duration ?? body.billsec ?? null
     const recordingUrl = body.RecordingUrl ?? body.recording_url ?? null
 
-    logger.info('Vobiz webhook', { callId, callUuid, status })
+    logger.info('Vobiz webhook', { callId: queryCallId, callUuid, status })
 
-    if (!callId) {
-      logger.warn('Vobiz webhook missing callId')
+    // Status hi nahi aaya to kuch update karne ko nahi (ping/unknown event)
+    if (!status) {
+      logger.warn('Vobiz webhook: empty status — ignored', { callUuid })
       return NextResponse.json({ ok: true })
     }
 
-    const call = await prisma.call.findUnique({
-      where: { id: callId },
-      include: {
-        outstanding: {
-          include: {
-            merchant: { select: { businessName: true } },
-            customer: { select: { name: true, phone: true } },
-          },
+    // Call dhoondo: pehle query callId (hamari DB id), warna provider UUID se
+    const callInclude = {
+      outstanding: {
+        include: {
+          merchant: { select: { businessName: true } },
+          customer: { select: { name: true, phone: true } },
         },
       },
-    })
-
-    if (!call) {
-      logger.warn('Vobiz webhook for unknown call', { callId })
-      return NextResponse.json({ ok: true })
+    } as const
+    let call = queryCallId
+      ? await prisma.call.findUnique({ where: { id: queryCallId }, include: callInclude })
+      : null
+    if (!call && callUuid) {
+      call = await prisma.call.findUnique({ where: { exotelSid: callUuid }, include: callInclude })
     }
 
-    const updateData: Record<string, unknown> = { status }
-    if (callUuid) updateData.exotelSid = callUuid
+    if (!call) {
+      logger.warn('Vobiz webhook for unknown call', { callId: queryCallId, callUuid })
+      return NextResponse.json({ ok: true })
+    }
+    const callId = call.id
+
+    const updateData: Record<string, unknown> = {}
+    // Terminal status kabhi peeche nahi jayega (out-of-order events se bachao)
+    if (TERMINAL_STATUSES.includes(call.status) && call.status !== status) {
+      logger.info('Vobiz webhook: terminal status already set — status change ignored', {
+        callId, existing: call.status, incoming: status,
+      })
+    } else {
+      updateData.status = status
+    }
+    if (callUuid && call.exotelSid !== callUuid) updateData.exotelSid = callUuid
     if (recordingUrl) updateData.recordingUrl = recordingUrl
     if (duration) updateData.durationSec = parseInt(duration, 10) || undefined
 

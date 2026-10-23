@@ -15,7 +15,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { placeCall } from '@/lib/exotel'
+import { placeVoiceCall } from '@/lib/voice-provider'
 import { isWithinSendingWindow } from '@/lib/date-utils'
 import { logger } from '@/lib/logger'
 
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
               select: { id: true, businessName: true, quietStart: true, quietEnd: true },
             },
             customer: {
-              select: { id: true, name: true, phone: true },
+              select: { id: true, name: true, phone: true, maxCallsPerDay: true },
             },
           },
         },
@@ -148,6 +148,26 @@ export async function GET(request: NextRequest) {
         continue
       }
 
+      // === DAILY CAP CHECK (Oct 23 fix) ===
+      // Pehle retry cron cap check hi nahi karta tha — auto-call ke limit ke
+      // upar bhi extra call lag sakti thi. Ab auto-call cron wala hi rule:
+      // merchant ka manual limit, warna escalation (Day1=2 ... max 8).
+      const dueDay = new Date(o.dueDate)
+      dueDay.setHours(0, 0, 0, 0)
+      const todayStart = new Date()
+      todayStart.setHours(0, 0, 0, 0)
+      const daysOverdue = Math.max(1, Math.round((todayStart.getTime() - dueDay.getTime()) / (1000 * 60 * 60 * 24)) + 1)
+      const autoMax = Math.min(2 * daysOverdue, 8)
+      const manualMax = (o.customer as unknown as { maxCallsPerDay?: number | null })?.maxCallsPerDay
+      const maxCallsToday = manualMax != null && manualMax >= 0 ? manualMax : autoMax
+      const callsToday = await prisma.call.count({
+        where: { outstandingId, createdAt: { gte: todayStart } },
+      })
+      if (callsToday >= maxCallsToday) {
+        skipped++
+        continue
+      }
+
       // Retry call karo!
       try {
         const callRecord = await prisma.call.create({
@@ -160,14 +180,16 @@ export async function GET(request: NextRequest) {
           },
         })
 
-        const exotelResponse = await placeCall({
+        // Provider merchant ki setting se (Vobiz primary / Exotel backup) —
+        // pehle ye seedha Exotel jata tha, provider setting ignore karke.
+        const voiceResult = await placeVoiceCall(o.merchant.id, {
           to: phone,
           callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/exotel?callId=${callRecord.id}`,
           record: true,
           customField: JSON.stringify({
             merchantName: o.merchant.businessName,
             customerName: o.customer.name,
-            amountINR: `₹${Number(o.amount).toLocaleString('en-IN')}`,
+            amountINR: o.amount.toString(),
             merchantId: o.merchant.id,
             customerId: o.customer.id,
             outstandingId,
@@ -178,7 +200,7 @@ export async function GET(request: NextRequest) {
 
         await prisma.call.update({
           where: { id: callRecord.id },
-          data: { exotelSid: exotelResponse.Call?.Sid ?? callRecord.exotelSid, status: 'queued' },
+          data: { exotelSid: voiceResult.providerCallId },
         })
 
         retried++
