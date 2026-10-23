@@ -52,6 +52,7 @@ enum ReminderChannel {
   whatsapp
   sms
   voice
+  email
   escalate
 }
 
@@ -209,6 +210,8 @@ model Customer {
   optedOutAt DateTime? @map("opted_out_at")
   notes      String?
   maxCallsPerDay Int?  @map("max_calls_per_day") // Merchant manual set: is customer ko din me kitne calls (null = auto escalation)
+  email      String? // Company customers ke email reminders ke liye
+  reminderMode String  @default("call") @map("reminder_mode") // 'call' = auto calls | 'email' = sirf email reminders, calls band (company customers)
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
 

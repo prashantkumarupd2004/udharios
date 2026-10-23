@@ -128,6 +128,20 @@ export async function PATCH(
     } else if (typeof body.maxCallsPerDay === 'number' && body.maxCallsPerDay >= 0 && body.maxCallsPerDay <= 20) {
       ;(data as any).maxCallsPerDay = Math.floor(body.maxCallsPerDay)
     }
+    // email: company customers ke email reminders ke liye (''/null = hatao)
+    if (body.email === null || body.email === '') {
+      ;(data as any).email = null
+    } else if (typeof body.email === 'string') {
+      const em = body.email.trim().toLowerCase()
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em)) {
+        return NextResponse.json({ error: 'Sahi email address daalo' }, { status: 400 })
+      }
+      ;(data as any).email = em
+    }
+    // reminderMode: 'call' = auto calls | 'email' = sirf email, calls band
+    if (body.reminderMode === 'call' || body.reminderMode === 'email') {
+      ;(data as any).reminderMode = body.reminderMode
+    }
 
     const customer = await prisma.customer.update({
       where: { id },

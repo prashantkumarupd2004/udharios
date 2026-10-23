@@ -87,6 +87,7 @@ export const createCustomerSchema = z.object({
     message: 'Customer consent is required before adding',
   }),
   notes: z.string().max(500).optional(),
+  email: z.string().trim().email('Valid email required').max(200).optional(),
 })
 
 export const updateCustomerSchema = createCustomerSchema.partial().omit({ consent: true })

@@ -116,7 +116,10 @@ export async function POST(request: NextRequest) {
         consent: true,
         consentAt: new Date(),
         notes: data.notes,
-      },
+        // Company customers ke email reminders ke liye (optional) —
+        // Prisma client type SQL migration ke baad refresh hoga
+        ...(data.email ? { email: data.email } : {}),
+      } as never,
     })
 
     await appendAuditLog({

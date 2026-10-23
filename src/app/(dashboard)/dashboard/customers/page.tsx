@@ -23,7 +23,7 @@ function fmtPhone(p: string) {
 }
 
 function AddCustomerModal({ onClose, onSuccess, lang }: { onClose: () => void; onSuccess: () => void; lang: string }) {
-  const [form, setForm] = useState({ name: '', phone: '', notes: '', consent: false })
+  const [form, setForm] = useState({ name: '', phone: '', notes: '', email: '', consent: false })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -39,7 +39,7 @@ function AddCustomerModal({ onClose, onSuccess, lang }: { onClose: () => void; o
       const res = await fetch('/api/customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, email: form.email.trim() || undefined }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? 'Error'); return }
@@ -83,6 +83,19 @@ function AddCustomerModal({ onClose, onSuccess, lang }: { onClose: () => void; o
                 id="customer-phone-input"
               />
             </div>
+          </div>
+          <div>
+            <label className="field-label">{lang === 'hi' ? 'Email (company customers ke liye)' : 'Email (for company customers)'}</label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+              placeholder="accounts@company.com"
+              className="field"
+            />
+            <p className="text-[11px] text-slate-400 mt-1">
+              {lang === 'hi' ? 'Optional — email bharne pe customer page se Email reminder mode on kar sakte ho' : 'Optional — enables Email reminder mode on the customer page'}
+            </p>
           </div>
           <div>
             <label className="field-label">{lang === 'hi' ? 'Notes' : 'Notes'}</label>

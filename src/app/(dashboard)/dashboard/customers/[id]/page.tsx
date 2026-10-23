@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   ArrowLeft, Phone, Loader2, IndianRupee, FileText, CalendarCheck,
   Clock, CheckCircle2, AlertTriangle, Wallet,
-  TrendingUp, Receipt, Pencil, X, History, Trash2,
+  TrendingUp, Receipt, Pencil, X, History, Trash2, Mail,
 } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
 
@@ -44,6 +44,8 @@ interface Customer {
   optedOut: boolean
   notes: string | null
   maxCallsPerDay: number | null
+  email: string | null
+  reminderMode: 'call' | 'email'
   outstandings: Outstanding[]
   bills: Bill[]
   promises: PromiseItem[]
@@ -72,6 +74,10 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const [deleting, setDeleting] = useState(false)
   const [maxCalls, setMaxCalls] = useState<string>('')
   const [savingCalls, setSavingCalls] = useState(false)
+  const [reminderMode, setReminderModeState] = useState<'call' | 'email'>('call')
+  const [emailInput, setEmailInput] = useState('')
+  const [savingMode, setSavingMode] = useState(false)
+  const [savingEmail, setSavingEmail] = useState(false)
   const [possiblyBlocked, setPossiblyBlocked] = useState(false)
   const [phoneError, setPhoneError] = useState('')
   const [calling, setCalling] = useState<string | null>(null)
@@ -89,6 +95,8 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
           setCustomer(data.customer)
           setTotalPending(Number(data.totalPending ?? 0))
           setMaxCalls(data.customer.maxCallsPerDay != null ? String(data.customer.maxCallsPerDay) : '')
+          setReminderModeState(data.customer.reminderMode === 'email' ? 'email' : 'call')
+          setEmailInput(data.customer.email ?? '')
           setPossiblyBlocked(!!data.possiblyBlocked)
         }
         setLoading(false)
@@ -141,6 +149,43 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
       alert(err instanceof Error ? err.message : 'Save nahi ho paya')
     } finally {
       setSavingCalls(false)
+    }
+  }
+
+  const handleSaveReminderMode = async (mode: 'call' | 'email') => {
+    setSavingMode(true)
+    try {
+      const res = await fetch(`/api/customers/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reminderMode: mode }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Save failed')
+      setReminderModeState(mode)
+      setCustomer(c => c ? { ...c, reminderMode: mode } : c)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Save nahi ho paya')
+    } finally {
+      setSavingMode(false)
+    }
+  }
+
+  const handleSaveEmail = async () => {
+    setSavingEmail(true)
+    try {
+      const res = await fetch(`/api/customers/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailInput.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Save failed')
+      setCustomer(c => c ? { ...c, email: emailInput.trim() || null } : c)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Save nahi ho paya')
+    } finally {
+      setSavingEmail(false)
     }
   }
 
@@ -358,6 +403,51 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                 {customer.maxCallsPerDay != null
                   ? `${customer.maxCallsPerDay}/din calls`
                   : (lang === 'hi' ? 'Auto (din ke hisaab se)' : 'Auto (by overdue days)')}
+              </p>
+              {/* Reminder mode — Call / Email (company customers ke liye) */}
+              <div className="mt-2.5 flex items-center gap-1.5 justify-end">
+                <Mail className="w-3 h-3 text-green-300/70" />
+                <div className="flex rounded-md overflow-hidden border border-white/20 text-[11px] font-semibold">
+                  <button
+                    onClick={() => handleSaveReminderMode('call')}
+                    disabled={savingMode}
+                    className={`px-2 py-0.5 transition-colors disabled:opacity-50 ${reminderMode === 'call' ? 'bg-green-400/30 text-white' : 'text-green-200/50 hover:text-green-200'}`}
+                  >
+                    Call
+                  </button>
+                  <button
+                    onClick={() => handleSaveReminderMode('email')}
+                    disabled={savingMode}
+                    className={`px-2 py-0.5 transition-colors disabled:opacity-50 ${reminderMode === 'email' ? 'bg-green-400/30 text-white' : 'text-green-200/50 hover:text-green-200'}`}
+                  >
+                    Email
+                  </button>
+                </div>
+              </div>
+              {reminderMode === 'email' && (
+                <div className="mt-1.5 flex items-center gap-1.5 justify-end">
+                  <input
+                    type="email"
+                    value={emailInput}
+                    onChange={e => setEmailInput(e.target.value)}
+                    placeholder="accounts@company.com"
+                    className="w-44 px-1.5 py-0.5 text-[11px] rounded-md bg-white/10 border border-white/20 text-white placeholder:text-green-200/40 focus:outline-none focus:border-green-400/50"
+                  />
+                  <button
+                    onClick={handleSaveEmail}
+                    disabled={savingEmail}
+                    className="text-[11px] font-semibold text-green-300/80 hover:text-green-200 hover:bg-white/10 px-2 py-0.5 rounded-md transition-colors disabled:opacity-50"
+                  >
+                    {savingEmail ? '...' : 'Set'}
+                  </button>
+                </div>
+              )}
+              <p className="text-green-200/40 text-[9px] mt-0.5">
+                {reminderMode === 'email'
+                  ? (customer.email
+                      ? (lang === 'hi' ? 'Email mode — calls band, sirf mail jayegi' : 'Email mode — no calls, email only')
+                      : (lang === 'hi' ? '⚠ Pehle email daalo — bina email ke kuch nahi jayega' : '⚠ Add email first — nothing will be sent'))
+                  : (lang === 'hi' ? 'Reminder: Call mode' : 'Reminder: Call mode')}
               </p>
               <button
                 onClick={handleDelete}

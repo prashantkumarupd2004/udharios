@@ -28,6 +28,7 @@ import { placeVoiceCall } from '@/lib/voice-provider'
 import { fetchVobizCall } from '@/lib/vobiz'
 import { isWithinSendingWindow } from '@/lib/date-utils'
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
+import { isEmailConfigured, sendEmail, buildPaymentReminderEmail } from '@/lib/email'
 import { logger } from '@/lib/logger'
 
 export const maxDuration = 60
@@ -289,11 +290,31 @@ export async function GET(request: NextRequest) {
       .slice()
       .sort((a: FetchedOverdue, b: FetchedOverdue) => (rotationIndex.get(a.id) ?? 0) - (rotationIndex.get(b.id) ?? 0))
 
+    // === EMAIL-MODE customers (company wale) ===
+    // Inhe calls BILKUL nahi jayengi — sirf professional email reminders
+    // (neeche EMAIL PASS me). Query alag try/catch me hai taaki jab tak
+    // user reminder_mode column wala SQL na chalaye, call flow safe rahe.
+    const emailModeCustomerIds = new Set<string>()
+    try {
+      const modeRows = await prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM customers WHERE reminder_mode = 'email'
+      `
+      for (const r of modeRows) emailModeCustomerIds.add(r.id)
+    } catch {
+      /* column abhi nahi (SQL pending) — koi email-mode customer nahi */
+    }
+    let emailModeSkipped = 0
+
     // === PHASE A: saste checks (bina DB) — candidate list ===
     type Candidate = { o: (typeof overdues)[number]; maxCallsToday: number }
     const candidates: Candidate[] = []
     let skipped = 0
     for (const o of overdues) {
+      // EMAIL MODE: company customer — calls band, sirf email jayegi
+      if (emailModeCustomerIds.has(o.customerId)) {
+        emailModeSkipped++
+        continue
+      }
       // CALL LIMIT: merchant manual setting ya auto escalation
       // Day count: due date wala din = Day 1 (2 calls), agla din Day 2 (4), phir 6, 8 (cap)
       const dueDay = new Date(o.dueDate)
@@ -465,6 +486,148 @@ export async function GET(request: NextRequest) {
       }
       await placeForCandidate(cand)
     })
+    // === EMAIL PASS (company customers) ===
+    // reminder_mode='email' walo ko professional email reminder:
+    // due din pe pehli mail, phir har 3 din me ek, per bill max 5.
+    // Poora pass defensive hai — RESEND_API_KEY na ho ya DB migration
+    // (email/reminder_mode columns) pending ho to chup-chaap skip;
+    // call flow pe koi asar nahi padta.
+    let emailsSent = 0
+    if (isEmailConfigured() && timeLeft() > 5_000) {
+      try {
+        interface EmailRow {
+          id: string
+          merchantId: string
+          customerId: string
+          invoiceNo: string | null
+          amount: unknown
+          dueDate: Date | string
+          merchant: { businessName: string; phone: string }
+          customer: { name: string; email: string | null }
+          paymentLink: { url: string; shortUrl: string | null } | null
+        }
+        const emailRows = (await (prisma.outstanding.findMany as any)({
+          where: {
+            dueDate: { lte: endOfToday },
+            status: { in: ['overdue', 'upcoming'] },
+            remindersPaused: false,
+            merchant: { isKillSwitched: false, isApproved: true },
+            customer: {
+              reminderMode: 'email',
+              email: { not: null },
+              optedOut: false,
+              consent: true,
+            },
+          },
+          include: {
+            merchant: { select: { businessName: true, phone: true } },
+            customer: { select: { name: true, email: true } },
+            paymentLink: { select: { url: true, shortUrl: true } },
+          },
+          orderBy: { dueDate: 'asc' },
+          take: 40,
+        })) as EmailRow[]
+
+        if (emailRows.length) {
+          const ids = emailRows.map((r) => r.id)
+          interface LogRow { outstandingId: string; sentAt: Date | string }
+          const logs = (await (prisma.reminderLog.findMany as any)({
+            where: { outstandingId: { in: ids }, channel: 'email', status: 'sent' },
+            select: { outstandingId: true, sentAt: true },
+            orderBy: { sentAt: 'desc' },
+          })) as LogRow[]
+          const logMap = new Map<string, { count: number; lastAt: number }>()
+          for (const l of logs) {
+            const t = new Date(l.sentAt).getTime()
+            const cur = logMap.get(l.outstandingId)
+            if (cur) {
+              cur.count++
+              if (t > cur.lastAt) cur.lastAt = t
+            } else {
+              logMap.set(l.outstandingId, { count: 1, lastAt: t })
+            }
+          }
+
+          const dueEmails = emailRows.filter((r) => {
+            const info = logMap.get(r.id)
+            if (!info) return true // pehli mail — due din pe
+            if (info.count >= 5) return false // per-bill cap: max 5 mails
+            return Date.now() - info.lastAt >= 3 * 24 * 60 * 60 * 1000 // 3 din ka gap
+          })
+
+          await runBatches(dueEmails, 5, async (r: EmailRow) => {
+            if (timeLeft() <= 3_000) return
+            const reminderNumber = (logMap.get(r.id)?.count ?? 0) + 1
+            const dueDayOnly = new Date(r.dueDate)
+            dueDayOnly.setHours(0, 0, 0, 0)
+            const daysOverdue = Math.max(
+              0,
+              Math.round((today.getTime() - dueDayOnly.getTime()) / 86400000)
+            )
+            const { subject, html } = buildPaymentReminderEmail({
+              businessName: r.merchant.businessName,
+              merchantPhone: r.merchant.phone,
+              customerName: r.customer.name,
+              invoiceNo: r.invoiceNo ?? '—',
+              amount: Number(r.amount),
+              dueDate: new Date(r.dueDate),
+              daysOverdue,
+              paymentLink: r.paymentLink?.shortUrl ?? r.paymentLink?.url ?? null,
+              reminderNumber,
+            })
+            let status: 'sent' | 'failed' = 'sent'
+            let externalMsgId: string | undefined
+            try {
+              const sent = await sendEmail({
+                to: r.customer.email as string,
+                subject,
+                html,
+                fromName: r.merchant.businessName,
+              })
+              externalMsgId = sent.id
+              emailsSent++
+            } catch (sendErr) {
+              status = 'failed'
+              logger.error('Email reminder failed', {
+                outstandingId: r.id,
+                error: String(sendErr),
+              })
+            }
+            await (prisma.reminderLog.create as any)({
+              data: {
+                merchantId: r.merchantId,
+                outstandingId: r.id,
+                customerId: r.customerId,
+                stage: reminderNumber,
+                channel: 'email',
+                templateName: 'payment_reminder_v1',
+                messageBody: subject,
+                status,
+                externalMsgId,
+              },
+            }).catch(() => {})
+            if (status === 'sent') {
+              await appendAuditLog({
+                merchantId: r.merchantId,
+                actor: 'system',
+                action: AUDIT_ACTIONS.REMINDER_SENT,
+                entity: 'outstanding',
+                entityId: r.id,
+                payload: {
+                  channel: 'email',
+                  to: r.customer.email,
+                  invoiceNo: r.invoiceNo,
+                  reminderNumber,
+                },
+              })
+            }
+          })
+        }
+      } catch (emailErr) {
+        logger.error('Email reminder pass skipped', { error: String(emailErr) })
+      }
+    }
+
     // Kaam bacha hai agar: kuch candidates bina start hue reh gaye (deadline),
     // ya run-cap hit hone se kuch candidates place hue bina reh gaye
     const workRemaining = !batchResult.complete || capStopped
@@ -496,6 +659,8 @@ export async function GET(request: NextRequest) {
       checked: overdues.length,
       called,
       skipped,
+      emailsSent,
+      emailModeSkipped,
       expiredPromises: expiredPromises.length,
       promiseReminders: promiseCalled,
       chained,
