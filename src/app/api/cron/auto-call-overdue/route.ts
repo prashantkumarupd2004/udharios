@@ -37,6 +37,14 @@ const RUN_DEADLINE_MS = 52_000 // 60s function limit se pehle saaf rukna hai
 const PLACE_BATCH = 6 // ek saath kitni placements (Sarvam/Vobiz load balance)
 const MAX_CHAIN = 40 // ek cron kick se zyada se zyada kitne chained runs
 
+// Provider capacity/congestion errors — saari lines busy, concurrency
+// limit, rate limit. In pe call "lagi hi nahi" mani jati hai: attempt
+// FREE hoti hai (na daily limit khaye, na gap), agli run turant retry.
+function isCapacityError(err: unknown): boolean {
+  const msg = String(err)
+  return /concurren|capacity|rate.?limit|too many|channel|429|502|503/i.test(msg)
+}
+
 export async function GET(request: NextRequest) {
   // Vercel Cron auth
   const authHeader = request.headers.get('authorization')
@@ -176,16 +184,18 @@ export async function GET(request: NextRequest) {
       promiseCandidates.push(o)
     }
     await runBatches(promiseCandidates, PLACE_BATCH, async (o: (typeof duePromises)[number]) => {
+      // Claim record try se PEHLE banaya — capacity error pe catch me
+      // delete karne ke liye id catch ke scope me chahiye.
+      const callRecord = await prisma.call.create({
+        data: {
+          merchantId: o.merchantId,
+          outstandingId: o.id,
+          customerId: o.customerId,
+          exotelSid: `promise-${Date.now()}-${o.id.slice(0, 8)}`,
+          status: 'initiated',
+        },
+      })
       try {
-        const callRecord = await prisma.call.create({
-          data: {
-            merchantId: o.merchantId,
-            outstandingId: o.id,
-            customerId: o.customerId,
-            exotelSid: `promise-${Date.now()}-${o.id.slice(0, 8)}`,
-            status: 'initiated',
-          },
-        })
 
         // Vobiz ya Exotel — merchant ke voice provider se
         const voiceResult = await placeVoiceCall(o.merchantId, {
@@ -212,6 +222,12 @@ export async function GET(request: NextRequest) {
         logger.info('Promise reminder call placed', { outstandingId: o.id, customer: o.customer.name })
       } catch (err) {
         logger.error('Promise reminder call failed', { outstandingId: o.id, error: String(err) })
+        // Capacity error (lines busy) — attempt FREE: record hatao, agli
+        // run me turant retry hoga, limit/gap nahi lagega.
+        if (isCapacityError(err)) {
+          await prisma.call.delete({ where: { id: callRecord.id } }).catch(() => {})
+          logger.warn('Promise call capacity — claim released', { outstandingId: o.id })
+        }
       }
     })
 
@@ -429,6 +445,13 @@ export async function GET(request: NextRequest) {
         logger.info('Auto-call placed', { outstandingId: o.id, customer: o.customer.name })
       } catch (callErr) {
         logger.error('Auto-call failed', { outstandingId: o.id, error: String(callErr) })
+        // Capacity error (saari lines busy / provider limit) — attempt
+        // FREE karo: claim record delete, taaki nakli call na daily limit
+        // khaye na gap lagaye; line khali hote hi agli run retry karegi.
+        if (isCapacityError(callErr)) {
+          await prisma.call.delete({ where: { id: callRecord.id } }).catch(() => {})
+          logger.warn('Auto-call capacity — claim released for retry', { outstandingId: o.id })
+        }
         skipped++
       }
     }
