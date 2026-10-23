@@ -1,18 +1,28 @@
 /**
  * GET /api/cron/auto-call-overdue — Daily auto-call for overdue outstandings.
  *
- * Vercel Cron se roz chalega. Har overdue outstanding ke liye:
- * - Sirf 9 AM – 9 PM (merchant ke quiet hours ke bahar)
- * - Sirf real phone number ho (tally-xxx nahi)
- * - consent=true, optedOut=false
+ * HEAVY-USE ENGINE (Oct 23): pehle sequential loop tha — ek run me ~10 calls
+ * hi ban paati theen, din bhar ki capacity ~200. Ab:
+ * - Parallel batches (6 concurrent placements) — per-call latency overlap
+ * - Self-chain: time budget khatm ho aur kaam bacha ho to run khud ko
+ *   dobara trigger karta hai (after()) — 9–7 window me lagatar processing,
+ *   cron entries sirf kickstart/safety ka kaam karti hain
+ * - Claim + recheck race guard: parallel/overlapping runs ek hi customer ko
+ *   double call nahi laga sakte, daily cap kabhi cross nahi hota
+ * - Fair rotation: aaj sabse kam calls wale pehle (neeche dekho)
+ *
+ * Rules (unchanged):
+ * - Sirf 9 AM – 7 PM IST (merchant quiet hours ke andar aur narrow ho sakta hai)
+ * - Sirf real phone number ho (tally-xxx nahi), consent=true, optedOut=false
  * - Merchant kill-switch OFF ho
- * - Escalation: due date din 2 calls, phir roz +2 (max 8/day); manual limit set ho to wahi
- * - Due date wale din se hi calls (koi grace period nahi)
+ * - Escalation: due date wala din 2 calls, phir roz +2 (max 8/day);
+ *   merchant ne manual limit set kiya ho to wahi (0 = band)
+ * - Koi grace period NAHI hai — due date wale din se hi calls
  *
  * Auth: CRON_SECRET bearer token (Vercel Cron automatic)
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { placeVoiceCall } from '@/lib/voice-provider'
 import { fetchVobizCall } from '@/lib/vobiz'
@@ -22,7 +32,10 @@ import { logger } from '@/lib/logger'
 
 export const maxDuration = 60
 
-const MAX_CALLS_PER_RUN = 50 // ek run me max 50 calls (cost control)
+const MAX_CALLS_PER_RUN = 200 // ek invocation ka safety cap (deadline asal governor hai)
+const RUN_DEADLINE_MS = 52_000 // 60s function limit se pehle saaf rukna hai
+const PLACE_BATCH = 6 // ek saath kitni placements (Sarvam/Vobiz load balance)
+const MAX_CHAIN = 40 // ek cron kick se zyada se zyada kitne chained runs
 
 export async function GET(request: NextRequest) {
   // Vercel Cron auth
@@ -32,11 +45,35 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const runStartedAt = Date.now()
+  const timeLeft = () => RUN_DEADLINE_MS - (Date.now() - runStartedAt)
+  const chainDepth = parseInt(request.nextUrl.searchParams.get('chain') ?? '0', 10) || 0
+
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   // Due date aaj ya pehle hai to call ke liye eligible (grace period NAHI hai)
   const endOfToday = new Date(today)
   endOfToday.setHours(23, 59, 59, 999)
+  const startOfDay = new Date(today)
+
+  /**
+   * Items ko parallel batches me chalao. Deadline aa jaye to ruk jao aur
+   * false return karo (matlab: kuch items bina process hue reh gaye).
+   */
+  async function runBatches<T>(
+    items: T[],
+    size: number,
+    fn: (item: T) => Promise<void>
+  ): Promise<{ complete: boolean; started: number }> {
+    let started = 0
+    for (let i = 0; i < items.length; i += size) {
+      if (timeLeft() <= 4_000) return { complete: false, started }
+      const slice = items.slice(i, i + size)
+      started += slice.length
+      await Promise.allSettled(slice.map((it) => fn(it)))
+    }
+    return { complete: true, started }
+  }
 
   try {
     // === PROMISE FOLLOW-UP ===
@@ -62,8 +99,8 @@ export async function GET(request: NextRequest) {
 
     // === VOBIZ STATUS SYNC (webhook miss ka fallback) ===
     // 'initiated'/'in-progress' pe atki recent calls ka asal status Vobiz API
-    // se kheecho. Isse neeche ki gap / retry / blocked logic ko sahi
-    // last-status milta hai (warna sab andha chalta hai).
+    // se kheecho (parallel batches me). Isse neeche ki gap / retry / blocked
+    // logic ko sahi last-status milta hai (warna sab andha chalta hai).
     try {
       const stale = await prisma.call.findMany({
         where: {
@@ -75,14 +112,17 @@ export async function GET(request: NextRequest) {
         },
         select: { id: true, exotelSid: true },
         orderBy: { createdAt: 'asc' },
-        take: 30,
+        take: 20,
       })
       const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-      let synced = 0
+      const syncable: { id: string; exotelSid: string }[] = []
       for (const c of stale) {
-        if (!uuidRe.test(c.exotelSid)) continue // sirf Vobiz UUID wali calls
+        if (uuidRe.test(c.exotelSid)) syncable.push(c) // sirf Vobiz UUID wali calls
+      }
+      let synced = 0
+      await runBatches(syncable, 10, async (c: { id: string; exotelSid: string }) => {
         const info = await fetchVobizCall(c.exotelSid)
-        if (!info || !info.status || ['initiated', 'queued'].includes(info.status)) continue
+        if (!info || !info.status || ['initiated', 'queued'].includes(info.status)) return
         await prisma.call.update({
           where: { id: c.id },
           data: {
@@ -92,14 +132,13 @@ export async function GET(request: NextRequest) {
           },
         }).catch(() => {})
         synced++
-      }
+      })
       if (synced > 0) logger.info('Vobiz status sync: calls updated', { synced })
     } catch (err) {
       logger.error('Vobiz status sync failed', { error: String(err) })
     }
 
-    // 2. Due promises (promisedDate = aaj): reminder call lagao
-    //    (yeh alag se handle hoga — neeche duePromises section me)
+    // 2. Due promises (promisedDate = aaj): reminder call lagao (parallel batches)
     const duePromises = await prisma.outstanding.findMany({
       where: {
         status: 'promised',
@@ -124,6 +163,7 @@ export async function GET(request: NextRequest) {
     })
 
     let promiseCalled = 0
+    const promiseCandidates: typeof duePromises = []
     for (const o of duePromises) {
       // Double-dial guard
       const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
@@ -133,7 +173,9 @@ export async function GET(request: NextRequest) {
       if (alreadyCalled) continue
       if (!isWithinSendingWindow(o.merchant.quietStart, o.merchant.quietEnd)) continue
       if (!/^\+91\d{10}$/.test(o.customer.phone)) continue
-
+      promiseCandidates.push(o)
+    }
+    await runBatches(promiseCandidates, PLACE_BATCH, async (o: (typeof duePromises)[number]) => {
       try {
         const callRecord = await prisma.call.create({
           data: {
@@ -146,8 +188,7 @@ export async function GET(request: NextRequest) {
         })
 
         // Vobiz ya Exotel — merchant ke voice provider se
-        const { placeVoiceCall } = await import('@/lib/voice-provider')
-        await placeVoiceCall(o.merchantId, {
+        const voiceResult = await placeVoiceCall(o.merchantId, {
           to: o.customer.phone,
           callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/exotel?callId=${callRecord.id}`,
           record: true,
@@ -163,12 +204,16 @@ export async function GET(request: NextRequest) {
             autoCall: true,
           }),
         })
+        await prisma.call.update({
+          where: { id: callRecord.id },
+          data: { exotelSid: voiceResult.providerCallId },
+        }).catch(() => {})
         promiseCalled++
         logger.info('Promise reminder call placed', { outstandingId: o.id, customer: o.customer.name })
       } catch (err) {
         logger.error('Promise reminder call failed', { outstandingId: o.id, error: String(err) })
       }
-    }
+    })
 
     // Overdue outstandings nikalo
     const overdues = await prisma.outstanding.findMany({
@@ -201,11 +246,10 @@ export async function GET(request: NextRequest) {
       take: 300, // rotation ke liye bada pool — sort neeche hota hai
     })
 
-    // === FAIR ROTATION (Oct 23 fix) ===
+    // === FAIR ROTATION ===
     // Pehle sirf dueDate order tha — naye overdue (recent due date) hamesha
     // line ke aakhir me rehte the, pehli call 11 baje tak atakti thi.
     // Ab: aaj sabse KAM calls wale pehle, phir jiska last call sabse purana.
-    const startOfDay = new Date(today)
     interface OverdueSortRow { id: string; dueDate: Date | string }
     interface CallCountRow { outstandingId: string; _count: { _all: number } }
     interface LastCallRow { outstandingId: string; _max: { createdAt: Date | string | null } }
@@ -246,107 +290,123 @@ export async function GET(request: NextRequest) {
       return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
     })
 
-    let called = 0
+    // === PHASE A: saste checks (bina DB) — candidate list ===
+    type Candidate = { o: (typeof overdues)[number]; maxCallsToday: number }
+    const candidates: Candidate[] = []
     let skipped = 0
-    const details: string[] = []
-    const loopStartedAt = Date.now()
-
     for (const o of overdues) {
-      if (called >= MAX_CALLS_PER_RUN) break
-      // Time budget: function timeout se pehle saaf ruk jao — aadhi placement
-      // pe kill hone se 'initiated' record reh jata hai bina call gaye.
-      if (Date.now() - loopStartedAt > 50_000) {
-        logger.info('Auto-call run: time budget reached, baaki agle run me', { called, skipped })
-        break
-      }
-
-      // === CALL LIMIT: merchant manual setting ya auto escalation ===
-      // Merchant ne customer ke liye maxCallsPerDay set kiya to wahi use hoga.
-      // Nahi to auto: Day 1: 2 calls, Day 2: 4 calls... (max 8/day cap)
-      // Day count: due date wala din = Day 1 (2 calls), agla din Day 2 (4 calls), phir 6, 8 (cap)
+      // CALL LIMIT: merchant manual setting ya auto escalation
+      // Day count: due date wala din = Day 1 (2 calls), agla din Day 2 (4), phir 6, 8 (cap)
       const dueDay = new Date(o.dueDate)
       dueDay.setHours(0, 0, 0, 0)
       const daysOverdue = Math.max(1, Math.round((today.getTime() - dueDay.getTime()) / (1000 * 60 * 60 * 24)) + 1)
       const autoMax = Math.min(2 * daysOverdue, 8)
-      // o.customer me maxCallsPerDay include karna hoga (query me select karo)
-      const manualMax = (o.customer as any)?.maxCallsPerDay
+      const manualMax = (o.customer as unknown as { maxCallsPerDay?: number | null })?.maxCallsPerDay
       const maxCallsToday = manualMax != null && manualMax >= 0 ? manualMax : autoMax
 
-      const callsToday = callsTodayMap.get(o.id) ?? 0
-      if (callsToday >= maxCallsToday) {
+      if ((callsTodayMap.get(o.id) ?? 0) >= maxCallsToday) {
         skipped++
         continue
       }
-
-      // === BLOCKED NUMBER DETECTION ===
-      // Lagatar 5+ fail (busy/failed/no-answer) = number block ho sakta hai → calls pause
-      const recentCalls = await prisma.call.findMany({
-        where: { customerId: o.customerId },
-        orderBy: { createdAt: 'desc' },
-        take: 5,
-        select: { status: true },
-      })
-      if (recentCalls.length >= 5) {
-        const allFailed = recentCalls.every(c =>
-          ['failed', 'busy', 'no-answer', 'canceled'].includes(c.status)
-        )
-        if (allFailed) {
-          // Blocked — auto calls pause, manual allowed
-          logger.info('Skipping possibly blocked number', {
-            customerId: o.customerId,
-            customerName: o.customer.name,
-          })
-          skipped++
-          continue
-        }
-      }
-
-      // Last call ka status check — retry logic
-      const lastCall = await prisma.call.findFirst({
-        where: { outstandingId: o.id },
-        orderBy: { createdAt: 'desc' },
-        select: { status: true, createdAt: true, durationSec: true },
-      })
-      if (lastCall) {
-        const minsSinceLastCall = (Date.now() - new Date(lastCall.createdAt).getTime()) / (1000 * 60)
-        const lastFailed = ['failed', 'busy', 'no-answer', 'canceled'].includes(lastCall.status)
-        const cutShort = lastCall.status === 'completed' && (lastCall.durationSec ?? 0) < 10
-        // Gap: daily limit ke hisaab se adjust karo
-        // 10-hour window (9 AM - 7 PM) me maxCallsToday calls → gap = 600 / maxCallsToday
-        // Manual limit set hai to aggressive calling allowed
-        const windowMins = 10 * 60 // 9 AM - 7 PM
-        const dynamicGap = Math.max(15, Math.floor(windowMins / Math.max(1, maxCallsToday)))
-        // Failed/busy/cut → half gap; successful → full gap
-        const minGapMins = (lastFailed || cutShort) ? Math.max(10, Math.floor(dynamicGap / 2)) : dynamicGap
-        if (minsSinceLastCall < minGapMins) {
-          skipped++
-          continue
-        }
-      }
-
-      // Sending window check (9 AM – 9 PM)
+      // Sending window check (9 AM – 7 PM IST)
       if (!isWithinSendingWindow(o.merchant.quietStart, o.merchant.quietEnd)) {
         skipped++
         continue
       }
-
       // Valid Indian mobile check
       if (!/^\+91\d{10}$/.test(o.customer.phone)) {
         skipped++
         continue
       }
+      candidates.push({ o, maxCallsToday })
+    }
+
+    // === PHASE B: parallel batches me asal checks + placement ===
+    let called = 0
+    const details: string[] = []
+
+    const placeForCandidate = async ({ o, maxCallsToday }: Candidate): Promise<void> => {
+      // BLOCKED NUMBER DETECTION: lagatar 5+ fail = number block ho sakta
+      // hai → auto calls pause (manual allowed). Aur last-call gap check.
+      const [recentCalls, lastCall] = await Promise.all([
+        prisma.call.findMany({
+          where: { customerId: o.customerId },
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+          select: { status: true },
+        }),
+        prisma.call.findFirst({
+          where: { outstandingId: o.id },
+          orderBy: { createdAt: 'desc' },
+          select: { status: true, createdAt: true, durationSec: true },
+        }),
+      ])
+
+      if (recentCalls.length >= 5) {
+        const allFailed = recentCalls.every((c) =>
+          ['failed', 'busy', 'no-answer', 'canceled'].includes(c.status)
+        )
+        if (allFailed) {
+          logger.info('Skipping possibly blocked number', {
+            customerId: o.customerId,
+            customerName: o.customer.name,
+          })
+          skipped++
+          return
+        }
+      }
+
+      // Gap: daily limit ke hisaab se — 10-hour window (9 AM–7 PM) me
+      // maxCallsToday calls → gap = 600 / maxCallsToday.
+      // Failed/busy/cut-short → half gap; successful → full gap.
+      let minGapMins = 0
+      if (lastCall) {
+        const minsSinceLastCall = (Date.now() - new Date(lastCall.createdAt).getTime()) / (1000 * 60)
+        const lastFailed = ['failed', 'busy', 'no-answer', 'canceled'].includes(lastCall.status)
+        const cutShort = lastCall.status === 'completed' && (lastCall.durationSec ?? 0) < 10
+        const windowMins = 10 * 60
+        const dynamicGap = Math.max(15, Math.floor(windowMins / Math.max(1, maxCallsToday)))
+        minGapMins = (lastFailed || cutShort) ? Math.max(10, Math.floor(dynamicGap / 2)) : dynamicGap
+        if (minsSinceLastCall < minGapMins) {
+          skipped++
+          return
+        }
+      }
+
+      // === CLAIM + RECHECK (race guard) ===
+      // Pehle record banao (claim), phir fresh count/gap verify karo.
+      // Koi parallel/overlapping run ne isi beech claim kar diya ho to
+      // hum peeche hat jayenge — double call aur cap-cross dono impossible.
+      const callRecord = await prisma.call.create({
+        data: {
+          merchantId: o.merchantId,
+          outstandingId: o.id,
+          customerId: o.customerId,
+          exotelSid: `auto-${Date.now()}-${o.id.slice(0, 8)}`,
+          status: 'initiated',
+        },
+      })
+      const [freshCount, rivalClaim] = await Promise.all([
+        prisma.call.count({
+          where: { outstandingId: o.id, createdAt: { gte: startOfDay } },
+        }),
+        prisma.call.findFirst({
+          where: { outstandingId: o.id, id: { not: callRecord.id } },
+          orderBy: { createdAt: 'desc' },
+          select: { createdAt: true },
+        }),
+      ])
+      const rivalTooFresh =
+        rivalClaim != null &&
+        minGapMins > 0 &&
+        Date.now() - new Date(rivalClaim.createdAt).getTime() < minGapMins * 60 * 1000
+      if (freshCount > maxCallsToday || rivalTooFresh) {
+        await prisma.call.delete({ where: { id: callRecord.id } }).catch(() => {})
+        skipped++
+        return
+      }
 
       try {
-        const callRecord = await prisma.call.create({
-          data: {
-            merchantId: o.merchantId,
-            outstandingId: o.id,
-            customerId: o.customerId,
-            exotelSid: `auto-${Date.now()}-${o.id.slice(0, 8)}`,
-            status: 'initiated',
-          },
-        })
-
         const voiceResult = await placeVoiceCall(o.merchantId, {
           to: o.customer.phone,
           callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/exotel?callId=${callRecord.id}`,
@@ -390,6 +450,41 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    let capStopped = false
+    const batchResult = await runBatches(candidates, PLACE_BATCH, async (cand) => {
+      if (called >= MAX_CALLS_PER_RUN) {
+        capStopped = true // run-cap ki wajah se ye candidate reh gaya → chain chahiye
+        skipped++
+        return
+      }
+      await placeForCandidate(cand)
+    })
+    // Kaam bacha hai agar: kuch candidates bina start hue reh gaye (deadline),
+    // ya run-cap hit hone se kuch candidates place hue bina reh gaye
+    const workRemaining = !batchResult.complete || capStopped
+
+    // === SELF-CHAIN ===
+    // Kaam bacha hai to response ke baad khud ko dobara trigger karo —
+    // isse 9–7 window me processing lagatar chalti rehti hai bina
+    // Vercel cron ki 30-min cadence pe nirbhar hue. Cron kicks
+    // har 30 min pe chain ko restart/safety deti hain.
+    let chained = false
+    if (workRemaining && chainDepth < MAX_CHAIN) {
+      const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://udharios.vercel.app').replace(/\/+$/, '')
+      chained = true
+      after(async () => {
+        try {
+          await fetch(`${appUrl}/api/cron/auto-call-overdue?chain=${chainDepth + 1}`, {
+            headers: cronSecret ? { authorization: `Bearer ${cronSecret}` } : {},
+            signal: AbortSignal.timeout(4_000),
+          })
+        } catch {
+          /* request Vercel tak pahunch gaya to invocation start ho gaya hoga;
+             warna agli cron kick chain ko phir zinda kar degi */
+        }
+      })
+    }
+
     return NextResponse.json({
       ok: true,
       checked: overdues.length,
@@ -397,6 +492,8 @@ export async function GET(request: NextRequest) {
       skipped,
       expiredPromises: expiredPromises.length,
       promiseReminders: promiseCalled,
+      chained,
+      chainDepth,
       details,
     })
   } catch (err) {
