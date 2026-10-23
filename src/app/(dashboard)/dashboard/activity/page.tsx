@@ -68,16 +68,24 @@ export default function ActivityPage() {
 
   const fetchLogs = async (p = 1) => {
     setLoading(true)
-    const res = await fetch(`/api/activity?page=${p}&limit=30`)
-    const data = await res.json()
-    const newLogs = data.logs ?? []
-    if (p === 1) {
-      setLogs(newLogs)
-    } else {
-      setLogs(prev => [...prev, ...newLogs])
+    try {
+      const res = await fetch(`/api/activity?page=${p}&limit=30`)
+      const data = await res.json()
+      const newLogs = data.logs ?? []
+      if (p === 1) {
+        // Refresh pe page counter bhi reset — warna Load more beech ke
+        // pages skip kar deta tha (page state purana reh jata tha).
+        setPage(1)
+        setLogs(newLogs)
+      } else {
+        setLogs(prev => [...prev, ...newLogs])
+      }
+      setHasMore(p < (data.pagination?.pages ?? 1))
+    } catch {
+      // network error — purane logs rehne do, spinner ruk jayega
+    } finally {
+      setLoading(false)
     }
-    setHasMore(p < data.pagination?.pages)
-    setLoading(false)
   }
 
   useEffect(() => { fetchLogs(1) }, [])
@@ -96,9 +104,10 @@ export default function ActivityPage() {
         </div>
         <button
           onClick={() => fetchLogs(1)}
-          className="text-sm font-bold text-green-600 hover:text-green-700 transition-colors inline-flex items-center gap-1.5"
+          disabled={loading}
+          className="text-sm font-bold text-green-600 hover:text-green-700 transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
         >
-          <RefreshCw className="w-4 h-4" /> {lang === 'hi' ? 'Refresh' : 'Refresh'}
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> {lang === 'hi' ? 'Refresh' : 'Refresh'}
         </button>
       </div>
 

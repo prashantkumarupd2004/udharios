@@ -408,6 +408,10 @@ export default function DashboardPage() {
       }
     }
     fetchData()
+    // Top-bar Refresh button ye event fire karta hai — bina page reload
+    // ke poora dashboard data dobara fetch ho jata hai.
+    const onRefresh = () => { void fetchData() }
+    window.addEventListener('ugaahi:refresh', onRefresh)
     // Poll sirf halka summary endpoint — poora dashboard (aging/trend/lists)
     // har minute dobara fetch karne ki zaroorat nahi. Summary route me 30s
     // server cache bhi hai, to ye poll lagbhag free hai.
@@ -418,7 +422,10 @@ export default function DashboardPage() {
       } catch { /* ignore — agle poll par retry */ }
     }
     const interval = setInterval(pollSummary, 60_000)
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('ugaahi:refresh', onRefresh)
+    }
   }, [])
 
   const today = new Date().toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', {
