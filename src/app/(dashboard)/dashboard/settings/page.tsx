@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import {
   Settings as SettingsIcon, Store, MoonStar, Languages, LogOut, Crown,
-  CreditCard, Landmark, Bell, User, Check, Smartphone, Phone,
+  CreditCard, Landmark, Bell, User, Check, Smartphone, Phone, MessageCircle,
 } from 'lucide-react'
 import { useLanguage } from '@/hooks/useLanguage'
 import PaymentGatewaySettings from './PaymentGatewaySettings'
@@ -259,6 +259,9 @@ export default function SettingsPage() {
 
           {/* Voice call provider toggle (Vobiz primary / Exotel backup) */}
           <VoiceProviderCard lang={lang} />
+
+          {/* WhatsApp connectivity test */}
+          <WhatsAppTestCard lang={lang} />
         </div>
       )}
 
@@ -477,6 +480,91 @@ function SaveBar({ saving, saved, onSave, lang }: {
         <span className="text-green-700 text-sm font-bold flex items-center gap-1 pr-2">
           <Check className="w-4 h-4" /> {lang === 'hi' ? 'Saved!' : 'Saved!'}
         </span>
+      )}
+    </div>
+  )
+}
+
+function WhatsAppTestCard({ lang }: { lang: string }) {
+  const [phone, setPhone] = useState('')
+  const [sending, setSending] = useState(false)
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null)
+
+  useEffect(() => {
+    fetch('/api/merchant/settings')
+      .then(r => r.json())
+      .then(d => {
+        const p = d?.merchant?.phone as string | undefined
+        if (p) setPhone(p.replace(/\D/g, '').slice(-10))
+      })
+      .catch(() => {})
+  }, [])
+
+  const sendTest = async () => {
+    setSending(true)
+    setResult(null)
+    try {
+      const res = await fetch('/api/merchant/test-whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: phone }),
+      })
+      const data = await res.json()
+      if (res.ok && data.ok) {
+        setResult({
+          ok: true,
+          text: lang === 'hi'
+            ? '✅ Test message bheja gaya — apna WhatsApp check karo!'
+            : '✅ Test message sent — check your WhatsApp!',
+        })
+      } else {
+        setResult({
+          ok: false,
+          text: `❌ ${data.error ?? (lang === 'hi' ? 'Message nahi gaya' : 'Message failed')}`,
+        })
+      }
+    } catch {
+      setResult({ ok: false, text: '❌ Network error' })
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
+      <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+        <MessageCircle className="w-5 h-5 text-green-600" />
+        <h2 className="font-extrabold text-slate-900">WhatsApp Test</h2>
+      </div>
+      <p className="text-xs text-slate-500 -mt-1">
+        {lang === 'hi'
+          ? 'Apne number pe ek test reminder bhejo aur check karo WhatsApp system chal raha hai ya nahi.'
+          : 'Send a test reminder to your number and verify WhatsApp is working.'}
+      </p>
+      <div className="flex gap-2">
+        <div className="flex flex-1">
+          <span className="bg-slate-100 border border-slate-200 border-r-0 rounded-l-xl px-3 flex items-center text-slate-500 text-sm font-semibold">+91</span>
+          <input
+            type="tel"
+            inputMode="numeric"
+            value={phone}
+            onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+            placeholder="9876543210"
+            className="field !rounded-l-none"
+          />
+        </div>
+        <button
+          onClick={sendTest}
+          disabled={sending || phone.length !== 10}
+          className="btn-primary px-5 py-2.5 text-sm whitespace-nowrap disabled:opacity-50"
+        >
+          {sending ? '...' : (lang === 'hi' ? 'Test bhejo' : 'Send test')}
+        </button>
+      </div>
+      {result && (
+        <p className={`text-sm font-semibold rounded-xl px-4 py-3 border ${result.ok ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+          {result.text}
+        </p>
       )}
     </div>
   )
