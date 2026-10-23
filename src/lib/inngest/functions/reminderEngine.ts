@@ -102,6 +102,21 @@ export const nightlyReminderScan = inngest.createFunction(
         return
       }
 
+      // WhatsApp/Voice stages — ab auto-call cron ka PATTERN ENGINE
+      // bhejta hai (calls, WhatsApp, email — teeno ek hi 1/2/4/6/8
+      // escalation pe, Oct 23 user setting). Yahan sirf stage aage
+      // badha do, bhejo MAT — warna customer ko double reminder
+      // jayega. Stage progression aur escalate (upar) chalte rahenge.
+      if (nextStage.channel === 'whatsapp' || nextStage.channel === 'voice') {
+        await step.run(`advance-stage-${os.id}-${nextStageIdx}`, async () => {
+          await prisma.outstanding.update({
+            where: { id: os.id },
+            data: { currentStage: nextStageIdx + 1 },
+          })
+        })
+        return
+      }
+
       // Voice or WhatsApp stage
       await step.invoke(`send-reminder-${os.id}-stage-${nextStageIdx}`, {
         function: sendStagedReminder,

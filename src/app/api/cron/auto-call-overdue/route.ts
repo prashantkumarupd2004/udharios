@@ -26,7 +26,14 @@ import { NextRequest, NextResponse, after } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { placeVoiceCall } from '@/lib/voice-provider'
 import { fetchVobizCall } from '@/lib/vobiz'
-import { isWithinSendingWindow } from '@/lib/date-utils'
+import { isWithinSendingWindow, formatIndianDate } from '@/lib/date-utils'
+import {
+  getWhatsAppProvider,
+  buildT1Polite,
+  buildT2WithLink,
+  buildT3Firm,
+  buildT4Final,
+} from '@/lib/providers/WhatsappProvider'
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
 import { isEmailConfigured, sendEmail, buildPaymentReminderEmail } from '@/lib/email'
 import { logger } from '@/lib/logger'
@@ -494,10 +501,10 @@ export async function GET(request: NextRequest) {
     // Poora pass defensive hai — RESEND_API_KEY na ho ya DB migration
     // (email/reminder_mode columns) pending ho to chup-chaap skip;
     // call flow pe koi asar nahi padta.
+    const endOfTomorrow = new Date(endOfToday.getTime() + 86400000)
     let emailsSent = 0
     if (isEmailConfigured() && timeLeft() > 5_000) {
       try {
-        const endOfTomorrow = new Date(endOfToday.getTime() + 86400000)
         interface EmailRow {
           id: string
           merchantId: string
@@ -647,6 +654,184 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // === WHATSAPP PASS (call-mode customers) ===
+    // WhatsApp pe bhi WAHI escalation jo calls/email pe hai (user ki
+    // setting): due se 1 din pehle 1, due din 2, phir roz +2 (8 cap),
+    // dynamic gap ke saath. Hisaab ReminderLog (channel=whatsapp) se
+    // hota hai — isiliye pre-due cron ya purane staged sends pehle se
+    // gaye hon to wo bhi count hote hain, double nahi jata.
+    // Email-mode customers isme nahi (unhe sirf email jati hai).
+    // Template ladder (total count pe): t1_polite -> t2_with_link
+    // (payment link ho to) -> T3_firm -> T4_final.
+    let whatsappSent = 0
+    if (process.env.WHATSAPP_API_KEY && timeLeft() > 5_000) {
+      try {
+        interface WaRow {
+          id: string
+          merchantId: string
+          customerId: string
+          invoiceNo: string | null
+          amount: unknown
+          dueDate: Date | string
+          merchant: { businessName: string; quietStart: string; quietEnd: string }
+          customer: { name: string; phone: string }
+          paymentLink: { url: string; shortUrl: string | null } | null
+        }
+        const waRows = (await (prisma.outstanding.findMany as any)({
+          where: {
+            dueDate: { lte: endOfTomorrow },
+            status: { in: ['overdue', 'upcoming'] },
+            remindersPaused: false,
+            merchant: { isKillSwitched: false, isApproved: true },
+            customer: { optedOut: false, consent: true },
+          },
+          include: {
+            merchant: { select: { businessName: true, quietStart: true, quietEnd: true } },
+            customer: { select: { name: true, phone: true } },
+            paymentLink: { select: { url: true, shortUrl: true } },
+          },
+          orderBy: { dueDate: 'asc' },
+          take: 40,
+        })) as WaRow[]
+
+        const waEligible = waRows.filter(
+          (r) =>
+            !emailModeCustomerIds.has(r.customerId) &&
+            /^\+91\d{10}$/.test(r.customer.phone) &&
+            isWithinSendingWindow(r.merchant.quietStart, r.merchant.quietEnd)
+        )
+
+        if (waEligible.length) {
+          const ids = waEligible.map((r) => r.id)
+          interface WaLogRow { outstandingId: string; sentAt: Date | string }
+          const waLogs = (await (prisma.reminderLog.findMany as any)({
+            where: { outstandingId: { in: ids }, channel: 'whatsapp', status: 'sent' },
+            select: { outstandingId: true, sentAt: true },
+            orderBy: { sentAt: 'desc' },
+          })) as WaLogRow[]
+          const waLogMap = new Map<string, { total: number; todayCount: number; lastAt: number }>()
+          for (const l of waLogs) {
+            const t = new Date(l.sentAt).getTime()
+            const cur = waLogMap.get(l.outstandingId) ?? { total: 0, todayCount: 0, lastAt: 0 }
+            cur.total++
+            if (t >= today.getTime()) cur.todayCount++
+            if (t > cur.lastAt) cur.lastAt = t
+            waLogMap.set(l.outstandingId, cur)
+          }
+
+          // Calls/email wala hi max-per-day pattern
+          const maxWaFor = (r: WaRow): number => {
+            const due = new Date(r.dueDate)
+            due.setHours(0, 0, 0, 0)
+            const diffDays = Math.round((due.getTime() - today.getTime()) / 86400000)
+            if (diffDays === 1) return 1 // due se ek din pehle
+            if (diffDays > 1) return 0
+            const dayIndex = 1 - diffDays
+            return Math.min(2 * dayIndex, 8)
+          }
+
+          const dueWa = waEligible.filter((r) => {
+            const maxToday = maxWaFor(r)
+            if (maxToday <= 0) return false
+            const info = waLogMap.get(r.id)
+            if ((info?.todayCount ?? 0) >= maxToday) return false
+            if (info?.lastAt) {
+              const gapMin = Math.max(15, Math.floor(600 / maxToday))
+              if (Date.now() - info.lastAt < gapMin * 60000) return false
+            }
+            return true
+          })
+
+          const wa = getWhatsAppProvider()
+          await runBatches(dueWa, 5, async (r: WaRow) => {
+            if (timeLeft() <= 3_000) return
+            const total = waLogMap.get(r.id)?.total ?? 0
+            const amountINR = `₹${Number(r.amount).toLocaleString('en-IN')}`
+            const dueDayOnly = new Date(r.dueDate)
+            dueDayOnly.setHours(0, 0, 0, 0)
+            const daysOverdue = Math.max(
+              0,
+              Math.round((today.getTime() - dueDayOnly.getTime()) / 86400000)
+            )
+            const link = r.paymentLink?.shortUrl ?? r.paymentLink?.url ?? null
+
+            let templateName = 't1_polite'
+            let components: ReturnType<typeof buildT1Polite> = buildT1Polite(
+              r.customer.name,
+              r.merchant.businessName,
+              amountINR,
+              formatIndianDate(new Date(r.dueDate))
+            )
+            if (total >= 7) {
+              templateName = 'T4_final'
+              components = buildT4Final(r.customer.name, amountINR, daysOverdue, r.merchant.businessName)
+            } else if (total >= 3) {
+              templateName = 'T3_firm'
+              components = buildT3Firm(r.customer.name, amountINR, daysOverdue, r.merchant.businessName)
+            } else if (total >= 1 && link) {
+              templateName = 't2_with_link'
+              components = buildT2WithLink(
+                r.customer.name,
+                amountINR,
+                r.invoiceNo ?? r.id.slice(0, 8),
+                link
+              )
+            }
+
+            let status: 'sent' | 'failed' = 'sent'
+            let externalMsgId: string | undefined
+            let failedReason: string | undefined
+            try {
+              const result = await wa.sendTemplate({
+                to: r.customer.phone.replace(/\D/g, ''),
+                templateName,
+                components,
+              })
+              externalMsgId = result.messageId
+              if (result.status === 'failed') {
+                status = 'failed'
+                failedReason = result.error
+              } else {
+                whatsappSent++
+              }
+            } catch (sendErr) {
+              status = 'failed'
+              failedReason = String(sendErr)
+              logger.error('WhatsApp pattern send failed', {
+                outstandingId: r.id,
+                error: failedReason,
+              })
+            }
+            await (prisma.reminderLog.create as any)({
+              data: {
+                merchantId: r.merchantId,
+                outstandingId: r.id,
+                customerId: r.customerId,
+                stage: total + 1,
+                channel: 'whatsapp',
+                templateName,
+                status,
+                externalMsgId,
+                failedReason: failedReason ?? null,
+              },
+            }).catch(() => {})
+            if (status === 'sent') {
+              await appendAuditLog({
+                merchantId: r.merchantId,
+                actor: 'system',
+                action: AUDIT_ACTIONS.REMINDER_SENT,
+                entity: 'outstanding',
+                entityId: r.id,
+                payload: { channel: 'whatsapp', templateName, count: total + 1 },
+              })
+            }
+          })
+        }
+      } catch (waErr) {
+        logger.error('WhatsApp pattern pass skipped', { error: String(waErr) })
+      }
+    }
+
     // Kaam bacha hai agar: kuch candidates bina start hue reh gaye (deadline),
     // ya run-cap hit hone se kuch candidates place hue bina reh gaye
     const workRemaining = !batchResult.complete || capStopped
@@ -679,6 +864,7 @@ export async function GET(request: NextRequest) {
       called,
       skipped,
       emailsSent,
+      whatsappSent,
       emailModeSkipped,
       expiredPromises: expiredPromises.length,
       promiseReminders: promiseCalled,
