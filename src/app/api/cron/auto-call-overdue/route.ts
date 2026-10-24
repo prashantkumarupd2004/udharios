@@ -31,8 +31,6 @@ import {
   getWhatsAppProvider,
   buildT1Polite,
   buildT2WithLink,
-  buildT3Firm,
-  buildT4Final,
 } from '@/lib/providers/WhatsappProvider'
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
 import { isEmailConfigured, sendEmail, buildPaymentReminderEmail } from '@/lib/email'
@@ -641,7 +639,7 @@ export async function GET(request: NextRequest) {
     // gaye hon to wo bhi count hote hain, double nahi jata.
     // Email-mode customers isme nahi (unhe sirf email jati hai).
     // Template ladder (total count pe): t1_polite -> t2_with_link
-    // (payment link ho to) -> T3_firm -> T4_final.
+    // (payment link ho to). Sirf ye 2 approved templates bheje jate hain.
     let whatsappSent = 0
     if (process.env.WHATSAPP_API_KEY && timeLeft() > 5_000) {
       try {
@@ -726,14 +724,12 @@ export async function GET(request: NextRequest) {
             if (timeLeft() <= 3_000) return
             const total = waLogMap.get(r.id)?.total ?? 0
             const amountINR = `₹${Number(r.amount).toLocaleString('en-IN')}`
-            const dueDayOnly = new Date(r.dueDate)
-            dueDayOnly.setHours(0, 0, 0, 0)
-            const daysOverdue = Math.max(
-              0,
-              Math.round((today.getTime() - dueDayOnly.getTime()) / 86400000)
-            )
             const link = r.paymentLink?.shortUrl ?? r.paymentLink?.url ?? null
 
+            // Sirf 2 approved templates: t1_polite (pehla msg) aur
+            // t2_with_link (dobara, link ho to). T3_firm/T4_final
+            // AiSensy me bane hi nahi — "Campaign does not exist" se
+            // 80 sends fail hue, isliye system se hata diye.
             let templateName = 't1_polite'
             let components: ReturnType<typeof buildT1Polite> = buildT1Polite(
               r.customer.name,
@@ -741,13 +737,7 @@ export async function GET(request: NextRequest) {
               amountINR,
               formatIndianDate(new Date(r.dueDate))
             )
-            if (total >= 7) {
-              templateName = 'T4_final'
-              components = buildT4Final(r.customer.name, amountINR, daysOverdue, r.merchant.businessName)
-            } else if (total >= 3) {
-              templateName = 'T3_firm'
-              components = buildT3Firm(r.customer.name, amountINR, daysOverdue, r.merchant.businessName)
-            } else if (total >= 1 && link) {
+            if (total >= 1 && link) {
               templateName = 't2_with_link'
               components = buildT2WithLink(
                 r.customer.name,

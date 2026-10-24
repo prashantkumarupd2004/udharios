@@ -68,10 +68,10 @@ export async function provisionMerchant(input: ProvisionMerchantInput, tx?: TxCl
       stages: [
         { dayOffset: 1, channel: 'whatsapp', templateName: 't1_polite' },
         { dayOffset: 3, channel: 'whatsapp', templateName: 't2_with_link' },
-        { dayOffset: 5, channel: 'whatsapp', templateName: 'T3_firm' },
+        { dayOffset: 5, channel: 'whatsapp', templateName: 't2_with_link' },
         { dayOffset: 7, channel: 'voice', templateName: null },
         { dayOffset: 10, channel: 'voice', templateName: null },
-        { dayOffset: 14, channel: 'whatsapp', templateName: 'T4_final' },
+        { dayOffset: 14, channel: 'whatsapp', templateName: 't2_with_link' },
         { dayOffset: 15, channel: 'escalate', templateName: null },
       ],
     },

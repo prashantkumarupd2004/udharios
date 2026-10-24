@@ -8,10 +8,6 @@ import {
   getWhatsAppProvider,
   buildT1Polite,
   buildT2WithLink,
-  buildT2WithUpiOrBank,
-  buildMerchantPaymentInfo,
-  buildT3Firm,
-  buildT4Final,
   isOptOutMessage,
 } from '@/lib/providers/WhatsappProvider'
 import { getGateway, isGatewayReady } from '@/lib/payments'
@@ -136,7 +132,7 @@ export const sendStagedReminder = inngest.createFunction(
     let externalMsgId: string | undefined
     let sendStatus: 'sent' | 'failed' = 'sent'
     let failedReason: string | undefined
-    // WhatsApp me bheja gaya actual template naam (fallback me T2_upi_bank ho sakta hai)
+    // WhatsApp me bheja gaya actual template naam (sirf approved templates)
     let resolvedTemplateName = stage.templateName ?? 't1_polite'
 
     if (stage.channel === 'whatsapp') {
@@ -149,7 +145,6 @@ export const sendStagedReminder = inngest.createFunction(
       // Payment link ensure karo (T2 ke liye) — auto-create ya fallback
       // ---------------------------------------------------------------
       let paymentUrl: string | null = outstanding.paymentLink?.url ?? null
-      let fallbackPaymentInfo: string | null = null
 
       const needsLink = stage.templateName === 't2_with_link'
 
@@ -228,14 +223,10 @@ export const sendStagedReminder = inngest.createFunction(
           }
         })
 
-        // Link nahi bana to UPI/bank fallback
-        if (!paymentUrl) {
-          fallbackPaymentInfo = buildMerchantPaymentInfo(outstanding.merchant)
-        }
       }
 
-      // Bina gateway wale merchant ke liye alag Meta template hai (4 body
-      // params, koi button nahi) — wahi naam bhejna zaroori hai.
+      // Sirf 2 approved templates: t1_polite aur t2_with_link.
+      // T3_firm/T4_final/T2_upi_bank AiSensy me bane hi nahi, isliye hata diye.
       switch (stage.templateName) {
         case 't1_polite':
           components = buildT1Polite(
@@ -253,17 +244,10 @@ export const sendStagedReminder = inngest.createFunction(
               outstanding.invoiceNo ?? outstandingId.slice(0, 8),
               paymentUrl
             )
-          } else if (fallbackPaymentInfo) {
-            // Bina gateway wale merchant — UPI/bank details bhejo
-            resolvedTemplateName = 'T2_upi_bank'
-            components = buildT2WithUpiOrBank(
-              outstanding.customer.name,
-              amountINR,
-              outstanding.invoiceNo ?? outstandingId.slice(0, 8),
-              fallbackPaymentInfo
-            )
           } else {
-            // Kuch nahi hai to polite reminder bhej do
+            // Link nahi hai to polite reminder bhej do (aur naam bhi
+            // t1_polite rakho, warna components/template mismatch hoga)
+            resolvedTemplateName = 't1_polite'
             components = buildT1Polite(
               outstanding.customer.name,
               outstanding.merchant.businessName,
@@ -271,22 +255,6 @@ export const sendStagedReminder = inngest.createFunction(
               formatIndianDate(outstanding.dueDate)
             )
           }
-          break
-        case 'T3_firm':
-          components = buildT3Firm(
-            outstanding.customer.name,
-            amountINR,
-            daysOverdue,
-            outstanding.merchant.businessName
-          )
-          break
-        case 'T4_final':
-          components = buildT4Final(
-            outstanding.customer.name,
-            amountINR,
-            daysOverdue,
-            outstanding.merchant.businessName
-          )
           break
         default:
           components = buildT1Polite(
