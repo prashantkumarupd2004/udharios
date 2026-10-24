@@ -312,11 +312,19 @@ export function buildT1Polite(
   ]
 }
 
-export function buildT2WithLink(
+/**
+ * T2 variant — bina gateway wale merchants ke liye.
+ * Payment link ki jagah UPI ID ya bank account details bhejta hai.
+ *
+ * Template me ye parameters honge:
+ *   1. customerName, 2. amountINR, 3. invoiceNo,
+ *   4. upiId ya "Bank: X, A/c: Y, IFSC: Z"
+ */
+export function buildT2WithUpiOrBank(
   customerName: string,
   amountINR: string,
   invoiceNo: string,
-  paymentUrl: string
+  paymentInfo: string,
 ): WhatsAppMessage['components'] {
   return [
     {
@@ -325,13 +333,8 @@ export function buildT2WithLink(
         { type: 'text', text: customerName },
         { type: 'text', text: amountINR },
         { type: 'text', text: invoiceNo },
+        { type: 'text', text: paymentInfo },
       ],
-    },
-    {
-      type: 'button',
-      sub_type: 'url',
-      index: 0,
-      parameters: [{ type: 'text', text: paymentUrl }],
     },
   ]
 }

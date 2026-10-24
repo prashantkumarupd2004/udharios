@@ -30,7 +30,8 @@ import { isWithinSendingWindow, formatIndianDate } from '@/lib/date-utils'
 import {
   getWhatsAppProvider,
   buildT1Polite,
-  buildT2WithLink,
+  buildT2WithUpiOrBank,
+  buildMerchantPaymentInfo,
 } from '@/lib/providers/WhatsappProvider'
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
 import { isEmailConfigured, sendEmail, buildPaymentReminderEmail } from '@/lib/email'
@@ -638,8 +639,8 @@ export async function GET(request: NextRequest) {
     // hota hai — isiliye pre-due cron ya purane staged sends pehle se
     // gaye hon to wo bhi count hote hain, double nahi jata.
     // Email-mode customers isme nahi (unhe sirf email jati hai).
-    // Template ladder (total count pe): t1_polite -> t2_with_link
-    // (payment link ho to). Sirf ye 2 approved templates bheje jate hain.
+    // Template ladder (total count pe): t1_polite -> T2_upi_bank
+    // (merchant ka saved UPI/bank ho to). Sirf ye 2 templates bheje jate hain.
     let whatsappSent = 0
     if (process.env.WHATSAPP_API_KEY && timeLeft() > 5_000) {
       try {
@@ -650,7 +651,7 @@ export async function GET(request: NextRequest) {
           invoiceNo: string | null
           amount: unknown
           dueDate: Date | string
-          merchant: { businessName: string; quietStart: string; quietEnd: string }
+          merchant: { businessName: string; quietStart: string; quietEnd: string; upiVpa: string | null; accountHolderName: string | null; accountNumber: string | null; bankName: string | null; ifscCode: string | null }
           customer: { name: string; phone: string }
           paymentLink: { url: string; shortUrl: string | null } | null
         }
@@ -663,7 +664,7 @@ export async function GET(request: NextRequest) {
             customer: { optedOut: false, consent: true },
           },
           include: {
-            merchant: { select: { businessName: true, quietStart: true, quietEnd: true } },
+            merchant: { select: { businessName: true, quietStart: true, quietEnd: true, upiVpa: true, accountHolderName: true, accountNumber: true, bankName: true, ifscCode: true } },
             customer: { select: { name: true, phone: true } },
             paymentLink: { select: { url: true, shortUrl: true } },
           },
@@ -724,12 +725,9 @@ export async function GET(request: NextRequest) {
             if (timeLeft() <= 3_000) return
             const total = waLogMap.get(r.id)?.total ?? 0
             const amountINR = `₹${Number(r.amount).toLocaleString('en-IN')}`
-            const link = r.paymentLink?.shortUrl ?? r.paymentLink?.url ?? null
-
-            // Sirf 2 approved templates: t1_polite (pehla msg) aur
-            // t2_with_link (dobara, link ho to). T3_firm/T4_final
-            // AiSensy me bane hi nahi — "Campaign does not exist" se
-            // 80 sends fail hue, isliye system se hata diye.
+            // Sirf 2 templates: t1_polite (pehla msg) aur T2_upi_bank
+            // (dobara — merchant ka saved UPI/bank details). Link wala
+            // template hata diya (user order).
             let templateName = 't1_polite'
             let components: ReturnType<typeof buildT1Polite> = buildT1Polite(
               r.customer.name,
@@ -737,14 +735,18 @@ export async function GET(request: NextRequest) {
               amountINR,
               formatIndianDate(new Date(r.dueDate))
             )
-            if (total >= 1 && link) {
-              templateName = 't2_with_link'
-              components = buildT2WithLink(
-                r.customer.name,
-                amountINR,
-                r.invoiceNo ?? r.id.slice(0, 8),
-                link
-              )
+            if (total >= 1) {
+              const paymentInfo = buildMerchantPaymentInfo(r.merchant)
+              if (paymentInfo) {
+                templateName = 'T2_upi_bank'
+                components = buildT2WithUpiOrBank(
+                  r.customer.name,
+                  amountINR,
+                  r.invoiceNo ?? r.id.slice(0, 8),
+                  paymentInfo
+                )
+              }
+              // Payment info save nahi hai to default t1_polite hi jayega
             }
 
             let status: 'sent' | 'failed' = 'sent'

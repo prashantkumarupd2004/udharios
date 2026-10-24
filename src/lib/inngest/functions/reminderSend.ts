@@ -7,12 +7,10 @@ import { prisma } from '@/lib/prisma'
 import {
   getWhatsAppProvider,
   buildT1Polite,
-  buildT2WithLink,
+  buildT2WithUpiOrBank,
+  buildMerchantPaymentInfo,
   isOptOutMessage,
 } from '@/lib/providers/WhatsappProvider'
-import { getGateway, isGatewayReady } from '@/lib/payments'
-import { decryptCredentials } from '@/lib/payments/crypto'
-import type { GatewayId } from '@/lib/payments/types'
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
 import { logger } from '@/lib/logger'
 import { msg91SendSms } from '@/lib/msg91'
@@ -141,92 +139,9 @@ export const sendStagedReminder = inngest.createFunction(
 
       let components: ReturnType<typeof buildT1Polite> = []
 
-      // ---------------------------------------------------------------
-      // Payment link ensure karo (T2 ke liye) — auto-create ya fallback
-      // ---------------------------------------------------------------
-      let paymentUrl: string | null = outstanding.paymentLink?.url ?? null
 
-      const needsLink = stage.templateName === 't2_with_link'
-
-      if (needsLink && !paymentUrl) {
-        // Pehle payment link banane ki koshish karo (merchant ke gateway se)
-        paymentUrl = await step.run('ensure-payment-link', async () => {
-          try {
-            const m = outstanding.merchant
-            const gatewayId = (m.paymentGateway ?? 'upi_vpa') as GatewayId
-            if (!isGatewayReady(gatewayId)) return null
-
-            let credentials: Record<string, string> = {}
-            if (gatewayId === 'upi_vpa') {
-              if (!m.upiVpa) return null
-              credentials = { vpa: m.upiVpa }
-            } else {
-              if (!m.gatewayCredentials) return null
-              try {
-                credentials = decryptCredentials(m.gatewayCredentials)
-              } catch {
-                return null
-              }
-            }
-
-            const gateway = getGateway(gatewayId)
-            const amountPaise = Math.round(Number(outstanding.amount) * 100)
-            const link = await gateway.createPaymentLink(
-              {
-                amount: amountPaise,
-                description: `${m.businessName} — Udhaari Payment`,
-                customerName: outstanding.customer.name,
-                customerPhone: outstanding.customer.phone,
-                referenceId: outstandingId,
-                notes: { merchant_id: merchantId, outstanding_id: outstandingId },
-                expiryDate: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
-                callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/payment/success`,
-              },
-              credentials,
-              m.gatewayTestMode ?? true,
-            )
-
-            // DB me save karo
-            const saved = await prisma.paymentLink.upsert({
-              where: { outstandingId },
-              create: {
-                merchantId,
-                outstandingId,
-                gateway: gatewayId,
-                gatewayLinkId: link.linkId,
-                url: link.shortUrl,
-                shortUrl: link.shortUrl,
-                amount: outstanding.amount,
-                status: 'created',
-              },
-              update: {
-                gateway: gatewayId,
-                gatewayLinkId: link.linkId,
-                url: link.shortUrl,
-                shortUrl: link.shortUrl,
-                status: 'created',
-              },
-            })
-            logger.info('Auto-created payment link for reminder', {
-              outstandingId,
-              gateway: gatewayId,
-            })
-            // WhatsApp button ke liye redirect URL (Meta ko poora URL format chahiye)
-            const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://udharios.vercel.app'
-            return `${baseUrl}/p/${saved.id}`
-          } catch (err) {
-            logger.warn('Auto payment link failed — fallback to UPI/bank', {
-              outstandingId,
-              error: String(err).slice(0, 120),
-            })
-            return null
-          }
-        })
-
-      }
-
-      // Sirf 2 approved templates: t1_polite aur t2_with_link.
-      // T3_firm/T4_final/T2_upi_bank AiSensy me bane hi nahi, isliye hata diye.
+      // Sirf 2 templates: t1_polite aur T2_upi_bank (merchant ka saved
+      // UPI/bank). Link wala template hata diya (user order).
       switch (stage.templateName) {
         case 't1_polite':
           components = buildT1Polite(
@@ -236,17 +151,18 @@ export const sendStagedReminder = inngest.createFunction(
             formatIndianDate(outstanding.dueDate)
           )
           break
-        case 't2_with_link':
-          if (paymentUrl) {
-            components = buildT2WithLink(
+        case 'T2_upi_bank': {
+          const paymentInfo = buildMerchantPaymentInfo(outstanding.merchant)
+          if (paymentInfo) {
+            components = buildT2WithUpiOrBank(
               outstanding.customer.name,
               amountINR,
               outstanding.invoiceNo ?? outstandingId.slice(0, 8),
-              paymentUrl
+              paymentInfo
             )
           } else {
-            // Link nahi hai to polite reminder bhej do (aur naam bhi
-            // t1_polite rakho, warna components/template mismatch hoga)
+            // Payment info save nahi hai to polite reminder bhej do
+            // (aur naam bhi t1_polite rakho, warna mismatch hoga)
             resolvedTemplateName = 't1_polite'
             components = buildT1Polite(
               outstanding.customer.name,
@@ -256,7 +172,11 @@ export const sendStagedReminder = inngest.createFunction(
             )
           }
           break
+        }
         default:
+          // Purani stage rows (t2_with_link wagera) bhi polite pe girengi,
+          // naam bhi t1_polite rakho taaki mismatch na ho
+          resolvedTemplateName = 't1_polite'
           components = buildT1Polite(
             outstanding.customer.name,
             outstanding.merchant.businessName,

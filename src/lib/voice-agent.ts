@@ -11,7 +11,7 @@
 
 import { transcribeAudio, synthesizeSpeech } from '@/lib/sarvam'
 import { parseHindiDateExpression, formatINR, formatIndianDate } from '@/lib/date-utils'
-import { getWhatsAppProvider, buildT2WithLink } from '@/lib/providers/WhatsappProvider'
+import { getWhatsAppProvider, buildT2WithUpiOrBank, buildMerchantPaymentInfo } from '@/lib/providers/WhatsappProvider'
 import { prisma } from '@/lib/prisma'
 import { appendAuditLog, AUDIT_ACTIONS } from '@/lib/audit'
 import { logger } from '@/lib/logger'
@@ -65,7 +65,7 @@ function getPromiseAckScript(date: string): string {
 }
 
 function getPayNowScript(): string {
-  return `Bahut badhiya! Maine aapke WhatsApp par payment link bhej diya hai. Dhanyavaad!`
+  return `Bahut badhiya! Maine aapke WhatsApp par payment details bhej diye hain. Dhanyavaad!`
 }
 
 function getDisputeAckScript(merchantName: string): string {
@@ -216,23 +216,39 @@ export async function processVoiceAgentTurn(
     }
 
     case 'confirm_payment': {
-      // Send WhatsApp payment link immediately
-      if (ctx.paymentLinkUrl) {
-        try {
+      // Call pe payment confirm hua — WhatsApp pe merchant ka saved
+      // UPI/bank details bhejo (link wala template hata diya).
+      try {
+        const merchant = await prisma.merchant.findUnique({
+          where: { id: ctx.merchantId },
+          select: {
+            upiVpa: true,
+            accountHolderName: true,
+            accountNumber: true,
+            bankName: true,
+            ifscCode: true,
+          },
+        })
+        const paymentInfo = merchant ? buildMerchantPaymentInfo(merchant) : null
+        if (paymentInfo) {
           const wa = getWhatsAppProvider()
           await wa.sendTemplate({
             to: await getCustomerPhone(ctx.customerId),
-            templateName: process.env.WA_TEMPLATE_ID_T2 ?? 't2_with_link',
-            components: buildT2WithLink(
+            templateName: 'T2_upi_bank',
+            components: buildT2WithUpiOrBank(
               ctx.customerName,
               ctx.amountINR,
               ctx.outstandingId,
-              ctx.paymentLinkUrl
+              paymentInfo
             ),
           })
-        } catch (err) {
-          logger.error('Failed to send payment link after voice confirm', { error: String(err) })
+        } else {
+          logger.warn('Merchant ne UPI/bank save nahi kiya — payment-details WhatsApp skip', {
+            merchantId: ctx.merchantId,
+          })
         }
+      } catch (err) {
+        logger.error('Failed to send payment details after voice confirm', { error: String(err) })
       }
       return {
         customerSpeech,
