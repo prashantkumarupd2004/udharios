@@ -78,7 +78,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const [emailInput, setEmailInput] = useState('')
   const [savingMode, setSavingMode] = useState(false)
   const [savingEmail, setSavingEmail] = useState(false)
-  const [possiblyBlocked, setPossiblyBlocked] = useState(false)
+
   const [phoneError, setPhoneError] = useState('')
   const [calling, setCalling] = useState<string | null>(null)
   const [callMsg, setCallMsg] = useState('')
@@ -97,7 +97,6 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
           setMaxCalls(data.customer.maxCallsPerDay != null ? String(data.customer.maxCallsPerDay) : '')
           setReminderModeState(data.customer.reminderMode === 'email' ? 'email' : 'call')
           setEmailInput(data.customer.email ?? '')
-          setPossiblyBlocked(!!data.possiblyBlocked)
         }
         setLoading(false)
       })
@@ -351,11 +350,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                 {!customer.consent && (
                   <span className="text-[10px] font-bold bg-red-500/20 text-red-300 border border-red-400/30 px-2 py-0.5 rounded-full">No Consent</span>
                 )}
-                {possiblyBlocked && (
-                  <span className="text-[10px] font-bold bg-orange-500/20 text-orange-300 border border-orange-400/30 px-2 py-0.5 rounded-full flex items-center gap-1">
-                    ⚠️ {lang === 'hi' ? 'Number block ho sakta hai' : 'Number may be blocked'}
-                  </span>
-                )}
+
               </div>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <p className="text-green-200/70 text-xs flex items-center gap-1 font-medium">

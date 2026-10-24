@@ -353,35 +353,14 @@ export async function GET(request: NextRequest) {
     const details: string[] = []
 
     const placeForCandidate = async ({ o, maxCallsToday }: Candidate): Promise<void> => {
-      // BLOCKED NUMBER DETECTION: lagatar 5+ fail = number block ho sakta
-      // hai → auto calls pause (manual allowed). Aur last-call gap check.
-      const [recentCalls, lastCall] = await Promise.all([
-        prisma.call.findMany({
-          where: { customerId: o.customerId },
-          orderBy: { createdAt: 'desc' },
-          take: 5,
-          select: { status: true },
-        }),
-        prisma.call.findFirst({
-          where: { outstandingId: o.id },
-          orderBy: { createdAt: 'desc' },
-          select: { status: true, createdAt: true, durationSec: true },
-        }),
-      ])
-
-      if (recentCalls.length >= 5) {
-        const allFailed = recentCalls.every((c) =>
-          ['failed', 'busy', 'no-answer', 'canceled'].includes(c.status)
-        )
-        if (allFailed) {
-          logger.info('Skipping possibly blocked number', {
-            customerId: o.customerId,
-            customerName: o.customer.name,
-          })
-          skipped++
-          return
-        }
-      }
+      // Blocked-number pause HATA DIYA GAYA HAI (24 Oct 2026, user order):
+      // fail/busy/no-answer hone par bhi auto calls chalte rahenge.
+      // Sirf last-call gap check bachta hai.
+      const lastCall = await prisma.call.findFirst({
+        where: { outstandingId: o.id },
+        orderBy: { createdAt: 'desc' },
+        select: { status: true, createdAt: true, durationSec: true },
+      })
 
       // Gap: daily limit ke hisaab se — 10-hour window (9 AM–7 PM) me
       // maxCallsToday calls → gap = 600 / maxCallsToday.
